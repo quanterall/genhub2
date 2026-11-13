@@ -1,0 +1,4 @@
+[{<<"pq">>,
+  {git,"https://github.com/quanterall/pqcf.git",
+       {ref,"2a90a1fffbc4876f35b69a24342d294eb590f27b"}},
+  0}].

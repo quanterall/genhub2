@@ -1,0 +1,12 @@
+{application, genhub2, [
+    {description, "GenHub2: rapid classification of DNA and RNA viruses, the first application on PQCF"},
+    {vsn, "0.1.0"},
+    {registered, [gh_sup, gh_jobs]},
+    {mod, {gh_app, []}},
+    {applications, [kernel, stdlib, crypto, public_key, inets, ssl, mnesia, pq]},
+    {env, [{data_dir, "data"},
+           %% the task types this node runs for PQCF's executors (pq_task's allow-list)
+           {task_modules, [gh_validate, gh_dehost, gh_screen, gh_consensus, gh_classify, gh_mutations, gh_lineage,
+                           gh_tree, gh_knowledge, gh_fetch]}]},
+    {licenses, ["Apache-2.0"]}
+]}.

@@ -1,0 +1,8 @@
+_build/
+priv/gh2k
+native/gh2k/target/
+data/
+rebar3.crashdump
+erl_crash.dump
+Mnesia.*/
+.cache-home/
