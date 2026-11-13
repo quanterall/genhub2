@@ -92,3 +92,25 @@ an existing tree.
 
 **Reproducibility:** both trees came out byte for byte the same in two runs (Newick SHA-256 `b06e5e9f...` for
 neighbour-joining, `4c441ab1...` for FastTree).
+
+## 5. The gateway and MQTT (FS 3.1, 4.2-4.4)
+
+[`gh_gateway_check.erl`](gh_gateway_check.erl), run by [`run_gateway.sh`](run_gateway.sh) against EMQX 5.8.9.
+Results: [`results/gateway-dgx-spark-2026-11-13T2205Z.json`](results/gateway-dgx-spark-2026-11-13T2205Z.json).
+**All 9 checks hold.**
+
+- **The page:** the page and its script are served.
+- **A job through the API:** NC_045512.2 is uploaded through `POST /api/uploads` and analysed through
+  `POST /api/jobs`. It comes back as *Betacoronavirus pandemicum*; the job is listed, and the uploaded file is served
+  back unchanged.
+- **MQTT:** an outside subscriber to `genhub/#` received the job on the specification's topics:
+  `genhub/sequences/new`, `genhub/tasks/status`, `genhub/results/classification` (which names the species),
+  `genhub/results/mutations` and `genhub/results/knowledge`.
+- **WebSocket:** the browser's WebSocket received the same topics.
+- **A job requested on MQTT:** a message on `genhub/sequences/new`, published as a sequencer's integration would,
+  started a job, and it finished.
+- **Refused:**
+  - a job for a file that is not in the store: 400;
+  - an unknown kind of job: 400;
+  - an upload over 100 MB: 413;
+  - an unknown job: 404.

@@ -3,8 +3,12 @@
     {vsn, "0.1.0"},
     {registered, [gh_sup, gh_jobs]},
     {mod, {gh_app, []}},
-    {applications, [kernel, stdlib, crypto, public_key, inets, ssl, mnesia, pq]},
+    {applications, [kernel, stdlib, crypto, public_key, inets, ssl, mnesia, pq, cowboy, emqtt]},
     {env, [{data_dir, "data"},
+           %% the gateway: address and port (phase A: this machine only; accounts and MFA come with sharing)
+           {http, #{ip => {127, 0, 0, 1}, port => 8480}},
+           %% the site's EMQX broker (undefined: no MQTT; the services still talk through gh_events)
+           {mqtt, undefined},
            %% the task types this node runs for PQCF's executors (pq_task's allow-list)
            {task_modules, [gh_validate, gh_dehost, gh_screen, gh_consensus, gh_classify, gh_mutations, gh_lineage,
                            gh_tree, gh_knowledge, gh_fetch]}]},

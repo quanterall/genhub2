@@ -53,9 +53,21 @@ Built:
   - **targets:** a 10 MB upload in 4.5 s, 1,000 genomes classified in 0.7 s, a neighbour-joining tree of 1,000
     in 4 s.
 
-Next in phase A:
-- the cowboy gateway: REST, WebSocket, upload, static pages;
-- the site's EMQX 5.8.9 broker with the specification's topics.
+- **The gateway** (`gh_web`, cowboy): the web page (`priv/www`: upload, analyses, results, related knowledge,
+  provenance, live events) and the API: `POST /api/uploads`, `POST /api/jobs`, `GET /api/jobs[/:id]`,
+  `GET /api/files/:hash`, and a WebSocket `/ws` with every event of the site. Phase A listens on this machine only;
+  accounts, roles and MFA come with sharing.
+- **MQTT inside the site** (`gh_mqtt`): every event is published to the site's EMQX 5.8.9 broker, QoS 1, on the
+  specification's topics:
+  - `genhub/sequences/new` and `genhub/sequences/processed`;
+  - `genhub/results/classification`, `genhub/results/mutations` and `genhub/results/knowledge`;
+  - `genhub/tasks/status`.
+
+  A message on `genhub/sequences/new` from another publisher, for example a sequencer's integration, starts a job.
+  The gateway check passes all 9 of its checks against a real EMQX 5.8.9
+  ([`acceptance/RESULTS.md`](acceptance/RESULTS.md)).
+
+Still to come in phase A: the remaining FS 3.1 pages (sharing, monitoring, accounts) and exports (CSV, PDF, SVG).
 
 ## Build and test
 
@@ -64,9 +76,14 @@ docker build -t pqcf-dev ~/pqcf && docker build -t pqcf-variants ~/pqcf/research
 docker build -t genhub2-dev docker
 docker run --rm -v "$PWD:$PWD" -w "$PWD" -e HOME="$PWD/.cache-home" genhub2-dev rebar3 eunit
 sh acceptance/run.sh <GRCh38 minimap2 index> <GRCh38 FASTA>
+sh acceptance/run_gateway.sh          # starts emqx/emqx:5.8.9 on 127.0.0.1:21883 for the check, then stops it
 ```
+
+To run a site: set `{genhub2, [{http, #{ip => ..., port => ...}}, {mqtt, #{host => "127.0.0.1", port => 1883}}]}` and
+start the `genhub2` application. The page is then at the gateway's address.
 
 ## Licence
 
 Apache License 2.0 (see `LICENSE` and `NOTICE`). The external programs GenHub2 calls keep their own licences, and none
-is linked into GenHub2: minimap2, samtools, Nextclade (MIT); MAFFT (BSD); FastTree (GPL).
+is linked into GenHub2: minimap2, samtools, Nextclade (MIT); MAFFT (BSD); FastTree (GPL). The libraries in the release are permissive:
+cowboy, cowlib, ranch, gun (ISC), getopt (BSD), emqtt (Apache 2.0); EMQX 5.8.9 (Apache 2.0) runs as its own service.

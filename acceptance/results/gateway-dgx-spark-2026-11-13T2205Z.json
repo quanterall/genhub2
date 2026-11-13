@@ -1,0 +1,87 @@
+{
+  "checks": [
+    {
+      "name": "page and script served",
+      "ok": true,
+      "value": "#{status => 200,type => <<\"text/html\">>,has_title => true,script_bytes => 5337,script_status => 200}"
+    },
+    {
+      "name": "genome job through the API: done",
+      "ok": true,
+      "value": "<<\"done\">>"
+    },
+    {
+      "name": "genome job: SARS-CoV-2 species",
+      "ok": true,
+      "value": "<<\"Betacoronavirus pandemicum\">>"
+    },
+    {
+      "name": "job listed; uploaded file served back unchanged",
+      "ok": true,
+      "value": "#{file_back => true,listed => true}"
+    },
+    {
+      "name": "MQTT: the specification's topics for the job",
+      "ok": true,
+      "value": "[<<\"genhub/results/classification\">>,<<\"genhub/results/knowledge\">>,<<\"genhub/results/mutations\">>,<<\"genhub/sequences/new\">>,<<\"genhub/tasks/status\">>]"
+    },
+    {
+      "name": "MQTT: the classification message names the species",
+      "ok": true,
+      "value": "[#{<<\"job\">> => <<\"job-mwfj08oj-8z\">>,<<\"result\">> => [#{<<\"call\">> => #{<<\"ani\">> => 1.0,<<\"confidence\">> => <<\"high\">>,<<\"family\">> => <<\"Coronaviridae\">>,<<\"genus\">> => <<\"Betacoronavirus\">>,<<\"organism\">> => <<\"Severe acute respiratory syndrome coronavirus 2\">>,<<\"ref\">> => <<\"NC_045512.2\">>,<<\"species\">> => <<\"Betacoronavirus pandemicum\">>,<<\"taxid\">> => 2697049},<<\"query\">> => <<\"NC_045512.2\">>}],<<\"step\">> => <<\"classify\">>}]"
+    },
+    {
+      "name": "WebSocket: the same topics",
+      "ok": true,
+      "value": "[<<\"genhub/results/classification\">>,<<\"genhub/results/knowledge\">>,<<\"genhub/results/mutations\">>,<<\"genhub/sequences/new\">>,<<\"genhub/tasks/status\">>]"
+    },
+    {
+      "name": "job requested on MQTT: started and done",
+      "ok": true,
+      "value": "#{id => <<\"job-mwfj0b08-5g\">>,started => true,state => <<\"done\">>,inputs => [<<\"4dabfd67f2402d1e1d21fbc5a23778076b551a314f8c99607079c24fd908a25d\">>]}"
+    },
+    {
+      "name": "refused: unknown file 400, bad kind 400, over 100 MB 413, unknown job 404",
+      "ok": true,
+      "value": "#{bad_kind => 400,no_such_job => 404,too_large => 413,unknown_file => 400}"
+    }
+  ],
+  "date": "2026-11-13T22:06:06Z",
+  "emqx": "emqx/emqx:5.8.9",
+  "host": "dgx-spark",
+  "job_from_mqtt": {
+    "id": "job-mwfj0b08-5g",
+    "inputs": [
+      "4dabfd67f2402d1e1d21fbc5a23778076b551a314f8c99607079c24fd908a25d"
+    ],
+    "started": true,
+    "state": "done"
+  },
+  "job_seconds": 2.007,
+  "job_state": "done",
+  "mqtt_topics": {
+    "genhub/results/classification": 1,
+    "genhub/results/knowledge": 1,
+    "genhub/results/mutations": 2,
+    "genhub/sequences/new": 1,
+    "genhub/tasks/status": 7
+  },
+  "refused": {
+    "bad_kind": 400,
+    "no_such_job": 404,
+    "too_large": 413,
+    "unknown_file": 400
+  },
+  "seconds": 5.609,
+  "upload": {
+    "bytes": 30415,
+    "hash": "4dabfd67f2402d1e1d21fbc5a23778076b551a314f8c99607079c24fd908a25d"
+  },
+  "websocket_topics": {
+    "genhub/results/classification": 1,
+    "genhub/results/knowledge": 1,
+    "genhub/results/mutations": 2,
+    "genhub/sequences/new": 1,
+    "genhub/tasks/status": 7
+  }
+}

@@ -85,6 +85,7 @@ handle_call({submit, Kind, Inputs, Params}, _From, Runs) ->
     J = #gh_job{id = Id, kind = Kind, inputs = Inputs, params = Params, state = queued, created = Now, updated = Now},
     ok = mnesia:dirty_write(J),
     gh_events:publish(<<"genhub/tasks/status">>, #{job => Id, state => queued}),
+    gh_events:publish(<<"genhub/sequences/new">>, #{job => Id, kind => Kind, inputs => Inputs}),
     {reply, Id, start_run(J, Runs)}.
 
 handle_cast(_, Runs) -> {noreply, Runs}.
@@ -116,14 +117,39 @@ run(#gh_job{id = Id, kind = Kind} = J) ->
                       Secs = erlang:convert_time_unit(erlang:monotonic_time() - T0, native, microsecond) / 1.0e6,
                       ok = mnesia:dirty_write(#gh_step{key = {Id, Step}, results = R, seconds = Secs}),
                       gh_events:publish(<<"genhub/tasks/status">>, #{job => Id, step => Step, seconds => Secs}),
+                      [gh_events:publish(T, #{job => Id, step => Step, result => summary(Step, [Res || {Res, _} <- R])})
+                       || T <- topics(Step)],
                       Done#{Step => [Res || {Res, _} <- R]}
               end
       end, #{}, gh_pipeline:steps(Kind)),
     finish(Id, done, undefined).
 
+%% The specification's topics (FS 4.3) for a step's results. Messages carry the job, and results small enough to
+%% travel: hashes for files, the classification calls, mutation counts, links.
+topics(validate) -> [];
+topics(consensus) -> [<<"genhub/sequences/processed">>];
+topics(classify) -> [<<"genhub/results/classification">>];
+topics(mutations) -> [<<"genhub/results/mutations">>];
+topics(lineage) -> [<<"genhub/results/mutations">>];
+topics(knowledge) -> [<<"genhub/results/knowledge">>];
+topics(_) -> [].
+
+summary(classify, [Calls]) ->
+    [#{query => maps:get(<<"query">>, Q), call => maps:get(<<"call">>, Q)} || Q <- Calls];
+summary(mutations, Rs) ->
+    [#{query => maps:get(query, M), substitutions => length(maps:get(substitutions, M, [])),
+       insertions => length(maps:get(insertions, M, [])), deletions => length(maps:get(deletions, M, []))}
+     || M <- lists:append(Rs)];
+summary(lineage, Rs) -> [maps:with([query, clade, pango, qc], L) || L <- lists:append(Rs)];
+summary(consensus, [C]) -> maps:with([genome, reference, breadth, mean_depth], C);
+summary(_, Rs) -> Rs.
+
 finish(Id, State, Error) ->
     update(Id, State, Error),
-    gh_events:publish(<<"genhub/tasks/status">>, #{job => Id, state => State}).
+    gh_events:publish(<<"genhub/tasks/status">>,
+                      #{job => Id, state => State, error => case Error of undefined -> null; E -> fmt(E) end}).
+
+fmt(E) -> iolist_to_binary(io_lib:format("~0P", [E, 30])).
 
 update(Id, State, Error) ->
     [J] = mnesia:dirty_read(gh_job, Id),
