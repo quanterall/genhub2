@@ -9,8 +9,6 @@ first application built on [PQCF](https://github.com/quanterall/pqcf).
 | L1, PQCF | tasks as plain data, executors (this node, the owner's nodes, federation peers), provenance of every result |
 | L2, GenHub2 | this repository: the analyses, the job service, the store, later the gateway, MQTT (EMQX) and sharing |
 
-The first partner is CellGenetics, Sofia; the first target is viruses, with SARS-CoV-2 as the first acceptance test.
-
 ## Status: phase A, one node (in progress)
 
 Built:
