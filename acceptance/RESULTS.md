@@ -18,7 +18,7 @@ family from NCBI Taxonomy. They are sketched with MinHash (K = 21, 1,000 hashes 
 | input | result | time |
 | --- | --- | --- |
 | NC_045512.2 (Wuhan-Hu-1) uploaded as a genome | *Betacoronavirus pandemicum*; 0 mutations against itself; lineage B, clade 19A | 1.4 s end to end |
-| reads: 20,000 pairs simulated from a Bulgarian genome (PX916490.1, BQ.1.1), plus 20,000 human pairs (GRCh38 chr1:150-160 Mb) | all 20,000 human pairs removed and all 20,000 viral pairs kept; consensus at 200x depth covers 99.2% of the genome and equals the source at every called base; *Betacoronavirus pandemicum*; lineage BQ.1.1 | 49 s, of which 47 s is loading the 8.7 GB human index to remove human reads |
+| reads: 20,000 pairs simulated from the GenBank genome PX916490.1 (BQ.1.1; its record names Bulgaria), plus 20,000 human pairs (GRCh38 chr1:150-160 Mb) | all 20,000 human pairs removed and all 20,000 viral pairs kept; consensus at 200x depth covers 99.2% of the genome and equals the source at every called base; *Betacoronavirus pandemicum*; lineage BQ.1.1 | 49 s, of which 47 s is loading the 8.7 GB human index to remove human reads |
 
 Each step is a PQCF task, and its result is stored in Mnesia with its provenance record: the task's hash, the code's
 checksum, the node and the times.
@@ -56,8 +56,8 @@ Classifying the 593 genomes took 0.55 s.
 
 ## 3. 1,000 SARS-CoV-2 genomes: our mutations against Nextclade's
 
-The genomes: the 138 complete Bulgarian SARS-CoV-2 genomes in GenBank, and 862 published in June of 2020-2024 (197
-Pango lineages). Mutations against Wuhan-Hu-1 come from minimap2 (Li 2018,
+The genomes: the 138 complete SARS-CoV-2 genomes whose GenBank records name Bulgaria (Entrez `Bulgaria[All Fields]`),
+and 862 published in June of 2020-2024 (197 Pango lineages). Mutations against Wuhan-Hu-1 come from minimap2 (Li 2018,
 [doi:10.1093/bioinformatics/bty191](https://doi.org/10.1093/bioinformatics/bty191)). They are compared with
 Nextclade's (Aksamentov et al. 2021, [doi:10.21105/joss.03773](https://doi.org/10.21105/joss.03773)), genome by
 genome.
