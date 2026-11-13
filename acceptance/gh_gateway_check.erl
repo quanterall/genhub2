@@ -5,7 +5,10 @@
 %%   2. a genome (NC_045512.2) uploaded and analysed through the API; its results read back;
 %%   3. the job followed live on the WebSocket and on MQTT: the specification's topics carry its messages;
 %%   4. a job requested on MQTT (genhub/sequences/new, as a sequencer's integration would) runs;
-%%   5. requests the gateway must refuse: a job for a file not in the store, an upload over 100 MB.
+%%   5. the exports: CSV, PDF and JSON of a job; a tree job of both jobs' genomes, as SVG and Newick;
+%%   6. monitoring: the site's counts, and an alert for the first species and lineage, only for the first job;
+%%   7. requests the gateway must refuse: a job for a file not in the store, an upload over 100 MB, a tree of one
+%%      sequence.
 %%
 %% Needs the reference bundles of the phase A acceptance test, and EMQX on 127.0.0.1:21883 (run_gateway.sh); the
 %% gateway listens on 127.0.0.1:28090.
@@ -31,13 +34,20 @@ main([Out]) ->
     MqttMsgs = collected(Mqtt),
     WsMsgs = collected(Ws),
     Viamqtt = mqtt_job(maps:get(hash, Upload)),
-    Refused = refused(),
-    Checks = checks(Page, Job, MqttMsgs, WsMsgs, Viamqtt, Refused),
+    Exports = exports(maps:get(id, Job)),
+    Tree = tree([maps:get(id, Job), maps:get(id, Viamqtt)]),
+    {200, _, Sum} = http(get, "/api/summary", none),
+    Summary = json:decode(Sum),
+    Alerts = [M || {<<"genhub/alerts">>, M} <- collected(Mqtt)],
+    Refused = refused(maps:get(id, Job)),
+    Checks = checks(Page, Job, MqttMsgs, WsMsgs, Viamqtt, Refused)
+        ++ more_checks(Job, Viamqtt, Exports, Tree, Summary, Alerts),
     R = #{date => list_to_binary(calendar:system_time_to_rfc3339(erlang:system_time(second), [{offset, "Z"}])),
           host => list_to_binary(net_adm:localhost()), emqx => <<"emqx/emqx:5.8.9">>,
           upload => Upload, job_seconds => maps:get(seconds, Job), job_state => maps:get(state, Job),
           mqtt_topics => count([T || {T, _} <- MqttMsgs]), websocket_topics => count([T || {T, _} <- WsMsgs]),
-          job_from_mqtt => Viamqtt, refused => Refused, checks => Checks,
+          job_from_mqtt => Viamqtt, exports => Exports, tree => maps:remove(svg, Tree), summary => Summary,
+          alerts => Alerts, refused => Refused, checks => Checks,
           seconds => (erlang:monotonic_time(millisecond) - T0) / 1000},
     ok = filelib:ensure_dir(Out),
     ok = file:write_file(Out, json:format(gh_json:term(R))),
@@ -159,12 +169,54 @@ wait_new(Before, N) ->
         [] -> timer:sleep(200), wait_new(Before, N - 1)
     end.
 
-refused() ->
+exports(Id) ->
+    Get = fun(E) -> http(get, "/api/jobs/" ++ binary_to_list(Id) ++ "/" ++ E, none) end,
+    {S1, T1, Csv} = Get("report.csv"),
+    {S2, T2, Pdf} = Get("report.pdf"),
+    {S3, _, Json} = Get("job.json"),
+    #{csv => #{status => S1, type => list_to_binary(T1), species => binary:match(Csv, <<"Betacoronavirus pandemicum">>) =/= nomatch},
+      pdf => #{status => S2, type => list_to_binary(T2), bytes => byte_size(Pdf), magic => binary:part(Pdf, 0, 8)},
+      json => #{status => S3, id => maps:get(<<"id">>, json:decode(Json))}}.
+
+tree(Ids) ->
+    {201, _, B} = http(post, "/api/trees", {"application/json", json:encode(#{jobs => Ids, method => nj})}),
+    #{<<"id">> := Id, <<"reference">> := Ref} = json:decode(B),
+    J = poll(Id, 600),
+    {S1, T1, Svg} = http(get, "/api/jobs/" ++ binary_to_list(Id) ++ "/tree.svg", none),
+    {S2, _, Nwk} = http(get, "/api/jobs/" ++ binary_to_list(Id) ++ "/tree.nwk", none),
+    Leaves = case re:run(Nwk, "[(,]([^(),:;]+):", [global, {capture, [1], binary}]) of
+                 {match, L} -> lists:sort([X || [X] <- L]);
+                 nomatch -> []
+             end,
+    #{id => Id, state => maps:get(<<"state">>, J), reference => Ref, svg_status => S1, svg_type => list_to_binary(T1),
+      svg => Svg, svg_ok => binary:match(Svg, <<"<svg ">>) =/= nomatch, newick_status => S2, leaves => Leaves}.
+
+more_checks(Job, ViaMqtt, Exports, Tree, Summary, Alerts) ->
+    [J1, J2] = [maps:get(id, Job), maps:get(id, ViaMqtt)],
+    Sp = [N || #{<<"name">> := <<"Betacoronavirus pandemicum">>, <<"count">> := N} <- maps:get(<<"species">>, Summary)],
+    Lin = [N || #{<<"name">> := <<"B">>, <<"count">> := N, <<"first_job">> := F} <- maps:get(<<"lineages">>, Summary), F =:= J1],
+    [check(<<"exports: CSV names the species, PDF is a PDF, JSON is the job">>,
+           Exports =:= #{csv => #{status => 200, type => <<"text/csv; charset=utf-8">>, species => true},
+                         pdf => (maps:get(pdf, Exports))#{status => 200, type => <<"application/pdf">>, magic => <<"%PDF-1.4">>},
+                         json => #{status => 200, id => J1}}, Exports),
+     check(<<"tree job of both genomes: done, SVG drawn, the reference and both genomes as leaves">>,
+           maps:get(state, Tree) =:= <<"done">> andalso maps:get(svg_ok, Tree) andalso maps:get(svg_status, Tree) =:= 200
+           andalso maps:get(leaves, Tree) =:= lists:sort([<<"NC_045512.2">>, <<J1/binary, "/NC_045512.2">>,
+                                                          <<J2/binary, "/NC_045512.2">>]),
+           maps:remove(svg, Tree)),
+     check(<<"monitoring: two SARS-CoV-2 analyses, lineage B first seen in the first job">>, {Sp, Lin} =:= {[2], [2]},
+           Summary),
+     check(<<"alerts: first species and first lineage, for the first job only">>,
+           lists:sort([{maps:get(<<"type">>, A), maps:get(<<"job">>, A)} || A <- Alerts])
+           =:= [{<<"new_pango">>, J1}, {<<"new_species">>, J1}], Alerts)].
+
+refused(Job) ->
     {S1, _, _} = http(post, "/api/jobs", {"application/json", json:encode(#{kind => genome, inputs => [binary:copy(<<"0">>, 64)]})}),
     {S2, _, _} = http(post, "/api/jobs", {"application/json", <<"{\"kind\": \"protein\"}">>}),
     {S3, _, _} = http(post, "/api/uploads", {"application/octet-stream", binary:copy(<<"A">>, 100000001)}),
     {S4, _, _} = http(get, "/api/jobs/job-none", none),
-    #{unknown_file => S1, bad_kind => S2, too_large => S3, no_such_job => S4}.
+    {S5, _, _} = http(post, "/api/trees", {"application/json", json:encode(#{jobs => [Job], method => nj})}),
+    #{unknown_file => S1, bad_kind => S2, too_large => S3, no_such_job => S4, tree_of_one => S5}.
 
 %%% checks
 
@@ -189,8 +241,9 @@ checks(Page, Job, Mqtt, Ws, ViaMqtt, Refused) ->
            [S || #{<<"result">> := [#{<<"call">> := #{<<"species">> := S}}]} <- MqttClass] =:= [Species], MqttClass),
      check(<<"WebSocket: the same topics">>, Wanted -- WTopics =:= [], WTopics),
      check(<<"job requested on MQTT: started and done">>, maps:get(state, ViaMqtt, none) =:= <<"done">>, ViaMqtt),
-     check(<<"refused: unknown file 400, bad kind 400, over 100 MB 413, unknown job 404">>,
-           Refused =:= #{unknown_file => 400, bad_kind => 400, too_large => 413, no_such_job => 404}, Refused)].
+     check(<<"refused: unknown file 400, bad kind 400, over 100 MB 413, unknown job 404, tree of one sequence 400">>,
+           Refused =:= #{unknown_file => 400, bad_kind => 400, too_large => 413, no_such_job => 404, tree_of_one => 400},
+           Refused)].
 
 check(Name, Ok, Value) -> #{name => Name, ok => Ok, value => iolist_to_binary(io_lib:format("~0P", [Value, 40]))}.
 

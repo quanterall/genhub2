@@ -2,7 +2,7 @@
 "use strict";
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
-let selected = null;
+let selected = location.hash ? decodeURIComponent(location.hash.slice(1)) : null;
 
 async function api(path, opts) {
   const r = await fetch(path, opts);
@@ -40,22 +40,55 @@ $("#go").addEventListener("click", async () => {
   }
 });
 
+$("#t-go").addEventListener("click", async () => {
+  $("#t-go").disabled = true;
+  try {
+    const jobs = (await api("/api/jobs")).filter((j) => j.state === "done" && j.kind !== "tree").map((j) => j.id);
+    const r = await api("/api/trees", {method: "POST", headers: {"content-type": "application/json"},
+                                       body: JSON.stringify({jobs, method: $("#t-method").value})});
+    $("#t-msg").textContent = `Started ${r.id}: ${jobs.length} analyses against ${r.reference}.`;
+    selected = r.id;
+    await refresh();
+  } catch (e) {
+    $("#t-msg").textContent = "Failed: " + e.message;
+  } finally {
+    $("#t-go").disabled = false;
+  }
+});
+
+async function monitor() {
+  const s = await api("/api/summary");
+  const rows = (xs) => xs.map((x) => `<tr><td>${esc(x.name)}</td><td>${x.count}</td>
+    <td>${new Date(x.first_seen).toLocaleDateString()}</td></tr>`).join("");
+  $("#m-lin tbody").innerHTML = rows(s.lineages);
+  $("#m-sp tbody").innerHTML = rows(s.species);
+}
+
 async function refresh() {
   const jobs = await api("/api/jobs");
   $("#jobs tbody").innerHTML = jobs.map((j) => `<tr data-id="${esc(j.id)}" class="${j.id === selected ? "sel" : ""}">
     <td><code>${esc(j.id)}</code></td><td>${esc(j.kind)}</td><td class="state-${esc(j.state)}">${esc(j.state)}</td>
     <td>${new Date(j.created).toLocaleString()}</td></tr>`).join("");
   document.querySelectorAll("#jobs tbody tr").forEach((tr) => tr.addEventListener("click", () => {
-    selected = tr.dataset.id; refresh();
+    selected = tr.dataset.id; history.replaceState(null, "", "#" + selected); refresh();
   }));
   if (selected) await show(selected);
+  await monitor();
 }
 
 async function show(id) {
   const j = await api("/api/jobs/" + encodeURIComponent(id));
   const res = (step) => (j.steps[step] ? j.steps[step].results : []);
   $("#detail").hidden = false;
-  $("#d-title").textContent = `${j.id}: ${j.kind}, ${j.state}` + (j.error ? ` (${j.error})` : "");
+  $("#d-title").textContent = `${j.id}: ${j.kind}, ${j.state}` + (j.state === "failed" && j.error ? ` (${j.error})` : "");
+  const base = "/api/jobs/" + encodeURIComponent(j.id) + "/";
+  const isTree = j.kind === "tree";
+  const exp = isTree ? ["tree.svg", "tree.nwk", "job.json"] : ["report.csv", "report.pdf", "job.json"];
+  $("#d-exports").innerHTML = j.state === "done"
+    ? "Export: " + exp.map((e) => `<a href="${base}${e}" target="_blank" rel="noopener">${e}</a>`).join("") : "";
+  $("#d-tree-wrap").hidden = !(isTree && j.state === "done");
+  if (isTree && j.state === "done") $("#d-tree").src = base + "tree.svg";
+  $("#d-results").hidden = isTree;
   $("#d-steps").innerHTML = j.order.map((s) => `<span class="step ${j.steps[s] ? "done" : ""}">${esc(s)}${
     j.steps[s] ? " " + j.steps[s].seconds.toFixed(2) + " s" : ""}</span>`).join("");
   const calls = res("classify").flat();
@@ -96,6 +129,13 @@ function connect() {
     li.textContent = `${new Date().toLocaleTimeString()} ${topic} ${JSON.stringify(message).slice(0, 200)}`;
     $("#events").prepend(li);
     if (topic === "genhub/tasks/status") refresh();
+    if (topic === "genhub/alerts") {
+      if ($("#alerts .hint")) $("#alerts").innerHTML = "";
+      const a = document.createElement("li");
+      a.textContent = `${new Date().toLocaleString()}: first ${message.type === "new_pango" ? "lineage" : "species"} ` +
+        `${message.pango || message.species} at this site (${message.job})`;
+      $("#alerts").prepend(a);
+    }
   };
 }
 

@@ -9,7 +9,7 @@
 -module(gh_jobs).
 -compile({no_auto_import, [get/1]}).
 -behaviour(gen_server).
--export([start_link/0, tables/0, submit/3, get/1, steps/1, wait/2, list/0]).
+-export([start_link/0, tables/0, submit/3, get/1, steps/1, view/1, wait/2, list/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2]).
 
 -record(gh_job, {id, kind, inputs, params, state, created, updated, error}).
@@ -33,7 +33,7 @@ create(T, Attrs) ->
 start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 %% A new job; its id.
--spec submit(genome | reads, [gh_store:hash()], map()) -> binary().
+-spec submit(genome | reads | tree, [gh_store:hash()], map()) -> binary().
 submit(Kind, Inputs, Params) -> gen_server:call(?MODULE, {submit, Kind, Inputs, Params}).
 
 -spec get(binary()) -> map() | undefined.
@@ -52,6 +52,20 @@ list() ->
 steps(Id) ->
     maps:from_list([{S, {R, T}} || #gh_step{key = {_, S}, results = R, seconds = T}
                                        <- mnesia:dirty_match_object(#gh_step{key = {Id, '_'}, _ = '_'})]).
+
+%% The job with its steps' results and provenance records, as the gateway and the exports show it; undefined if no
+%% such job.
+-spec view(binary()) -> map() | undefined.
+view(Id) ->
+    case get(Id) of
+        undefined -> undefined;
+        J ->
+            Steps = maps:map(fun(_, {Results, Secs}) ->
+                                     #{seconds => Secs, results => [R || {R, _} <- Results],
+                                       provenance => [P || {_, P} <- Results]}
+                             end, steps(Id)),
+            J#{steps => Steps, order => gh_pipeline:steps(maps:get(kind, J))}
+    end.
 
 %% the job once done or failed, or timeout
 -spec wait(binary(), timeout()) -> map() | timeout.
@@ -122,7 +136,8 @@ run(#gh_job{id = Id, kind = Kind} = J) ->
                       Done#{Step => [Res || {Res, _} <- R]}
               end
       end, #{}, gh_pipeline:steps(Kind)),
-    finish(Id, done, undefined).
+    finish(Id, done, undefined),
+    gh_monitor:job_done(Id).
 
 %% The specification's topics (FS 4.3) for a step's results. Messages carry the job, and results small enough to
 %% travel: hashes for files, the classification calls, mutation counts, links.

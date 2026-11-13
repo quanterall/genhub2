@@ -9,7 +9,7 @@ first application built on [PQCF](https://github.com/quanterall/pqcf).
 | L1, PQCF | tasks as plain data, executors (this node, the owner's nodes, federation peers), provenance of every result |
 | L2, GenHub2 | this repository: the analyses, the job service, the store, later the gateway, MQTT (EMQX) and sharing |
 
-## Status: phase A, one node (in progress)
+## Status: phase A, one node (done)
 
 Built:
 - **The analyses, each a PQCF task** (a module implementing the `pq_task` behaviour, run by PQCF's executors):
@@ -53,7 +53,8 @@ Built:
 
 - **The gateway** (`gh_web`, cowboy): the web page (`priv/www`: upload, analyses, results, related knowledge,
   provenance, live events) and the API: `POST /api/uploads`, `POST /api/jobs`, `GET /api/jobs[/:id]`,
-  `GET /api/files/:hash`, and a WebSocket `/ws` with every event of the site. Phase A listens on this machine only;
+  `GET /api/jobs/:id/:export`, `POST /api/trees`, `GET /api/summary`, `GET /api/files/:hash`, and a WebSocket `/ws`
+  with every event of the site. Phase A listens on this machine only;
   accounts, roles and MFA come with sharing.
 - **MQTT inside the site** (`gh_mqtt`): every event is published to the site's EMQX 5.8.9 broker, QoS 1, on the
   specification's topics:
@@ -62,10 +63,18 @@ Built:
   - `genhub/tasks/status`.
 
   A message on `genhub/sequences/new` from another publisher, for example a sequencer's integration, starts a job.
-  The gateway check passes all 9 of its checks against a real EMQX 5.8.9
+- **Exports** (`gh_export`): CSV, PDF and JSON of a job's results; phylogenetic trees as SVG and Newick.
+- **Trees from the page:** a tree job of the genomes of chosen analyses, by neighbour-joining or FastTree, drawn in
+  the page.
+- **Monitoring at the site** (`gh_monitor`): counts by species, lineage and week, each with the job and date it was
+  first seen. A finished job that brings a species or lineage the site has not seen before raises an alert on
+  `genhub/alerts`. Exchanging these counts between sites, without sequences, is phase D.
+- **The gateway check** passes all 13 of its checks against a real EMQX 5.8.9
   ([`acceptance/RESULTS.md`](acceptance/RESULTS.md)).
 
-Still to come in phase A: the remaining FS 3.1 pages (sharing, monitoring, accounts) and exports (CSV, PDF, SVG).
+Next:
+- **phase B:** two nodes of one owner, through PQCF's `{nodes, ...}` executor;
+- **phase C:** two sites through the FVLLMP gate, with sharing, accounts, roles and MFA.
 
 ## Build and test
 

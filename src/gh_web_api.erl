@@ -37,16 +37,41 @@ handle(jobs, <<"POST">>, Req) ->
 handle(jobs, <<"GET">>, Req) ->
     reply(200, [maps:without([params], J) || J <- gh_jobs:list()], Req);
 handle(job, <<"GET">>, Req) ->
-    Id = cowboy_req:binding(id, Req),
-    case gh_jobs:get(Id) of
-        undefined -> throw({status, 404, <<"no such job">>});
-        J ->
-            Steps = maps:map(fun(_, {Results, Secs}) ->
-                                     #{seconds => Secs, results => [R || {R, _} <- Results],
-                                       provenance => [P || {_, P} <- Results]}
-                             end, gh_jobs:steps(Id)),
-            reply(200, J#{steps => Steps, order => gh_pipeline:steps(maps:get(kind, J))}, Req)
-    end;
+    reply(200, view(Req), Req);
+handle(export, <<"GET">>, Req) ->
+    J = view(Req),
+    Id = maps:get(id, J),
+    {Type, Body} = case cowboy_req:binding(export, Req) of
+                       <<"report.csv">> -> {<<"text/csv; charset=utf-8">>, gh_export:csv(J)};
+                       <<"report.pdf">> -> {<<"application/pdf">>, gh_export:pdf(J)};
+                       <<"job.json">> -> {<<"application/json">>, gh_json:encode(J)};
+                       <<"tree.svg">> -> {<<"image/svg+xml">>, gh_export:svg(gh_store:read(newick(J)))};
+                       <<"tree.nwk">> -> {<<"text/plain; charset=utf-8">>, gh_store:read(newick(J))};
+                       _ -> throw({status, 404, <<"exports: report.csv, report.pdf, job.json, tree.svg, tree.nwk">>})
+                   end,
+    Name = <<Id/binary, "-", (cowboy_req:binding(export, Req))/binary>>,
+    cowboy_req:reply(200, #{<<"content-type">> => Type,
+                            <<"content-disposition">> => <<"inline; filename=\"", Name/binary, "\"">>}, Body, Req);
+handle(trees, <<"POST">>, Req) ->
+    {ok, Body, Req2} = cowboy_req:read_body(Req, #{length => 100000}),
+    {Ids, Method} = case catch json:decode(Body) of
+                        #{<<"jobs">> := L, <<"method">> := M} when is_list(L), M =:= <<"nj">>; M =:= <<"fasttree">> ->
+                            {L, binary_to_existing_atom(M)};
+                        _ -> throw({status, 400, <<"expected {\"jobs\": [id, ...], \"method\": \"nj\" | \"fasttree\"}">>})
+                    end,
+    Views = [case gh_jobs:view(I) of
+                 #{state := done, kind := K} = V when K =/= tree -> V;
+                 _ -> throw({status, 400, <<"not a finished genome or reads job: ", I/binary>>})
+             end || I <- Ids],
+    Genomes = [{genome_of(V), [maps:get(ref, R) || R <- gh_export:rows(V)]} || V <- Views],
+    Refs = lists:append([Rs || {_, Rs} <- Genomes]),
+    length(Refs) >= 2 orelse throw({status, 400, <<"a tree needs at least two sequences">>}),
+    Reference = most_common(Refs),
+    Fasta = gh_store:put_binary([named(maps:get(id, V), gh_store:read(G)) || {V, {G, _}} <- lists:zip(Views, Genomes)]),
+    Params = (gh_config:params())#{reference => Reference, method => Method, from_jobs => Ids},
+    reply(201, #{id => gh_jobs:submit(tree, [Fasta], Params), reference => Reference}, Req2);
+handle(summary, <<"GET">>, Req) ->
+    reply(200, gh_monitor:summary(), Req);
 handle(file, <<"GET">>, Req) ->
     Hash = cowboy_req:binding(hash, Req),
     (byte_size(Hash) =:= 64 andalso gh_store:has(Hash)) orelse throw({status, 404, <<"no such file">>}),
@@ -55,6 +80,27 @@ handle(file, <<"GET">>, Req) ->
                      {sendfile, 0, filelib:file_size(P), P}, Req);
 handle(_, _, _) ->
     throw({status, 405, <<"method not allowed">>}).
+
+view(Req) ->
+    case gh_jobs:view(cowboy_req:binding(id, Req)) of
+        undefined -> throw({status, 404, <<"no such job">>});
+        J -> J
+    end.
+
+newick(#{kind := tree, state := done, steps := #{tree := #{results := [#{newick := H}]}}}) -> H;
+newick(_) -> throw({status, 404, <<"not a finished tree job">>}).
+
+%% a job's genome file: the validated upload, or the consensus of its reads
+genome_of(#{kind := genome, steps := #{validate := #{results := [#{output := H}]}}}) -> H;
+genome_of(#{kind := reads, steps := #{consensus := #{results := [#{genome := H}]}}}) -> H.
+
+%% the records of a FASTA file, each named <job>/<its own name>, so trees show where a genome came from
+named(Job, Fasta) ->
+    binary:replace(<<"\n", Fasta/binary>>, <<"\n>">>, <<"\n>", Job/binary, "/">>, [global]).
+
+most_common(L) ->
+    Counts = lists:foldl(fun(X, M) -> maps:update_with(X, fun(C) -> C + 1 end, 1, M) end, #{}, L),
+    element(2, lists:max([{N, K} || {K, N} <- maps:to_list(Counts)])).
 
 body_to_file(Req, Fd, N) ->
     {More, Data, Req2} = case cowboy_req:read_body(Req, #{length => 8000000, period => 60000}) of

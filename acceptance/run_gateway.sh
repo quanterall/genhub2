@@ -15,6 +15,8 @@ if [ -z "$(docker ps -q --filter name=^genhub2-emqx$)" ]; then
   STARTED=1
   until docker exec genhub2-emqx emqx ctl status 2>/dev/null | grep -q "is started"; do sleep 1; done
 fi
+# the check's site starts with no jobs (its alerts are for the first species and lineage seen)
+d=data/mnesia-gateway; rm -rf "${d:?}"
 mkdir -p data/mnesia-gateway .cache-home
 set +e
 docker run --rm --network host --user "$(id -u):$(id -g)" --cpuset-cpus="$CPUS" \

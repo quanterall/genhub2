@@ -4,18 +4,22 @@
 %% interrupted is simply run again.
 %%   genome: validate, classify, mutations, lineage, knowledge
 %%   reads:  validate, dehost, screen, consensus, classify, mutations, lineage, knowledge
+%%   tree:   tree, of the genomes of earlier jobs ({tree, [GenomesHash]}, params reference and method)
 %% Params: #{refs := ViralRefBundle, host := HostBundle, nextclade := DatasetBundle, min_depth := N}
 -module(gh_pipeline).
 -export([steps/1, tasks/3, genome/2]).
 
 -define(SARS_COV_2_REF, <<"NC_045512.2">>).
 
--spec steps(genome | reads) -> [atom()].
+-spec steps(genome | reads | tree) -> [atom()].
 steps(genome) -> [validate, classify, mutations, lineage, knowledge];
-steps(reads) -> [validate, dehost, screen, consensus, classify, mutations, lineage, knowledge].
+steps(reads) -> [validate, dehost, screen, consensus, classify, mutations, lineage, knowledge];
+steps(tree) -> [tree].
 
 %% The step's tasks; Done: Step => [Result] of the steps before it.
 -spec tasks(atom(), map(), #{atom() => [term()]}) -> [pq_task:task()].
+tasks(tree, #{inputs := [Genomes], params := #{refs := Refs, reference := Acc, method := M}}, _) ->
+    [{pq_task, gh_tree, {tree, Genomes, Refs, Acc, M}}];
 tasks(validate, #{inputs := Files}, _) ->
     [{pq_task, gh_validate, {validate, F}} || F <- Files];
 tasks(dehost, #{params := #{host := Host}}, #{validate := V}) ->

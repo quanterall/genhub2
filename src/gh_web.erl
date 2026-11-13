@@ -4,6 +4,9 @@
 %%   POST /api/jobs                  {"kind": "genome" | "reads", "inputs": [hash, ...]}: {"id"}
 %%   GET  /api/jobs                  the jobs, newest first
 %%   GET  /api/jobs/:id              a job with every step's results and provenance records
+%%   GET  /api/jobs/:id/:export      report.csv, report.pdf, job.json; for a tree job tree.svg, tree.nwk
+%%   POST /api/trees                 {"jobs": [id, ...], "method": "nj" | "fasttree"}: a tree job of their genomes
+%%   GET  /api/summary               the site's monitoring counts (gh_monitor)
 %%   GET  /api/files/:hash           a file from the store (a consensus genome, a tree)
 %%   GET  /ws                        WebSocket: every event of the site (gh_events), as JSON
 %% Phase A listens on this machine only; accounts, roles and MFA come with sharing (phase C).
@@ -20,6 +23,9 @@ start() ->
                          {"/api/uploads", gh_web_api, uploads},
                          {"/api/jobs", gh_web_api, jobs},
                          {"/api/jobs/:id", gh_web_api, job},
+                         {"/api/jobs/:id/:export", gh_web_api, export},
+                         {"/api/trees", gh_web_api, trees},
+                         {"/api/summary", gh_web_api, summary},
                          {"/api/files/:hash", gh_web_api, file},
                          {"/ws", gh_web_ws, []}]}]),
     cowboy:start_clear(gh_http, [{ip, Ip}, {port, Port}], #{env => #{dispatch => Dispatch}}).
