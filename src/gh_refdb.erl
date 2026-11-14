@@ -8,7 +8,20 @@
 %%   nextclade(Tag)      Nextclade's SARS-CoV-2 dataset at a pinned tag
 %%   genomes(Accs, Dir)  (for tests) the GenBank genomes with these accessions: a FASTA file and their taxonomy
 -module(gh_refdb).
--export([refseq_viral/0, host/1, nextclade/1, genomes/2, named/2, taxonomy_tsv/2]).
+-export([refseq_viral/0, viral_proteins/0, host/1, hostile/1, primers/2, kraken/1, nextclade/1,
+         nextclade_datasets/0, genomes/2, named/2, taxonomy_tsv/2]).
+
+%% Nextclade datasets for the viruses Bulgarian labs see most, besides SARS-CoV-2 (its tag pinned in nextclade/1)
+-define(NEXTCLADE_DATASETS,
+        ["nextstrain/flu/h1n1pdm/ha/MW626062", "nextstrain/flu/h1n1pdm/ha/CY121680", "nextstrain/flu/h3n2/ha/EPI1857216",
+         "nextstrain/flu/h3n2/ha/CY163680", "nextstrain/flu/vic/ha/KX058884", "nextstrain/flu/b/ha/KX058884",
+         "nextstrain/flu/yam/ha/JN993010", "nextstrain/rsv/a/EPI_ISL_412866", "nextstrain/rsv/b/EPI_ISL_1653999",
+         "nextstrain/mpox/all-clades", "nextstrain/orthoebolavirus/ebov", "nextstrain/measles/genome/WHO-2012",
+         "nextstrain/dengue/all", "nextstrain/hmpv/all-clades/NC_039199", "nextstrain/rubella/genome",
+         "nextstrain/mumps/genome", "nextstrain/wnv/all-lineages",
+         %% dengue: nextclade sort matches the serotype datasets of the community collection
+         "community/v-gen-lab/dengue/denv1", "community/v-gen-lab/dengue/denv2", "community/v-gen-lab/dengue/denv3",
+         "community/v-gen-lab/dengue/denv4"]).
 
 -define(K, "21").
 -define(S, "1000").
@@ -30,7 +43,7 @@ named(Name, Build) ->
 refseq_viral() ->
     named("refseq_viral", fun() ->
         Url = gh_ncbi:genome_download_url("10239", #{"refseq_only" => "true", "complete_only" => "true"}),
-        #{hash := Zip} = gh_fetch:run({fetch_public, Url}, #{home => node()}),
+        Zip = gh_fetch:cached(Url),
         gh_store:with_tmp(fun(Dir) ->
             [Fasta, Reports, Tax, Sketch] = [filename:join(Dir, F) || F <- ["refs.fasta", "reports.jsonl",
                                                                              "taxonomy.tsv", "refs.sketch"]],
@@ -40,6 +53,113 @@ refseq_viral() ->
             _ = gh_tool:gh2k_must(["sketch", ?K, ?S, Fasta, Sketch]),
             gh_refs:bundle(#{"refs.fasta" => Fasta, "refs.fasta.fai" => Fasta ++ ".fai", "refs.sketch" => Sketch,
                              "taxonomy.tsv" => Tax, "ncbi_dataset.zip" => gh_store:path(Zip)})
+        end)
+    end).
+
+%% Every protein of the complete RefSeq viral genomes, as a DIAMOND database (proteins.dmnd), and each protein's
+%% taxonomy (proteins.tsv: protein, taxid, species, genus, family, organism), from its organism's entry in the
+%% RefSeq bundle's taxonomy.
+-spec viral_proteins() -> gh_store:hash().
+viral_proteins() ->
+    named("refseq_viral_proteins", fun() ->
+        Refs = refseq_viral(),
+        ByOrganism = maps:from_list([{maps:get(organism, T), T} || T <- maps:values(gh_refs:taxonomy(Refs, node()))]),
+        Url = gh_ncbi:genome_download_url("10239", #{"refseq_only" => "true", "complete_only" => "true"}),
+        PUrl = string:replace(Url, "include_sequence=GENOME", "include_sequence=PROTEIN"),
+        Zip = gh_fetch:cached(lists:flatten(PUrl)),
+        gh_store:with_tmp(fun(Dir) ->
+            [Faa, Tsv, Db] = [filename:join(Dir, F) || F <- ["proteins.faa", "proteins.tsv", "proteins"]],
+            _ = gh_tool:bash("unzip -p \"$1\" ncbi_dataset/data/protein.faa > \"$2\"", [gh_store:path(Zip), Faa]),
+            {ok, B0} = file:read_file(Faa),
+            %% For genes without a protein record (e.g. the rabies and Zaire ebolavirus RefSeq genomes), NCBI's
+            %% protein file holds the coding sequence itself (a header "<genome>:<range> CDS: ..."): those are
+            %% translated here (standard code), and listed in translated.txt
+            Recs = [R || R <- binary:split(B0, <<"\n>">>, [global]), R =/= <<>>],
+            {Prot, Nuc} = lists:partition(fun protein_letters/1, Recs),
+            Fix = fun(R) -> case R of <<">", X/binary>> -> X; X -> X end end,
+            B = iolist_to_binary([[$>, Fix(R), $\n] || R <- Prot]
+                                 ++ [begin
+                                         [H | Ls] = binary:split(Fix(R), <<"\n">>, [global]),
+                                         [$>, H, $\n, translate(iolist_to_binary(Ls)), $\n]
+                                     end || R <- Nuc]),
+            ok = file:write_file(Faa, B),
+            ok = file:write_file(filename:join(Dir, "translated.txt"),
+                                 [[hd(binary:split(Fix(R), <<"\n">>)), $\n] || R <- Nuc]),
+            Rows = [begin
+                        [Acc | _] = binary:split(H, [<<" ">>]),
+                        Org = case re:run(H, "\\[organism=([^\\]]*)\\]", [{capture, [1], binary}]) of
+                                  {match, [O]} -> O;
+                                  nomatch -> <<>>
+                              end,
+                        T = maps:get(Org, ByOrganism, #{taxid => 0, species => <<>>, genus => <<>>, family => <<>>}),
+                        [Acc, $\t, integer_to_binary(maps:get(taxid, T)), $\t, maps:get(species, T), $\t,
+                         maps:get(genus, T), $\t, maps:get(family, T), $\t, Org, $\n]
+                    end || <<">", H/binary>> <- binary:split(B, <<"\n">>, [global])],
+            ok = file:write_file(Tsv, [<<"#accession\ttaxid\tspecies\tgenus\tfamily\torganism\n">> | Rows]),
+            _ = gh_tool:bash("diamond makedb --quiet --in \"$1\" -d \"$2\"", [Faa, Db]),
+            gh_refs:bundle(#{"proteins.dmnd" => Db ++ ".dmnd", "taxonomy.tsv" => Tsv,
+                             "translated.txt" => filename:join(Dir, "translated.txt")})
+        end)
+    end).
+
+%% A coding sequence translated with the standard genetic code; a final stop is left off, other stops and codons with
+%% other letters than A, C, G, T become X.
+translate(Seq0) ->
+    Seq = binary:replace(string:uppercase(Seq0), [<<"U">>, <<"\r">>], <<>>, [global]),
+    Aa = << <<(codon(C))>> || <<C:3/binary>> <= Seq >>,
+    case Aa of
+        <<>> -> <<>>;
+        _ -> case binary:last(Aa) of
+                 $* -> binary:replace(binary:part(Aa, 0, byte_size(Aa) - 1), <<"*">>, <<"X">>, [global]);
+                 _ -> binary:replace(Aa, <<"*">>, <<"X">>, [global])
+             end
+    end.
+
+codon(C) ->
+    Bases = "TCAG",
+    Table = <<"FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG">>,
+    case [string:chr(Bases, B) || <<B>> <= C] of
+        [I, J, K] when I > 0, J > 0, K > 0 -> binary:at(Table, (I - 1) * 16 + (J - 1) * 4 + (K - 1));
+        _ -> $X
+    end.
+
+%% a protein record with at least one letter that is not also a nucleotide letter
+protein_letters(R) ->
+    [_ | Lines] = binary:split(R, <<"\n">>, [global]),
+    Seq = iolist_to_binary(Lines),
+    Seq =/= <<>> andalso binary:match(string:uppercase(Seq), [<<"A">>, <<"C">>, <<"G">>, <<"T">>, <<"U">>, <<"N">>, <<"\r">>]) =/= nomatch
+        andalso re:run(Seq, "[^ACGTUNacgtun\r]") =/= nomatch.
+
+%% Hostile's index (Constantinides et al. 2023, doi:10.1093/bioinformatics/btad728) from the directory
+%% "hostile index fetch --minimap2" filled: Index.fa.gz and Index.mmi, kept under hostile/ as Hostile expects
+-spec hostile(file:filename()) -> gh_store:hash().
+hostile(Dir) ->
+    named("hostile", fun() ->
+        gh_refs:bundle(maps:from_list([{"hostile/" ++ filename:basename(F), F}
+                                       || F <- filelib:wildcard(filename:join(Dir, "*"))]))
+    end).
+
+%% A primer scheme (BED with the primers' sequences) for amplicon sequencing, e.g. ARTIC's
+-spec primers(string(), string()) -> gh_store:hash().
+primers(Name, Url) ->
+    named("primers-" ++ Name, fun() ->
+        gh_store:with_tmp(fun(Dir) ->
+            F = filename:join(Dir, "primers.bed"),
+            ok = file:write_file(F, gh_fetch:get(Url)),
+            gh_refs:bundle(#{"primers.bed" => F})
+        end)
+    end).
+
+%% A prebuilt Kraken 2 database with Bracken's k-mer distributions (Lu et al. 2022, doi:10.1038/s41596-022-00738-y),
+%% unpacked under kraken/
+-spec kraken(string()) -> gh_store:hash().
+kraken(Url) ->
+    named("kraken-" ++ filename:basename(Url, ".tar.gz"), fun() ->
+        Tgz = gh_fetch:cached(Url),
+        gh_store:with_tmp(fun(Dir) ->
+            _ = gh_tool:bash("tar -xzf \"$1\" -C \"$2\"", [gh_store:path(Tgz), Dir]),
+            Files = [F || F <- filelib:wildcard(filename:join(Dir, "**")), filelib:is_regular(F)],
+            gh_refs:bundle(maps:from_list([{"kraken/" ++ filename:basename(F), F} || F <- Files]))
         end)
     end).
 
@@ -58,6 +178,38 @@ nextclade(Tag) ->
             gh_refs:bundle(#{"dataset.zip" => Zip})
         end)
     end).
+
+%% Every dataset of ?NEXTCLADE_DATASETS at its latest tag on the day the bundle is built, SARS-CoV-2's at the pinned
+%% tag, and Nextclade's minimizer index, by which nextclade sort sends each genome to its dataset. datasets.tsv
+%% records each dataset's name, tag and file, so the bundle says exactly what it holds.
+-spec nextclade_datasets() -> gh_store:hash().
+nextclade_datasets() ->
+    named("nextclade-datasets-v2", fun() ->
+        Sars = nextclade("2026-10-28--15-04-26Z"),
+        gh_store:with_tmp(fun(Dir) ->
+            Index = filename:join(Dir, "minimizer_index.json"),
+            ok = file:write_file(Index, gh_fetch:get("https://data.clades.nextstrain.org/v3/minimizer_index.json")),
+            SarsZip = gh_refs:file(Sars, "dataset.zip", node()),
+            Got = [{"nextstrain/sars-cov-2/wuhan-hu-1/orfs", SarsZip}
+                   | [begin
+                          Zip = filename:join(Dir, file_name(N)),
+                          _ = gh_tool:bash("nextclade dataset get --name \"$1\" --output-zip \"$2\" >/dev/null 2>&1", [N, Zip]),
+                          filelib:file_size(Zip) > 0 orelse error({empty_download, nextclade, N}),
+                          {N, Zip}
+                      end || N <- ?NEXTCLADE_DATASETS]],
+            Rows = [[N, $\t, tag(Z), $\t, file_name(N), $\n] || {N, Z} <- Got],
+            Tsv = filename:join(Dir, "datasets.tsv"),
+            ok = file:write_file(Tsv, ["#name\ttag\tfile\n" | Rows]),
+            gh_refs:bundle(maps:from_list([{"minimizer_index.json", Index}, {"datasets.tsv", Tsv}
+                                           | [{file_name(N), Z} || {N, Z} <- Got]]))
+        end)
+    end).
+
+file_name(Name) -> lists:flatten(string:replace(Name, "/", "__", all)) ++ ".zip".
+
+tag(Zip) ->
+    J = json:decode(gh_tool:bash("unzip -p \"$1\" pathogen.json", [Zip])),
+    maps:get(<<"tag">>, maps:get(<<"version">>, J, #{}), <<"unknown">>).
 
 %% The genomes with these accessions, downloaded 100 at a time, into Dir: {FASTA, taxonomy TSV}.
 -spec genomes([binary()], file:filename()) -> {file:filename(), file:filename()}.

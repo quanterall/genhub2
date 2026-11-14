@@ -30,7 +30,7 @@ csv_test() ->
     [Header, Row, <<>>] = binary:split(iolist_to_binary(gh_export:csv(job())), <<"\r\n">>, [global]),
     ?assertMatch(<<"sequence,species,", _/binary>>, Header),
     ?assertEqual(<<"s1,Betacoronavirus pandemicum,Betacoronavirus,Coronaviridae,\"SARS-CoV-2, \"\"Wuhan\"\"\",0.999,high,"
-                   "NC_045512.2,B,19A,1,0,0,0">>, Row).
+                   "minhash,NC_045512.2,B,19A,1,0,0,0">>, Row).
 
 pdf_test() ->
     P = gh_export:pdf(job()),

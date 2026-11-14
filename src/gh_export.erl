@@ -8,7 +8,7 @@
 
 -spec csv(map()) -> iodata().
 csv(Job) ->
-    Header = ["sequence", "species", "genus", "family", "organism", "identity", "confidence", "nearest_reference",
+    Header = ["sequence", "species", "genus", "family", "organism", "identity", "confidence", "method", "nearest_reference",
               "pango", "clade", "substitutions", "insertions", "deletions", "missing"],
     [line(Header) | [line(row(R)) || R <- rows(Job)]].
 
@@ -23,7 +23,7 @@ field(F) ->
     end.
 
 row(R) ->
-    [maps:get(K, R, <<>>) || K <- [query, species, genus, family, organism, ani, confidence, ref, pango, clade,
+    [maps:get(K, R, <<>>) || K <- [query, species, genus, family, organism, ani, confidence, method, ref, pango, clade,
                                     substitutions, insertions, deletions, missing]].
 
 %% per sequence: the call, the lineage and the mutation counts of a job (gh_jobs:view/1); used by the monitoring too
@@ -35,15 +35,24 @@ rows(#{steps := Steps}) ->
                     end
           end,
     Lin = maps:from_list([{maps:get(query, L), L} || L <- Res(lineage)]),
+    Prot = maps:from_list([{maps:get(query, P), maps:get(call, P)} || P <- Res(protein),
+                           maps:get(confidence, maps:get(call, P)) =/= unclassified]),
     Mut = maps:from_list([{maps:get(query, M), M} || M <- Res(mutations)]),
     [begin
          Q = maps:get(<<"query">>, C),
-         Call = maps:get(<<"call">>, C),
+         Call = case maps:get(Q, Prot, none) of
+                    none -> (maps:get(<<"call">>, C))#{<<"method">> => <<"minhash">>};
+                    P -> #{<<"species">> => maps:get(species, P), <<"genus">> => maps:get(genus, P),
+                           <<"family">> => maps:get(family, P), <<"organism">> => maps:get(organism, P),
+                           <<"ani">> => maps:get(aa_identity, P), <<"confidence">> => atom_to_binary(maps:get(confidence, P)),
+                           <<"ref">> => maps:get(protein, P), <<"method">> => <<"protein">>}
+                end,
          L = maps:get(Q, Lin, #{}),
          M = maps:get(Q, Mut, #{}),
          #{query => Q, species => maps:get(<<"species">>, Call, <<>>), genus => maps:get(<<"genus">>, Call, <<>>),
            family => maps:get(<<"family">>, Call, <<>>), organism => maps:get(<<"organism">>, Call, <<>>),
            ani => maps:get(<<"ani">>, Call, <<>>), confidence => maps:get(<<"confidence">>, Call),
+           method => maps:get(<<"method">>, Call),
            ref => maps:get(<<"ref">>, Call, <<>>), pango => maps:get(pango, L, <<>>), clade => maps:get(clade, L, <<>>),
            substitutions => length(maps:get(substitutions, M, [])), insertions => length(maps:get(insertions, M, [])),
            deletions => length(maps:get(deletions, M, [])), missing => maps:get(missing, M, <<>>)}
@@ -65,7 +74,8 @@ pdf(#{id := Id, kind := Kind, state := State} = Job) ->
              {10, ""},
              {12, "Classification"}]
         ++ lists:append([[{10, [maps:get(query, R), ": ", maps:get(species, R), " (", maps:get(family, R),
-                               "), identity ", fmt(maps:get(ani, R)), ", confidence ", maps:get(confidence, R)]},
+                               "), identity ", fmt(maps:get(ani, R)), ", confidence ", maps:get(confidence, R),
+                               " (", maps:get(method, R), ")"]},
                           {10, ["    nearest reference ", maps:get(ref, R), " ", maps:get(organism, R)]},
                           {10, ["    lineage ", maps:get(pango, R), " ", maps:get(clade, R), "; substitutions ",
                                 integer_to_list(maps:get(substitutions, R)), ", insertions ",

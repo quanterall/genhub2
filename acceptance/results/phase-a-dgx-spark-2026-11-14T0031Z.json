@@ -2,7 +2,8 @@
   "bundles": {
     "host": "9a2eee446c59c423c433670c9e0e9f5994f74622dcf707bcc38cadd9f12f02f0",
     "nextclade": "39b70eee8919fba4b3cf261e46124954d58128f59aef1d5260d246c3d276e8ef",
-    "refseq_viral": "29e42c18e59a4409bad717596cc00839fed889a0d2944a65d0caab7bf45bbd32"
+    "refseq_viral": "29e42c18e59a4409bad717596cc00839fed889a0d2944a65d0caab7bf45bbd32",
+    "refseq_viral_proteins": "b8bef48c1e0dfd209b3628149fda268e890af9a2d3e9a1583b513cb9dc36706e"
   },
   "checks": [
     {
@@ -73,26 +74,41 @@
     {
       "name": "target: 10 MB processed in < 5 s",
       "ok": true,
-      "value": "4.546498"
+      "value": "4.342345"
     },
     {
       "name": "target: 1,000 sequences classified in < 60 s",
       "ok": true,
-      "value": "0.68698"
+      "value": "0.676989"
     },
     {
       "name": "target: tree of 1,000 in < 300 s, all leaves (neighbour-joining)",
       "ok": true,
-      "value": "#{seconds => 3.968246,sequences => 1001,leaves => 1001,newick => <<\"b06e5e9fd95a7a5161ac4cf488f937df7f1e223c5591ad5bc63c39a8623b93cb\">>}"
+      "value": "#{seconds => 4.38736,sequences => 1001,leaves => 1001,newick => <<\"b06e5e9fd95a7a5161ac4cf488f937df7f1e223c5591ad5bc63c39a8623b93cb\">>}"
     },
     {
       "name": "maximum-likelihood tree of 1,000 (FastTree): all leaves; time measured",
       "ok": true,
-      "value": "#{seconds => 703.177713,sequences => 1001,leaves => 1001,newick => <<\"4c441ab1f569be37cd1b18abcdaa33bd61e019df99fa331edfa39747d90a39c5\">>}"
+      "value": "#{seconds => 705.177115,sequences => 1001,leaves => 1001,newick => <<\"4c441ab1f569be37cd1b18abcdaa33bd61e019df99fa331edfa39747d90a39c5\">>}"
+    },
+    {
+      "name": "held-out: proteins + MinHash right for at least as many species as MinHash alone",
+      "ok": true,
+      "value": "#{total => 593,right => 564} -> #{total => 593,right => 572}"
+    },
+    {
+      "name": "held-out: species of MinHash's low-confidence calls, MinHash -> combined (measured)",
+      "ok": true,
+      "value": "#{total => 132,right => 108} -> #{total => 132,right => 115}"
+    },
+    {
+      "name": "held-out: MinHash alone unchanged by the protein step",
+      "ok": true,
+      "value": "#{total => 593,right => 564}"
     }
   ],
   "cpus": 10,
-  "date": "2026-11-13T20:30:51Z",
+  "date": "2026-11-14T00:44:31Z",
   "example_genome": {
     "call": {
       "ani": 1.0,
@@ -105,7 +121,7 @@
       "taxid": 2697049
     },
     "clade": "19A",
-    "job": "job-mwff5gu8-24i",
+    "job": "job-mwfo7hnl-2iq",
     "knowledge": [
       {
         "information_only": true,
@@ -143,19 +159,20 @@
         "module": "gh_classify",
         "node": "gh_acceptance@genhub2",
         "pq_version": "1.4.0",
-        "seconds": 0.863095,
-        "started": 1794601086858,
+        "seconds": 0.604532,
+        "started": 1794616297769,
         "task": "e1be290ac8feaf1e9c8fb42f071558a6b83c4cc973078ab7f7e29e0c47ae37ea"
       }
     ],
-    "seconds": 1.41451,
+    "seconds": 1.111541,
     "state": "done",
     "step_seconds": {
-      "classify": 0.863193,
-      "knowledge": 0.002757,
-      "lineage": 0.413648,
-      "mutations": 0.033109,
-      "validate": 0.007576
+      "classify": 0.604619,
+      "knowledge": 0.001095,
+      "lineage": 0.406006,
+      "mutations": 0.031072,
+      "protein": 1.0e-6,
+      "validate": 0.004951
     },
     "substitutions": 0
   },
@@ -176,6 +193,7 @@
       "length": 29867,
       "mean_depth": 200.61,
       "n_fraction": 0.008571332909230924,
+      "primers_trimmed": false,
       "reference": "NC_045512.2"
     },
     "consensus_vs_source": {
@@ -186,7 +204,7 @@
       "substitutions": 0
     },
     "human_kept": 0,
-    "job": "job-mwff5i58-2de",
+    "job": "job-mwfo7ipn-2te",
     "pairs_in": 40000,
     "pairs_kept": 20000,
     "pango": "BQ.1.1",
@@ -202,7 +220,7 @@
       "species": "Betacoronavirus pandemicum",
       "taxid": 2697049
     },
-    "seconds": 49.389977,
+    "seconds": 21.916978,
     "simulated": {
       "genome_pairs": 20000,
       "spike_pairs": 20000
@@ -211,14 +229,16 @@
     "source_pango": "BQ.1.1",
     "state": "done",
     "step_seconds": {
-      "classify": 0.439077,
-      "consensus": 0.423291,
-      "dehost": 46.836819,
-      "knowledge": 5.1e-5,
-      "lineage": 0.458071,
-      "mutations": 0.031495,
-      "screen": 1.018209,
-      "validate": 0.15064
+      "classify": 0.401538,
+      "consensus": 0.400307,
+      "dehost": 19.721556,
+      "knowledge": 4.8e-5,
+      "kraken": 1.0e-6,
+      "lineage": 0.428234,
+      "mutations": 0.031166,
+      "protein": 1.0e-6,
+      "screen": 0.721222,
+      "validate": 0.145212
     },
     "viral_kept": 20000
   },
@@ -1040,12 +1060,1046 @@
       }
     ],
     "requested": 600,
-    "seconds": 0.551017,
+    "seconds": 0.493602,
     "species": {
       "accuracy": 0.9510961214165261,
       "right": 564,
       "total": 593
     }
+  },
+  "held_out_protein": {
+    "all": {
+      "combined": {
+        "family": {
+          "right": 593,
+          "total": 593
+        },
+        "genus": {
+          "right": 573,
+          "total": 573
+        },
+        "species": {
+          "right": 572,
+          "total": 593
+        }
+      },
+      "minhash": {
+        "family": {
+          "right": 591,
+          "total": 593
+        },
+        "genus": {
+          "right": 572,
+          "total": 573
+        },
+        "species": {
+          "right": 564,
+          "total": 593
+        }
+      },
+      "protein": {
+        "family": {
+          "right": 586,
+          "total": 593
+        },
+        "genus": {
+          "right": 566,
+          "total": 573
+        },
+        "species": {
+          "right": 547,
+          "total": 593
+        }
+      }
+    },
+    "by_minhash_confidence": {
+      "high": {
+        "combined": {
+          "family": {
+            "right": 275,
+            "total": 275
+          },
+          "genus": {
+            "right": 273,
+            "total": 273
+          },
+          "species": {
+            "right": 274,
+            "total": 275
+          }
+        },
+        "minhash": {
+          "family": {
+            "right": 275,
+            "total": 275
+          },
+          "genus": {
+            "right": 273,
+            "total": 273
+          },
+          "species": {
+            "right": 274,
+            "total": 275
+          }
+        },
+        "protein": {
+          "family": {
+            "right": 275,
+            "total": 275
+          },
+          "genus": {
+            "right": 273,
+            "total": 273
+          },
+          "species": {
+            "right": 255,
+            "total": 275
+          }
+        }
+      },
+      "low": {
+        "combined": {
+          "family": {
+            "right": 132,
+            "total": 132
+          },
+          "genus": {
+            "right": 116,
+            "total": 116
+          },
+          "species": {
+            "right": 115,
+            "total": 132
+          }
+        },
+        "minhash": {
+          "family": {
+            "right": 131,
+            "total": 132
+          },
+          "genus": {
+            "right": 116,
+            "total": 116
+          },
+          "species": {
+            "right": 108,
+            "total": 132
+          }
+        },
+        "protein": {
+          "family": {
+            "right": 125,
+            "total": 132
+          },
+          "genus": {
+            "right": 109,
+            "total": 116
+          },
+          "species": {
+            "right": 108,
+            "total": 132
+          }
+        }
+      },
+      "medium": {
+        "combined": {
+          "family": {
+            "right": 185,
+            "total": 185
+          },
+          "genus": {
+            "right": 183,
+            "total": 183
+          },
+          "species": {
+            "right": 182,
+            "total": 185
+          }
+        },
+        "minhash": {
+          "family": {
+            "right": 185,
+            "total": 185
+          },
+          "genus": {
+            "right": 183,
+            "total": 183
+          },
+          "species": {
+            "right": 182,
+            "total": 185
+          }
+        },
+        "protein": {
+          "family": {
+            "right": 185,
+            "total": 185
+          },
+          "genus": {
+            "right": 183,
+            "total": 183
+          },
+          "species": {
+            "right": 183,
+            "total": 185
+          }
+        }
+      },
+      "unclassified": {
+        "combined": {
+          "family": {
+            "right": 1,
+            "total": 1
+          },
+          "genus": {
+            "right": 1,
+            "total": 1
+          },
+          "species": {
+            "right": 1,
+            "total": 1
+          }
+        },
+        "minhash": {
+          "family": {
+            "right": 0,
+            "total": 1
+          },
+          "genus": {
+            "right": 0,
+            "total": 1
+          },
+          "species": {
+            "right": 0,
+            "total": 1
+          }
+        },
+        "protein": {
+          "family": {
+            "right": 1,
+            "total": 1
+          },
+          "genus": {
+            "right": 1,
+            "total": 1
+          },
+          "species": {
+            "right": 1,
+            "total": 1
+          }
+        }
+      }
+    },
+    "changed": [
+      {
+        "minhash": {
+          "family": "none",
+          "genus": "none",
+          "species": "none"
+        },
+        "protein": {
+          "aa_identity": 0.456,
+          "family": "Pneumoviridae",
+          "genus": "Metapneumovirus",
+          "species": "Metapneumovirus hominis"
+        },
+        "query": "GQ888739.1",
+        "truth": {
+          "family": "Pneumoviridae",
+          "genus": "Metapneumovirus",
+          "species": "Metapneumovirus hominis"
+        },
+        "used": "protein",
+        "virus": "Human metapneumovirus"
+      },
+      {
+        "minhash": {
+          "family": "Paramyxoviridae",
+          "genus": "Morbillivirus",
+          "species": "Morbillivirus hominis"
+        },
+        "protein": {},
+        "query": "LC830465.1",
+        "truth": {
+          "family": "Paramyxoviridae",
+          "genus": "Morbillivirus",
+          "species": "Morbillivirus hominis"
+        },
+        "used": "minhash",
+        "virus": "Measles virus"
+      },
+      {
+        "minhash": {
+          "family": "Paramyxoviridae",
+          "genus": "Morbillivirus",
+          "species": "Morbillivirus hominis"
+        },
+        "protein": {},
+        "query": "OP660930.1",
+        "truth": {
+          "family": "Paramyxoviridae",
+          "genus": "Morbillivirus",
+          "species": "Morbillivirus hominis"
+        },
+        "used": "minhash",
+        "virus": "Measles virus"
+      },
+      {
+        "minhash": {
+          "family": "Paramyxoviridae",
+          "genus": "Morbillivirus",
+          "species": "Morbillivirus hominis"
+        },
+        "protein": {},
+        "query": "OP660980.1",
+        "truth": {
+          "family": "Paramyxoviridae",
+          "genus": "Morbillivirus",
+          "species": "Morbillivirus hominis"
+        },
+        "used": "minhash",
+        "virus": "Measles virus"
+      },
+      {
+        "minhash": {
+          "family": "Paramyxoviridae",
+          "genus": "Morbillivirus",
+          "species": "Morbillivirus hominis"
+        },
+        "protein": {},
+        "query": "OP661030.1",
+        "truth": {
+          "family": "Paramyxoviridae",
+          "genus": "Morbillivirus",
+          "species": "Morbillivirus hominis"
+        },
+        "used": "minhash",
+        "virus": "Measles virus"
+      },
+      {
+        "minhash": {
+          "family": "Paramyxoviridae",
+          "genus": "Morbillivirus",
+          "species": "Morbillivirus hominis"
+        },
+        "protein": {},
+        "query": "OP661080.1",
+        "truth": {
+          "family": "Paramyxoviridae",
+          "genus": "Morbillivirus",
+          "species": "Morbillivirus hominis"
+        },
+        "used": "minhash",
+        "virus": "Measles virus"
+      },
+      {
+        "minhash": {
+          "family": "Paramyxoviridae",
+          "genus": "Morbillivirus",
+          "species": "Morbillivirus hominis"
+        },
+        "protein": {},
+        "query": "PP693927.1",
+        "truth": {
+          "family": "Paramyxoviridae",
+          "genus": "Morbillivirus",
+          "species": "Morbillivirus hominis"
+        },
+        "used": "minhash",
+        "virus": "Measles virus"
+      },
+      {
+        "minhash": {
+          "family": "Paramyxoviridae",
+          "genus": "Morbillivirus",
+          "species": "Morbillivirus hominis"
+        },
+        "protein": {},
+        "query": "PZ137877.1",
+        "truth": {
+          "family": "Paramyxoviridae",
+          "genus": "Morbillivirus",
+          "species": "Morbillivirus hominis"
+        },
+        "used": "minhash",
+        "virus": "Measles virus"
+      },
+      {
+        "minhash": {
+          "family": "Vilyaviridae",
+          "genus": "Palantirivirus",
+          "species": "Palantirivirus auledhrim"
+        },
+        "protein": {
+          "aa_identity": 0.8323912826899128,
+          "family": "Hepeviridae",
+          "genus": "Paslahepevirus",
+          "species": "Paslahepevirus balayani"
+        },
+        "query": "MF444123.1",
+        "truth": {
+          "family": "Hepeviridae",
+          "genus": "",
+          "species": "Hepatitis E virus"
+        },
+        "used": "protein",
+        "virus": "Hepatitis E virus"
+      },
+      {
+        "minhash": {
+          "family": "Hepeviridae",
+          "genus": "",
+          "species": "Hepatitis E virus"
+        },
+        "protein": {
+          "aa_identity": 0.8764708423326133,
+          "family": "Hepeviridae",
+          "genus": "Paslahepevirus",
+          "species": "Paslahepevirus balayani"
+        },
+        "query": "MW837255.1",
+        "truth": {
+          "family": "Hepeviridae",
+          "genus": "",
+          "species": "Hepatitis E virus"
+        },
+        "used": "protein",
+        "virus": "Hepatitis E virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Spanish goat encephalitis virus"
+        },
+        "protein": {
+          "aa_identity": 0.9359999999999999,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus encephalitidis"
+        },
+        "query": "HQ201303.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus encephalitidis"
+        },
+        "used": "protein",
+        "virus": "Tick-borne encephalitis virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Spanish goat encephalitis virus"
+        },
+        "protein": {
+          "aa_identity": 0.935,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus encephalitidis"
+        },
+        "query": "KP844724.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus encephalitidis"
+        },
+        "used": "protein",
+        "virus": "Tick-borne encephalitis virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Spanish goat encephalitis virus"
+        },
+        "protein": {
+          "aa_identity": 0.9359999999999999,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus encephalitidis"
+        },
+        "query": "KU761570.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus encephalitidis"
+        },
+        "used": "protein",
+        "virus": "Tick-borne encephalitis virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.809,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "LC318700.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Spanish goat encephalitis virus"
+        },
+        "protein": {
+          "aa_identity": 0.934,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus encephalitidis"
+        },
+        "query": "LC440459.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus encephalitidis"
+        },
+        "used": "minhash",
+        "virus": "Tick-borne encephalitis virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.807,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "MF175838.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.81,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "MH170229.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Spanish goat encephalitis virus"
+        },
+        "protein": {
+          "aa_identity": 0.945,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus encephalitidis"
+        },
+        "query": "MH645617.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus encephalitidis"
+        },
+        "used": "protein",
+        "virus": "Tick-borne encephalitis virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.809,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "MH939153.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Nairoviridae",
+          "genus": "Orthonairovirus",
+          "species": "Orthonairovirus haemorrhagiae"
+        },
+        "protein": {
+          "aa_identity": 0.763,
+          "family": "Nairoviridae",
+          "genus": "Orthonairovirus",
+          "species": "Orthonairovirus parahaemorrhagiae"
+        },
+        "query": "MN866206.1",
+        "truth": {
+          "family": "Nairoviridae",
+          "genus": "Orthonairovirus",
+          "species": "Orthonairovirus haemorrhagiae"
+        },
+        "used": "protein",
+        "virus": "Crimean-Congo haemorrhagic fever virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.807,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "MW142224.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.809,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "OL741623.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.81,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "OP009523.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.81,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "OP609811.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.809,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "OQ689696.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.807,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "OX442288.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.809,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "OZ309015.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.809,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "OZ309975.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.809,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "OZ310025.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.8079999999999999,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "OZ310076.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.809,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "OZ310126.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.809,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "OZ310176.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.809,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "OZ310228.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.8029999999999999,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "PP104339.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "protein": {
+          "aa_identity": 0.8079999999999999,
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus yaoundeense"
+        },
+        "query": "PV021469.1",
+        "truth": {
+          "family": "Flaviviridae",
+          "genus": "Orthoflavivirus",
+          "species": "Orthoflavivirus nilense"
+        },
+        "used": "minhash",
+        "virus": "West Nile virus"
+      },
+      {
+        "minhash": {
+          "family": "Sedoreoviridae",
+          "genus": "Rotavirus",
+          "species": "Rotavirus deltagastroenteritidis"
+        },
+        "protein": {
+          "aa_identity": 0.375,
+          "family": "Sedoreoviridae",
+          "genus": "Rotavirus",
+          "species": "Rotavirus alphagastroenteritidis"
+        },
+        "query": "LC810925.1",
+        "truth": {
+          "family": "Sedoreoviridae",
+          "genus": "Rotavirus",
+          "species": "Rotavirus alphagastroenteritidis"
+        },
+        "used": "protein",
+        "virus": "Rotavirus A"
+      },
+      {
+        "minhash": {
+          "family": "Sedoreoviridae",
+          "genus": "Rotavirus",
+          "species": "Rotavirus deltagastroenteritidis"
+        },
+        "protein": {
+          "aa_identity": 0.363,
+          "family": "Sedoreoviridae",
+          "genus": "Rotavirus",
+          "species": "Rotavirus alphagastroenteritidis"
+        },
+        "query": "LC909798.1",
+        "truth": {
+          "family": "Sedoreoviridae",
+          "genus": "Rotavirus",
+          "species": "Rotavirus alphagastroenteritidis"
+        },
+        "used": "protein",
+        "virus": "Rotavirus A"
+      },
+      {
+        "minhash": {
+          "family": "Sedoreoviridae",
+          "genus": "Rotavirus",
+          "species": "Bat rotavirus"
+        },
+        "protein": {
+          "aa_identity": 0.9440000000000001,
+          "family": "Sedoreoviridae",
+          "genus": "Rotavirus",
+          "species": "Rotavirus alphagastroenteritidis"
+        },
+        "query": "LC909848.1",
+        "truth": {
+          "family": "Sedoreoviridae",
+          "genus": "Rotavirus",
+          "species": "Rotavirus alphagastroenteritidis"
+        },
+        "used": "protein",
+        "virus": "Rotavirus A"
+      },
+      {
+        "minhash": {
+          "family": "Sedoreoviridae",
+          "genus": "Rotavirus",
+          "species": "Rotavirus deltagastroenteritidis"
+        },
+        "protein": {
+          "aa_identity": 0.382,
+          "family": "Sedoreoviridae",
+          "genus": "Rotavirus",
+          "species": "Rotavirus alphagastroenteritidis"
+        },
+        "query": "PP848637.1",
+        "truth": {
+          "family": "Sedoreoviridae",
+          "genus": "Rotavirus",
+          "species": "Rotavirus alphagastroenteritidis"
+        },
+        "used": "protein",
+        "virus": "Rotavirus A"
+      },
+      {
+        "minhash": {
+          "family": "Rhabdoviridae",
+          "genus": "Lyssavirus",
+          "species": "Lyssavirus phala"
+        },
+        "protein": {
+          "aa_identity": 0.9157919367588933,
+          "family": "Rhabdoviridae",
+          "genus": "Lyssavirus",
+          "species": "Lyssavirus rabies"
+        },
+        "query": "PQ379849.1",
+        "truth": {
+          "family": "Rhabdoviridae",
+          "genus": "Lyssavirus",
+          "species": "Lyssavirus rabies"
+        },
+        "used": "protein",
+        "virus": "Rabies virus"
+      }
+    ],
+    "genomes": 593,
+    "protein_seconds": 34.330166,
+    "protein_used": 126
   },
   "host": "genhub2",
   "nextclade_dataset": "2026-10-28--15-04-26Z",
@@ -2188,9 +3242,9 @@
       "XDP": 1,
       "XDV.1": 2
     },
-    "mutations_seconds": 1.530742,
+    "mutations_seconds": 1.141896,
     "nextclade_good": 843,
-    "nextclade_seconds": 5.072187,
+    "nextclade_seconds": 3.819252,
     "per_genome": {
       "LC772113.1": {
         "clade": "22B",
@@ -8194,37 +9248,38 @@
       }
     }
   },
-  "seconds": 803.964,
+  "seconds": 803.502,
   "targets": {
     "classify_1000": {
-      "seconds": 0.68698,
+      "seconds": 0.676989,
       "sequences": 1000,
       "species": { "Betacoronavirus pandemicum": 1000 }
     },
     "ten_mb": {
       "bytes": 9986961,
       "genomes": 327,
-      "seconds": 4.546498,
+      "seconds": 4.342345,
       "state": "done",
       "step_seconds": {
-        "classify": 0.499944,
-        "knowledge": 2.16e-4,
-        "lineage": 2.799753,
-        "mutations": 1.037377,
-        "validate": 0.173918
+        "classify": 0.43305,
+        "knowledge": 1.64e-4,
+        "lineage": 2.714605,
+        "mutations": 0.971889,
+        "protein": 2.6e-5,
+        "validate": 0.154262
       }
     },
     "trees": {
       "fasttree": {
         "leaves": 1001,
         "newick": "4c441ab1f569be37cd1b18abcdaa33bd61e019df99fa331edfa39747d90a39c5",
-        "seconds": 703.177713,
+        "seconds": 705.177115,
         "sequences": 1001
       },
       "nj": {
         "leaves": 1001,
         "newick": "b06e5e9fd95a7a5161ac4cf488f937df7f1e223c5591ad5bc63c39a8623b93cb",
-        "seconds": 3.968246,
+        "seconds": 4.38736,
         "sequences": 1001
       }
     }

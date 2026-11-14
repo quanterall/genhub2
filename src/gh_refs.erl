@@ -46,6 +46,7 @@ dir(Bundle, Home) ->
     end.
 
 link(Src, Dst) ->
+    ok = filelib:ensure_dir(Dst),
     case file:make_link(Src, Dst) of
         ok -> ok;
         {error, _} -> {ok, _} = file:copy(Src, Dst), ok

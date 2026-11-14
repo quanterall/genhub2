@@ -4,4 +4,5 @@ Copyright 2026 Quanterall Ltd.
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
 It calls these programs as separate processes, under their own licences (none is linked into GenHub2):
-minimap2 (MIT), samtools and bcftools (MIT/Expat), Nextclade (MIT), MAFFT (BSD), FastTree (GPL-2.0-or-later).
+minimap2 (MIT), samtools and bcftools (MIT/Expat), Nextclade (MIT), Kraken 2 (MIT), Hostile (MIT), UShER (MIT),
+MAFFT (BSD), FastTree (GPL-2.0-or-later), VeryFastTree (GPL-3.0), DIAMOND (GPL-3.0), iVar (GPL-3.0), Bracken (GPL-3.0).

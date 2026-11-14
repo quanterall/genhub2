@@ -92,12 +92,15 @@ async function show(id) {
   $("#d-steps").innerHTML = j.order.map((s) => `<span class="step ${j.steps[s] ? "done" : ""}">${esc(s)}${
     j.steps[s] ? " " + j.steps[s].seconds.toFixed(2) + " s" : ""}</span>`).join("");
   const calls = res("classify").flat();
+  const prot = Object.fromEntries(res("protein").flat().filter((p) => p.call.confidence !== "unclassified").map((p) => [p.query, p.call]));
   $("#d-class tbody").innerHTML = calls.map((q) => {
-    const c = q.call || {};
+    const p = prot[q.query];
+    const c = p ? {species: p.species, family: p.family, ani: p.aa_identity, confidence: p.confidence, method: "protein (aa identity)"}
+                : {...(q.call || {}), method: "MinHash (ANI)"};
     const near = (q.hits || []).slice(0, 3).map((h) => `${esc(h.ref)} ${esc(h.organism)} (${h.ani.toFixed(3)})`).join("<br>");
     return `<tr><td>${esc(q.query)}</td><td>${esc(c.species || "-")}</td><td>${esc(c.family || "-")}</td>
       <td>${c.ani != null ? c.ani.toFixed(3) : "-"}</td><td class="conf-${esc(c.confidence)}">${esc(c.confidence)}</td>
-      <td>${near}</td></tr>`;
+      <td>${esc(c.method)}</td><td>${near}</td></tr>`;
   }).join("");
   const lin = res("lineage").flat();
   $("#d-lineage-wrap").hidden = lin.length === 0;
@@ -106,11 +109,16 @@ async function show(id) {
   $("#d-mut tbody").innerHTML = res("mutations").flat().map((m) => m.aligned ? `<tr><td>${esc(m.query)}</td>
     <td>${esc(m.reference)}</td><td>${m.substitutions.length}</td><td>${m.insertions.length}</td>
     <td>${m.deletions.length}</td><td>${m.missing}</td></tr>` : `<tr><td>${esc(m.query)}</td><td colspan="5">not aligned</td></tr>`).join("");
+  const kr = res("kraken")[0];
+  $("#d-kraken-wrap").hidden = !kr;
+  if (kr) $("#d-kraken tbody").innerHTML = kr.species.map((s) => `<tr><td>${esc(s.name)}</td><td>${s.reads}</td>
+    <td>${(s.share * 100).toFixed(1)}%</td></tr>`).join("");
   const cons = res("consensus")[0];
   $("#d-cons-wrap").hidden = !cons;
   if (cons) {
     const d = res("dehost")[0];
-    $("#d-cons").innerHTML = `${d ? `${d.pairs_kept} of ${d.pairs_in} read pairs kept after removing human reads. ` : ""}
+    $("#d-cons").innerHTML = `${d ? `${d.pairs_kept} of ${d.pairs_in} read pairs kept after removing human reads (${esc(d.method)}). ` : ""}
+      ${cons.primers_trimmed ? "Primers trimmed (iVar). " : ""}
       Against ${esc(cons.reference)}: ${(cons.breadth * 100).toFixed(1)}% covered, mean depth ${cons.mean_depth.toFixed(0)}.
       <a href="/api/files/${esc(cons.genome)}">Consensus genome (FASTA)</a>`;
   }

@@ -36,15 +36,26 @@ get_retrying(Url, N) ->
 taxonomy(Ids) ->
     lists:foldl(fun(Batch, Acc) -> maps:merge(Acc, taxonomy_batch(Batch)) end, #{}, chunks(lists:usort(Ids), 1000)).
 
-taxonomy_batch(Ids) ->
+taxonomy_batch(Ids) -> taxonomy_batch(Ids, 4).
+
+taxonomy_batch(Ids, Tries) ->
     Body = json:encode(#{<<"taxons">> => [integer_to_binary(I) || I <- Ids], <<"page_size">> => 1000}),
     {ok, _} = application:ensure_all_started([inets, ssl]),
-    {ok, {{_, 200, _}, _, R}} = httpc:request(post, {?API ++ "/taxonomy/dataset_report", [], "application/json", Body},
+    case httpc:request(post, {?API ++ "/taxonomy/dataset_report", [], "application/json", Body},
                                               [{timeout, 600000}, {ssl, [{verify, verify_peer},
                                                                           {cacerts, public_key:cacerts_get()},
                                                                           {customize_hostname_check,
                                                                            [{match_fun, public_key:pkix_verify_hostname_match_fun(https)}]}]}],
-                                              [{body_format, binary}]),
+                                              [{body_format, binary}]) of
+        {ok, {{_, 200, _}, _, R}} -> taxonomy_reports(R);
+        Other when Tries > 1 ->
+            logger:warning("NCBI taxonomy: ~0P; retrying in a minute", [Other, 8]),
+            timer:sleep(60000),
+            taxonomy_batch(Ids, Tries - 1);
+        Other -> error({ncbi_taxonomy, Other})
+    end.
+
+taxonomy_reports(R) ->
     maps:from_list([begin
                         T = maps:get(<<"taxonomy">>, Rep),
                         C = maps:get(<<"classification">>, T, #{}),

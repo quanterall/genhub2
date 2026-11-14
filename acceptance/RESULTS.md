@@ -1,11 +1,11 @@
 # Phase A acceptance: results
 
-GenHub2 on one node (an NVIDIA DGX Spark, 10 of its 20 cores), with PQCF's local executor, 13 November 2026.
-Results file: [`results/phase-a-dgx-spark-2026-11-13T2017Z.json`](results/phase-a-dgx-spark-2026-11-13T2017Z.json).
+GenHub2 on one node (an NVIDIA DGX Spark, 10 of its 20 cores), with PQCF's local executor, 14 November 2026.
+Results file: [`results/phase-a-dgx-spark-2026-11-14T0031Z.json`](results/phase-a-dgx-spark-2026-11-14T0031Z.json).
 How it is run: [`run.sh`](run.sh) and [`gh_acceptance.erl`](gh_acceptance.erl). The genomes it used are listed in
 [`held-out.tsv`](held-out.tsv) and [`sars-cov-2.tsv`](sars-cov-2.tsv).
 
-**All 17 checks hold.**
+**All 20 checks hold.**
 
 ## Reference database
 
@@ -49,10 +49,32 @@ The 29 species misses:
 - **1 rabies genome** was nearest to another lyssavirus.
 - **1 human metapneumovirus genome** shared no hashes with any reference.
 
-These are the limits of nucleotide MinHash for divergent genomes. In the plan, that is where a protein-level or
-learned classifier would have to show it does better on held-out data before it is adopted.
+These are the limits of nucleotide MinHash for divergent genomes. A protein-level classifier was added for them
+(section 2b).
 
 Classifying the 593 genomes took 0.55 s.
+
+## 2b. Classification by proteins, for MinHash's weak calls
+
+Every held-out genome was also classified by its proteins: DIAMOND blastx (Buchfink et al. 2021,
+[doi:10.1038/s41592-021-01101-x](https://doi.org/10.1038/s41592-021-01101-x)) against all 720,495 proteins of the
+complete RefSeq viral genomes. Each region of the genome votes for its best hit's species by bit score.
+- **The protein database:** for genes without a protein record (among them the rabies and Zaire ebolavirus RefSeq
+  genomes), NCBI's protein file holds the coding sequence; those 1,462 records are translated (standard code).
+- **The combination:** GenHub2 uses the protein call where MinHash's is low or missing, and MinHash's elsewhere.
+
+| species right | MinHash alone | proteins alone | combined |
+| --- | --- | --- | --- |
+| all 593 | 564 (95.1%) | 547 (92.2%) | **572 (96.5%)** |
+| MinHash high confidence: 275 | 274 | 255 | 274 |
+| MinHash medium: 185 | 182 | 183 | 182 |
+| MinHash low: 132 | 108 | 108 | **115** |
+| MinHash unclassified: 1 | 0 | 1 | **1** |
+
+- **Family:** right for all 593 when combined, up from 591.
+- **Proteins alone are worse at high confidence:** closely related species share near-identical proteins, which is
+  why the protein call only replaces MinHash's weak calls.
+- **Time:** the protein search of all 593 genomes took 34 s.
 
 ## 3. 1,000 SARS-CoV-2 genomes: our mutations against Nextclade's
 
@@ -96,7 +118,7 @@ neighbour-joining, `4c441ab1...` for FastTree).
 ## 5. The gateway, MQTT, exports and monitoring (FS 3.1, 4.2-4.4, 5.4)
 
 [`gh_gateway_check.erl`](gh_gateway_check.erl), run by [`run_gateway.sh`](run_gateway.sh) against EMQX 5.8.9, on a site
-with no earlier jobs. Results: [`results/gateway-dgx-spark-2026-11-13T2243Z.json`](results/gateway-dgx-spark-2026-11-13T2243Z.json).
+with no earlier jobs. Results: [`results/gateway-dgx-spark-2026-11-14T0102Z.json`](results/gateway-dgx-spark-2026-11-14T0102Z.json).
 **All 13 checks hold.**
 
 - **The page:** the page and its script are served.
@@ -122,3 +144,115 @@ with no earlier jobs. Results: [`results/gateway-dgx-spark-2026-11-13T2243Z.json
 
 The page was also looked at in Chromium, at 1280 px and at a phone's 390 px (no horizontal scrolling); the PDF
 report and the tree drawings were looked at too.
+
+## 6. The added methods, each against what it adds to
+
+[`gh_methods_check.erl`](gh_methods_check.erl), run by [`run_methods.sh`](run_methods.sh), on phase A's data, 14 November
+2026. Results: [`results/methods-dgx-spark-2026-11-14T0044Z.json`](results/methods-dgx-spark-2026-11-14T0044Z.json).
+**All 9 checks hold.**
+
+### Maximum-likelihood trees: VeryFastTree
+
+VeryFastTree (Piñeiro et al. 2020, [doi:10.1093/gigascience/giaa055](https://doi.org/10.1093/gigascience/giaa055)) is
+FastTree's algorithm, parallel.
+
+| tree of the 1,000 SARS-CoV-2 genomes and the reference | time (10 cores) |
+| --- | --- |
+| neighbour-joining (gh2k) | 3.5 s |
+| FastTree 2.1.11, 10 threads | 698 s |
+| **VeryFastTree 4.0.5, 10 threads** | **250 s**, within the 5-minute target |
+
+Does VeryFastTree's tree agree with FastTree's? It writes no branch of 1e-4 substitutions per site or shorter, so it
+orders near-identical genomes arbitrarily and always has 991 splits. FastTree has far fewer once its zero-length
+branches are collapsed. So the measure is how many of FastTree's splits each other tree contains:
+
+| FastTree's branches shorter than | FastTree's splits | found in VeryFastTree's tree | found in neighbour-joining's |
+| --- | --- | --- | --- |
+| 1e-05 | 431 | 415 (96%) | 370 (86%) |
+| 5e-05 | 251 | 249 (99%) | 211 (84%) |
+| 0.0001 | 162 | 162 (100%) | 123 (76%) |
+
+The Robinson-Foulds distance between the two whole trees ([doi:10.1016/0025-5564(81)90043-2](https://doi.org/10.1016/0025-5564(81)90043-2)),
+592 (normalised 0.42), is almost all VeryFastTree's extra resolution of
+identical genomes.
+
+### Placement in an existing tree: UShER
+
+UShER (Turakhia et al. 2021, [doi:10.1038/s41588-021-00862-7](https://doi.org/10.1038/s41588-021-00862-7)):
+- **The tree:** a mutation-annotated tree built from 900 of the 1,000 SARS-CoV-2 genomes (a
+  neighbour-joining tree, 3.2 s; building the mutation-annotated tree, 2.0 s),
+  labelled with their Nextclade lineages.
+- **The placement:** the other 100 genomes, every tenth, placed into it.
+- **Results:**
+  - all 100 were placed, in 0.8 s for all of them;
+  - **69 got exactly their Nextclade lineage**;
+  - 84 got their lineage or a parent or child of it (BA.5 for BA.5.2.1).
+
+UShER labels a clade at its root by the samples it was given. 900 genomes spread over five years are thin for the
+fine lineages; a site's own growing tree is what it is for.
+
+### Lineages beyond SARS-CoV-2: Nextclade's datasets
+
+The bundle holds 22 datasets:
+- SARS-CoV-2;
+- influenza HA: H1N1pdm, H3N2, B/Victoria, B, B/Yamagata;
+- RSV A and B, mpox, Ebola, measles, hMPV, rubella, mumps, West Nile;
+- dengue 1-4, from the community collection.
+
+`nextclade sort --all-matches` sends each held-out genome to the best-scoring dataset the bundle holds.
+- **Result:** 178 of the 593 genomes reached a dataset, and every one got a clade. **None reached another
+  virus's dataset.**
+- **Reached a dataset, by virus:**
+  - SARS-CoV-2 18 of 18, mpox 20 of 20, RSV 20 of 20, dengue
+    20 of 20;
+  - Ebola 19 of 19, West Nile 19 of 19, hMPV 19 of 20;
+  - measles 18 of 20, mumps 17 of 20, rubella 6 of 20, influenza B
+    2 of 20.
+- **Influenza:** the held-out influenza records are mostly segments other than HA, which these datasets do not
+  cover. Influenza A reached none.
+- **The other 18 viruses** have no dataset here.
+- The first run of this check, before `--all-matches`, reached only 121 genomes. Sort's best match was often a dataset
+  the bundle does not hold (e.g. `sars-cov-2/BA.2.86`).
+
+### Host removal: Hostile against GRCh38
+
+Hostile (Constantinides et al. 2023, [doi:10.1093/bioinformatics/btad728](https://doi.org/10.1093/bioinformatics/btad728))
+uses the T2T human genome with HLA alleles, masked where it resembles RefSeq viruses and phages. The sample: 10,000
+read pairs each of SARS-CoV-2, Epstein-Barr virus (NC_007605.1) and human (GRCh38 chr1:150-160 Mb).
+
+| pairs kept | SARS-CoV-2 | EBV | human | time |
+| --- | --- | --- | --- | --- |
+| minimap2 against GRCh38's analysis set | 10,000 | 0 | 0 | 20 s |
+| **Hostile** | 10,000 | **9,951** | 2 | 12 s |
+
+GRCh38's analysis set contains the EBV genome, so removing reads that match it removes a human virus with them.
+Hostile is now GenHub2's default.
+
+### Amplicon primers: iVar
+
+iVar (Grubaugh et al. 2019, [doi:10.1186/s13059-018-1618-7](https://doi.org/10.1186/s13059-018-1618-7)). The test:
+- **The amplicons:** ARTIC V4.1 amplicons (98; 90 without missing bases) simulated over the
+  BQ.1.1 genome PX916490.1, with every read's primer bases taken from the primer, as in PCR.
+- **The genome against the primers:** it differs from the primers at 9
+  sites.
+- **Untrimmed:** reads carrying a primer base disagree there with the overlapping amplicon's reads, and the
+  consensus leaves **9 bases N** where the genome has a base.
+- **Trimmed** (`ivar trim -e`): 0 N and 0 wrong
+  bases, the genome exactly.
+
+### Mixed samples: Kraken 2 + Bracken
+
+Kraken 2 (Wood et al. 2019, [doi:10.1186/s13059-019-1891-0](https://doi.org/10.1186/s13059-019-1891-0)) and Bracken
+(Lu et al. 2017, [doi:10.7717/peerj-cs.104](https://doi.org/10.7717/peerj-cs.104)), with the prebuilt viral database
+k2_viral_20241228. The sample:
+- 6,000 read pairs of SARS-CoV-2, 3,000 of influenza A and 1,000 of RSV;
+- 2,000 human read pairs.
+
+| species | in the mixture | Bracken |
+| --- | --- | --- |
+| Betacoronavirus pandemicum | 60% | 59.6% |
+| Alphainfluenzavirus influenzae | 30% | 29.8% |
+| Orthopneumovirus hominis | 10% | 9.9% |
+
+There was one false species: BeAn 58058 virus 0.7%,
+almost certainly from some of the human reads. Classifying the 12,000 pairs took 0.9 s.

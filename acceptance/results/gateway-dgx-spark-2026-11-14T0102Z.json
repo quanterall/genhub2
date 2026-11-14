@@ -1,12 +1,12 @@
 {
   "alerts": [
     {
-      "job": "job-mwfkcowe-3n",
+      "job": "job-mwfpbdn4-92",
       "species": "Betacoronavirus pandemicum",
       "type": "new_species"
     },
     {
-      "job": "job-mwfkcowe-3n",
+      "job": "job-mwfpbdn4-92",
       "pango": "B",
       "type": "new_pango"
     }
@@ -15,7 +15,7 @@
     {
       "name": "page and script served",
       "ok": true,
-      "value": "#{status => 200,type => <<\"text/html\">>,has_title => true,script_bytes => 7404,script_status => 200}"
+      "value": "#{status => 200,type => <<\"text/html\">>,has_title => true,script_bytes => 8094,script_status => 200}"
     },
     {
       "name": "genome job through the API: done",
@@ -40,7 +40,7 @@
     {
       "name": "MQTT: the classification message names the species",
       "ok": true,
-      "value": "[#{<<\"job\">> => <<\"job-mwfkcowe-3n\">>,<<\"result\">> => [#{<<\"call\">> => #{<<\"ani\">> => 1.0,<<\"confidence\">> => <<\"high\">>,<<\"family\">> => <<\"Coronaviridae\">>,<<\"genus\">> => <<\"Betacoronavirus\">>,<<\"organism\">> => <<\"Severe acute respiratory syndrome coronavirus 2\">>,<<\"ref\">> => <<\"NC_045512.2\">>,<<\"species\">> => <<\"Betacoronavirus pandemicum\">>,<<\"taxid\">> => 2697049},<<\"query\">> => <<\"NC_045512.2\">>}],<<\"step\">> => <<\"classify\">>}]"
+      "value": "[#{<<\"job\">> => <<\"job-mwfpbdn4-92\">>,<<\"result\">> => [#{<<\"call\">> => #{<<\"ani\">> => 1.0,<<\"confidence\">> => <<\"high\">>,<<\"family\">> => <<\"Coronaviridae\">>,<<\"genus\">> => <<\"Betacoronavirus\">>,<<\"organism\">> => <<\"Severe acute respiratory syndrome coronavirus 2\">>,<<\"ref\">> => <<\"NC_045512.2\">>,<<\"species\">> => <<\"Betacoronavirus pandemicum\">>,<<\"taxid\">> => 2697049},<<\"query\">> => <<\"NC_045512.2\">>}],<<\"step\">> => <<\"classify\">>},#{<<\"job\">> => <<\"job-mwfpbdn4-92\">>,<<\"result\">> => [],<<\"step\">> => <<\"protein\">>}]"
     },
     {
       "name": "WebSocket: the same topics",
@@ -50,7 +50,7 @@
     {
       "name": "job requested on MQTT: started and done",
       "ok": true,
-      "value": "#{id => <<\"job-mwfkcqga-5f\">>,started => true,state => <<\"done\">>,inputs => [<<\"4dabfd67f2402d1e1d21fbc5a23778076b551a314f8c99607079c24fd908a25d\">>]}"
+      "value": "#{id => <<\"job-mwfpbfku-77\">>,started => true,state => <<\"done\">>,inputs => [<<\"4dabfd67f2402d1e1d21fbc5a23778076b551a314f8c99607079c24fd908a25d\">>]}"
     },
     {
       "name": "refused: unknown file 400, bad kind 400, over 100 MB 413, unknown job 404, tree of one sequence 400",
@@ -60,25 +60,25 @@
     {
       "name": "exports: CSV names the species, PDF is a PDF, JSON is the job",
       "ok": true,
-      "value": "#{json => #{id => <<\"job-mwfkcowe-3n\">>,status => 200},csv => #{status => 200,type => <<\"text/csv; charset=utf-8\">>,species => true},pdf => #{status => 200,type => <<\"application/pdf\">>,bytes => 2139,magic => <<\"%PDF-1.4\">>}}"
+      "value": "#{json => #{id => <<\"job-mwfpbdn4-92\">>,status => 200},csv => #{status => 200,type => <<\"text/csv; charset=utf-8\">>,species => true},pdf => #{status => 200,type => <<\"application/pdf\">>,bytes => 2183,magic => <<\"%PDF-1.4\">>}}"
     },
     {
       "name": "tree job of both genomes: done, SVG drawn, the reference and both genomes as leaves",
       "ok": true,
-      "value": "#{id => <<\"job-mwfkcrdv-cj\">>,state => <<\"done\">>,reference => <<\"NC_045512.2\">>,leaves => [<<\"NC_045512.2\">>,<<\"job-mwfkcowe-3n/NC_045512.2\">>,<<\"job-mwfkcqga-5f/NC_045512.2\">>],newick_status => 200,svg_ok => true,svg_status => 200,svg_type => <<\"image/svg+xml\">>}"
+      "value": "#{id => <<\"job-mwfpbgig-aq\">>,state => <<\"done\">>,reference => <<\"NC_045512.2\">>,leaves => [<<\"NC_045512.2\">>,<<\"job-mwfpbdn4-92/NC_045512.2\">>,<<\"job-mwfpbfku-77/NC_045512.2\">>],newick_status => 200,svg_ok => true,svg_status => 200,svg_type => <<\"image/svg+xml\">>}"
     },
     {
       "name": "monitoring: two SARS-CoV-2 analyses, lineage B first seen in the first job",
       "ok": true,
-      "value": "#{<<\"analyses\">> => 2,<<\"lineages\">> => [#{<<\"count\">> => 2,<<\"first_job\">> => <<\"job-mwfkcowe-3n\">>,<<\"first_seen\">> => <<\"2026-11-13T22:43:41.966Z\">>,<<\"name\">> => <<\"B\">>}],<<\"species\">> => [#{<<\"count\">> => 2,<<\"first_job\">> => <<\"job-mwfkcowe-3n\">>,<<\"first_seen\">> => <<\"2026-11-13T22:43:41.966Z\">>,<<\"name\">> => <<\"Betacoronavirus pandemicum\">>}],<<\"weeks\">> => [#{<<\"count\">> => 2,<<\"lineage\">> => <<\"B\">>,<<\"week\">> => <<\"2026-W46\">>}]}"
+      "value": "#{<<\"analyses\">> => 2,<<\"lineages\">> => [#{<<\"count\">> => 2,<<\"first_job\">> => <<\"job-mwfpbdn4-92\">>,<<\"first_seen\">> => <<\"2026-11-14T01:02:38.800Z\">>,<<\"name\">> => <<\"B\">>}],<<\"species\">> => [#{<<\"count\">> => 2,<<\"first_job\">> => <<\"job-mwfpbdn4-92\">>,<<\"first_seen\">> => <<\"2026-11-14T01:02:38.800Z\">>,<<\"name\">> => <<\"Betacoronavirus pandemicum\">>}],<<\"weeks\">> => [#{<<\"count\">> => 2,<<\"lineage\">> => <<\"B\">>,<<\"week\">> => <<\"2026-W46\">>}]}"
     },
     {
       "name": "alerts: first species and first lineage, for the first job only",
       "ok": true,
-      "value": "[#{<<\"job\">> => <<\"job-mwfkcowe-3n\">>,<<\"species\">> => <<\"Betacoronavirus pandemicum\">>,<<\"type\">> => <<\"new_species\">>},#{<<\"job\">> => <<\"job-mwfkcowe-3n\">>,<<\"pango\">> => <<\"B\">>,<<\"type\">> => <<\"new_pango\">>}]"
+      "value": "[#{<<\"job\">> => <<\"job-mwfpbdn4-92\">>,<<\"species\">> => <<\"Betacoronavirus pandemicum\">>,<<\"type\">> => <<\"new_species\">>},#{<<\"job\">> => <<\"job-mwfpbdn4-92\">>,<<\"pango\">> => <<\"B\">>,<<\"type\">> => <<\"new_pango\">>}]"
     }
   ],
-  "date": "2026-11-13T22:43:46Z",
+  "date": "2026-11-14T01:02:44Z",
   "emqx": "emqx/emqx:5.8.9",
   "exports": {
     "csv": {
@@ -87,11 +87,11 @@
       "type": "text/csv; charset=utf-8"
     },
     "json": {
-      "id": "job-mwfkcowe-3n",
+      "id": "job-mwfpbdn4-92",
       "status": 200
     },
     "pdf": {
-      "bytes": 2139,
+      "bytes": 2183,
       "magic": "%PDF-1.4",
       "status": 200,
       "type": "application/pdf"
@@ -99,22 +99,22 @@
   },
   "host": "dgx-spark",
   "job_from_mqtt": {
-    "id": "job-mwfkcqga-5f",
+    "id": "job-mwfpbfku-77",
     "inputs": [
       "4dabfd67f2402d1e1d21fbc5a23778076b551a314f8c99607079c24fd908a25d"
     ],
     "started": true,
     "state": "done"
   },
-  "job_seconds": 1.005,
+  "job_seconds": 1.506,
   "job_state": "done",
   "mqtt_topics": {
     "genhub/alerts": 2,
-    "genhub/results/classification": 1,
+    "genhub/results/classification": 2,
     "genhub/results/knowledge": 1,
     "genhub/results/mutations": 2,
     "genhub/sequences/new": 1,
-    "genhub/tasks/status": 7
+    "genhub/tasks/status": 8
   },
   "refused": {
     "bad_kind": 400,
@@ -123,22 +123,22 @@
     "tree_of_one": 400,
     "unknown_file": 400
   },
-  "seconds": 5.111,
+  "seconds": 5.457,
   "summary": {
     "analyses": 2,
     "lineages": [
       {
         "count": 2,
-        "first_job": "job-mwfkcowe-3n",
-        "first_seen": "2026-11-13T22:43:41.966Z",
+        "first_job": "job-mwfpbdn4-92",
+        "first_seen": "2026-11-14T01:02:38.800Z",
         "name": "B"
       }
     ],
     "species": [
       {
         "count": 2,
-        "first_job": "job-mwfkcowe-3n",
-        "first_seen": "2026-11-13T22:43:41.966Z",
+        "first_job": "job-mwfpbdn4-92",
+        "first_seen": "2026-11-14T01:02:38.800Z",
         "name": "Betacoronavirus pandemicum"
       }
     ],
@@ -151,11 +151,11 @@
     ]
   },
   "tree": {
-    "id": "job-mwfkcrdv-cj",
+    "id": "job-mwfpbgig-aq",
     "leaves": [
       "NC_045512.2",
-      "job-mwfkcowe-3n/NC_045512.2",
-      "job-mwfkcqga-5f/NC_045512.2"
+      "job-mwfpbdn4-92/NC_045512.2",
+      "job-mwfpbfku-77/NC_045512.2"
     ],
     "newick_status": 200,
     "reference": "NC_045512.2",
@@ -170,10 +170,10 @@
   },
   "websocket_topics": {
     "genhub/alerts": 2,
-    "genhub/results/classification": 1,
+    "genhub/results/classification": 2,
     "genhub/results/knowledge": 1,
     "genhub/results/mutations": 2,
     "genhub/sequences/new": 1,
-    "genhub/tasks/status": 7
+    "genhub/tasks/status": 8
   }
 }

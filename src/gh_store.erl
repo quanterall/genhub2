@@ -7,7 +7,7 @@
 %% A task running on another of the owner's nodes fetches what it needs from the coordinating node's store
 %% (ensure/2); between sites, the FVLLMP data route will do the same (FS 4.5).
 -module(gh_store).
--export([root/0, path/1, put_file/1, move_file/1, put_binary/1, read/1, ensure/2, has/1, file_hash/1,
+-export([root/0, path/1, put_file/1, move_file/1, put_binary/1, read/1, read_from/2, ensure/2, has/1, file_hash/1,
          with_tmp/1]).
 
 -type hash() :: binary().
@@ -69,6 +69,12 @@ put_binary(Data) ->
 -spec read(hash()) -> binary().
 read(Hash) ->
     {ok, B} = file:read_file(ensure(Hash, node())),
+    B.
+
+%% the content of Hash, fetched first from Home's store if this node does not have it
+-spec read_from(hash(), node()) -> binary().
+read_from(Hash, Home) ->
+    {ok, B} = file:read_file(ensure(Hash, Home)),
     B.
 
 %% The local path of Hash, fetched first from Home's store if this node does not have it; the content is checked

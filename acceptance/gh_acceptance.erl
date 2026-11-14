@@ -17,7 +17,7 @@
 -module(gh_acceptance).
 -export([main/1]).
 %% for looking into a part of the test from a shell
--export([sars_cov_2/0, mutations_vs_nextclade/2, held_out/1, classification/2]).
+-export([sars_cov_2/0, mutations_vs_nextclade/2, held_out/1, classification/2, protein_vs_minhash/3]).
 
 -define(NEXTCLADE_TAG, "2026-10-28--15-04-26Z").
 -define(HUMAN_REGION, "chr1:150000000-160000000").
@@ -44,7 +44,8 @@ main([HostIndex, Grch38, Out]) ->
     Refs = gh_refdb:refseq_viral(),
     Host = gh_refdb:host(HostIndex),
     Next = gh_refdb:nextclade(?NEXTCLADE_TAG),
-    Params = #{refs => Refs, host => Host, nextclade => Next, min_depth => 10},
+    Proteins = gh_refdb:viral_proteins(),
+    Params = #{refs => Refs, proteins => Proteins, host => Host, nextclade => Next, min_depth => 10},
     log("data: held-out set and SARS-CoV-2 genomes"),
     Held = held_out(Refs),
     Sars = sars_cov_2(),
@@ -55,17 +56,20 @@ main([HostIndex, Grch38, Out]) ->
     ExReads = example_reads(Params, Sars, Mut, Grch38),
     log("2. held-out classification"),
     Class = classification(Held, Refs),
+    log("2b. held-out classification by proteins"),
+    Prot = protein_vs_minhash(Held, Refs, Proteins),
     log("4. targets"),
     Targets = targets(Params, Sars),
     ok = filelib:ensure_dir(Out),
-    ok = file:write_file(Out ++ ".partial", term_to_binary({ExGenome, ExReads, Class, Mut, Targets})),
-    Checks = checks(ExGenome, ExReads, Class, Mut, Targets),
+    ok = file:write_file(Out ++ ".partial", term_to_binary({ExGenome, ExReads, Class, Prot, Mut, Targets})),
+    Checks = checks(ExGenome, ExReads, Class, Mut, Targets) ++ protein_checks(Class, Prot),
     R = #{date => list_to_binary(calendar:system_time_to_rfc3339(erlang:system_time(second), [{offset, "Z"}])),
           host => list_to_binary(net_adm:localhost()), cpus => erlang:system_info(schedulers_online),
           pqcf => <<"2a90a1f">>, nextclade_dataset => list_to_binary(?NEXTCLADE_TAG),
-          bundles => #{refseq_viral => Refs, host => Host, nextclade => Next},
+          bundles => #{refseq_viral => Refs, refseq_viral_proteins => Proteins, host => Host, nextclade => Next},
           references => length(maps:keys(gh_refs:taxonomy(Refs, node()))),
-          example_genome => ExGenome, example_reads => ExReads, held_out => Class, sars_cov_2_1000 => Mut,
+          example_genome => ExGenome, example_reads => ExReads, held_out => Class, held_out_protein => Prot,
+          sars_cov_2_1000 => Mut,
           targets => Targets, checks => Checks,
           seconds => (erlang:monotonic_time(millisecond) - T0) / 1000},
     ok = file:write_file(Out, json:format(jsonable(R))),
@@ -274,6 +278,66 @@ split(Fasta, N) ->
 chunks([], _) -> [];
 chunks(L, N) when length(L) =< N -> [L];
 chunks(L, N) -> {A, B} = lists:split(N, L), [A | chunks(B, N)].
+
+%%% 2b. classification by proteins, against MinHash and combined
+
+%% Every held-out genome classified by MinHash and by proteins (gh_protein); scored alone and as GenHub2 combines
+%% them (the protein call replaces MinHash's low-confidence and unclassified calls), by MinHash's confidence.
+protein_vs_minhash(#{fasta := Fasta, truth := Truth}, Refs, Proteins) ->
+    Chunks = split(Fasta, 100),
+    Mh = lists:append(pq_rexec:map([{pq_task, gh_classify, {classify, C, Refs, 10}} || C <- Chunks], local, #{})),
+    {Pr0, Secs} = secs(fun() ->
+        lists:append(pq_rexec:map([{pq_task, gh_protein, {protein, C, Proteins}} || C <- Chunks], local,
+                                  #{workers => 3}))
+    end),
+    Pr = maps:from_list([{maps:get(query, P), maps:get(call, P)} || P <- Pr0]),
+    Rows = [begin
+                Q = maps:get(<<"query">>, M),
+                T = maps:get(Q, Truth),
+                MC = maps:get(<<"call">>, M),
+                PC = maps:get(Q, Pr),
+                Conf = maps:get(<<"confidence">>, MC),
+                Use = case (Conf =:= <<"low">> orelse Conf =:= <<"unclassified">>)
+                           andalso maps:get(confidence, PC) =/= unclassified of
+                          true -> protein;
+                          false -> minhash
+                      end,
+                #{query => Q, virus => maps:get(virus, T), minhash_confidence => Conf,
+                  protein_confidence => maps:get(confidence, PC), used => Use,
+                  truth => maps:with([species, genus, family], T),
+                  minhash => #{species => maps:get(<<"species">>, MC, none), genus => maps:get(<<"genus">>, MC, none),
+                               family => maps:get(<<"family">>, MC, none)},
+                  protein => maps:with([species, genus, family, aa_identity], PC)}
+            end || M <- Mh],
+    Score = fun(Rs, Who, K) ->
+                    Rs2 = [R || R <- Rs, maps:get(K, maps:get(truth, R)) =/= <<>>],
+                    Right = length([R || R <- Rs2, maps:get(K, maps:get(pick(R, Who), R), none) =:= maps:get(K, maps:get(truth, R))]),
+                    #{right => Right, total => length(Rs2)}
+            end,
+    Table = fun(Rs) -> maps:from_list([{W, maps:from_list([{K, Score(Rs, W, K)} || K <- [species, genus, family]])}
+                                       || W <- [minhash, protein, combined]]) end,
+    Buckets = [<<"high">>, <<"medium">>, <<"low">>, <<"unclassified">>],
+    #{genomes => length(Rows), protein_seconds => Secs, all => Table(Rows),
+      by_minhash_confidence => maps:from_list([{B, Table([R || R <- Rows, maps:get(minhash_confidence, R) =:= B])}
+                                               || B <- Buckets]),
+      protein_used => length([R || #{used := protein} = R <- Rows]),
+      changed => [maps:with([query, virus, minhash, protein, truth, used], R)
+                  || R <- Rows, maps:get(species, maps:get(minhash, R)) =/= maps:get(species, maps:get(protein, R), none)]}.
+
+pick(_, minhash) -> minhash;
+pick(_, protein) -> protein;
+pick(#{used := U}, combined) -> U.
+
+protein_checks(Class, Prot) ->
+    #{all := #{minhash := #{species := MS}, combined := #{species := CS}}} = Prot,
+    Low = maps:get(<<"low">>, maps:get(by_minhash_confidence, Prot)),
+    #{minhash := #{species := LM}, combined := #{species := LC}} = Low,
+    [check(<<"held-out: proteins + MinHash right for at least as many species as MinHash alone">>,
+           maps:get(right, CS) >= maps:get(right, MS), [fmt(MS), <<" -> ">>, fmt(CS)]),
+     check(<<"held-out: species of MinHash's low-confidence calls, MinHash -> combined (measured)">>,
+           true, [fmt(LM), <<" -> ">>, fmt(LC)]),
+     check(<<"held-out: MinHash alone unchanged by the protein step">>,
+           maps:get(right, MS) =:= maps:get(right, maps:get(species, Class)), fmt(MS))].
 
 %%% 3. mutations against Wuhan-Hu-1, ours and Nextclade's
 

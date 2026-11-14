@@ -65,13 +65,16 @@
     <div id="d-results">
     <h3>Classification</h3>
     <div class="scroll"><table id="d-class"><thead><tr><th>Sequence</th><th>Species</th><th>Family</th>
-      <th>Identity</th><th>Confidence</th><th>Nearest references</th></tr></thead><tbody></tbody></table></div>
+      <th>Identity</th><th>Confidence</th><th>Method</th><th>Nearest references</th></tr></thead><tbody></tbody></table></div>
     <div id="d-lineage-wrap"><h3>Lineage (Nextclade)</h3>
       <div class="scroll"><table id="d-lineage"><thead><tr><th>Sequence</th><th>Pango</th><th>Clade</th>
         <th>QC</th></tr></thead><tbody></tbody></table></div></div>
     <h3>Mutations against the reference</h3>
     <div class="scroll"><table id="d-mut"><thead><tr><th>Sequence</th><th>Reference</th><th>Substitutions</th>
       <th>Insertions</th><th>Deletions</th><th>Missing</th></tr></thead><tbody></tbody></table></div>
+    <div id="d-kraken-wrap" hidden><h3>Sample composition (Kraken 2 + Bracken)</h3>
+      <div class="scroll"><table id="d-kraken"><thead><tr><th>Species</th><th>Read pairs</th><th>Share</th></tr></thead>
+        <tbody></tbody></table></div></div>
     <div id="d-cons-wrap"><h3>Consensus</h3><p id="d-cons"></p></div>
     <h3>Related knowledge</h3>
     <p class="notice">Information, not clinical advice: links to public records for a clinician or public-health

@@ -26,14 +26,16 @@ handle(uploads, <<"POST">>, Req) ->
     reply(201, #{hash => Hash, bytes => Bytes}, Req2);
 handle(jobs, <<"POST">>, Req) ->
     {ok, Body, Req2} = cowboy_req:read_body(Req, #{length => 100000}),
-    {Kind, Inputs} = case catch json:decode(Body) of
+    Req0 = case catch json:decode(Body) of M when is_map(M) -> M; _ -> #{} end,
+    {Kind, Inputs} = case Req0 of
                          #{<<"kind">> := <<"genome">>, <<"inputs">> := [H]} -> {genome, [H]};
                          #{<<"kind">> := <<"reads">>, <<"inputs">> := [H1, H2]} -> {reads, [H1, H2]};
                          _ -> throw({status, 400, <<"expected {\"kind\": \"genome\", \"inputs\": [hash]} or "
                                                     "{\"kind\": \"reads\", \"inputs\": [hash1, hash2]}">>})
                      end,
     [gh_store:has(H) orelse throw({status, 400, <<"not in the store: ", H/binary>>}) || H <- Inputs],
-    reply(201, #{id => gh_jobs:submit(Kind, Inputs, gh_config:params())}, Req2);
+    Params = (gh_config:params())#{primers => gh_config:primers(maps:get(<<"primers">>, Req0, undefined))},
+    reply(201, #{id => gh_jobs:submit(Kind, Inputs, Params)}, Req2);
 handle(jobs, <<"GET">>, Req) ->
     reply(200, [maps:without([params], J) || J <- gh_jobs:list()], Req);
 handle(job, <<"GET">>, Req) ->

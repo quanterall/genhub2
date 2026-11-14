@@ -1,0 +1,1125 @@
+{
+  "bundles": {
+    "grch38": "9a2eee446c59c423c433670c9e0e9f5994f74622dcf707bcc38cadd9f12f02f0",
+    "hostile": "54dcd088293aa8f215dbf7ed2e97a6ce33d21df1e50277605452ee0481928bbd",
+    "kraken": "680790dcacd7360d3a51e5f569d1f2580df7d3a73a95555eed4aafb2ee1f57a7",
+    "nextclade_datasets": "47515ebcbf5486da4efae933a12dbe463f517e772704984dee8457ee9b475d57",
+    "primers_artic_v4_1": "9462de26eb82a273ff593fbf70f37e01b3f07c75aea88d650c8fce1ad987d87d",
+    "refseq_viral": "29e42c18e59a4409bad717596cc00839fed889a0d2944a65d0caab7bf45bbd32"
+  },
+  "checks": [
+    {
+      "name": "VeryFastTree: a maximum-likelihood tree of the 1,000 genomes in < 300 s",
+      "ok": true,
+      "value": "#{veryfasttree => 249.808414,fasttree => 697.630483,nj => 3.515474}"
+    },
+    {
+      "name": "VeryFastTree's tree against FastTree's: Robinson-Foulds distance (measured)",
+      "ok": true,
+      "value": "#{rf => 592,normalised => 0.41631504922644164,splits_a => 991,splits_b => 431}"
+    },
+    {
+      "name": "UShER: every left-out genome placed",
+      "ok": true,
+      "value": "100"
+    },
+    {
+      "name": "UShER: placed clade = Nextclade lineage, or a parent or child of it (measured)",
+      "ok": true,
+      "value": "#{place_seconds => 0.836717,same_lineage => 69,same_or_related_lineage => 84,with_clade => 100}"
+    },
+    {
+      "name": "lineages: no held-out genome sent to another virus's dataset",
+      "ok": true,
+      "value": "#{with_clade => 178,routed => 178,wrong_dataset => []}"
+    },
+    {
+      "name": "dehost: Hostile keeps the EBV pairs (>= 99%), GRCh38 removes them",
+      "ok": true,
+      "value": "[9951,<<\" vs \">>,0]"
+    },
+    {
+      "name": "dehost: both remove the human pairs (>= 99%) and keep the SARS-CoV-2 pairs (>= 99%)",
+      "ok": true,
+      "value": "#{grch38 => #{<<\"v\">> => 10000},hostile => #{<<\"e\">> => 9951,<<\"h\">> => 2,<<\"v\">> => 10000}}"
+    },
+    {
+      "name": "primers: trimmed consensus has no wrong base, and fewer wrong or missing bases than untrimmed",
+      "ok": true,
+      "value": "#{trimmed => #{differences => 0,n_where_genome_has_base => 0},untrimmed => #{differences => 0,n_where_genome_has_base => 9},primer_sites_differing_from_genome => 9}"
+    },
+    {
+      "name": "kraken: each virus's Bracken share within 5 points of the mixture's",
+      "ok": true,
+      "value": "#{expected => #{<<\"Alphainfluenzavirus influenzae\">> => 0.3,<<\"Betacoronavirus pandemicum\">> => 0.6,<<\"Orthopneumovirus hominis\">> => 0.1},bracken => #{<<\"Alphainfluenzavirus influenzae\">> => 0.29809,<<\"Betacoronavirus pandemicum\">> => 0.59618,<<\"Orthopneumovirus hominis\">> => 0.09897}}"
+    }
+  ],
+  "cpus": 10,
+  "date": "2026-11-14T01:01:53Z",
+  "dehost": {
+    "grch38_minimap2": {
+      "kept_by_origin": { "v": 10000 },
+      "pairs_in": 30000,
+      "pairs_kept": 10000,
+      "seconds": 19.565811
+    },
+    "hostile": {
+      "kept_by_origin": {
+        "e": 9951,
+        "h": 2,
+        "v": 10000
+      },
+      "pairs_in": 30000,
+      "pairs_kept": 19953,
+      "seconds": 11.923478
+    }
+  },
+  "host": "genhub2",
+  "kraken": {
+    "bracken_read_length": 150,
+    "classified": 10072,
+    "expected_shares": {
+      "Alphainfluenzavirus influenzae": 0.3,
+      "Betacoronavirus pandemicum": 0.6,
+      "Orthopneumovirus hominis": 0.1
+    },
+    "mixture": [
+      {
+        "pairs": 6000,
+        "virus": "PX916490.1"
+      },
+      {
+        "pairs": 3000,
+        "virus": "PX457773.1"
+      },
+      {
+        "pairs": 1000,
+        "virus": "LC474558.1"
+      }
+    ],
+    "pairs": 12000,
+    "seconds": 0.905307,
+    "species": [
+      {
+        "name": "Betacoronavirus pandemicum",
+        "name_in_database": "Severe acute respiratory syndrome-related coronavirus",
+        "reads": 6000,
+        "share": 0.59618,
+        "taxid": 694009
+      },
+      {
+        "name": "Alphainfluenzavirus influenzae",
+        "name_in_database": "Alphainfluenzavirus influenzae",
+        "reads": 3000,
+        "share": 0.29809,
+        "taxid": 2955291
+      },
+      {
+        "name": "Orthopneumovirus hominis",
+        "name_in_database": "Orthopneumovirus hominis",
+        "reads": 996,
+        "share": 0.09897,
+        "taxid": 3049954
+      },
+      {
+        "name": "BeAn 58058 virus",
+        "name_in_database": "BeAn 58058 virus",
+        "reads": 68,
+        "share": 0.00676,
+        "taxid": 67082
+      }
+    ]
+  },
+  "lineages": {
+    "by_virus": {
+      "Chikungunya virus": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Crimean-Congo haemorrhagic fever virus": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Dengue virus": {
+        "datasets": [
+          "community/v-gen-lab/dengue/denv1",
+          "community/v-gen-lab/dengue/denv2",
+          "community/v-gen-lab/dengue/denv4"
+        ],
+        "genomes": 20,
+        "routed": 20,
+        "with_clade": 20
+      },
+      "Dobrava-Belgrade virus": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Ebola virus": {
+        "datasets": [
+          "nextstrain/orthoebolavirus/ebov"
+        ],
+        "genomes": 19,
+        "routed": 19,
+        "with_clade": 19
+      },
+      "Enterovirus A71": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Enterovirus D68": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "HIV-1": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Hepatitis A virus": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Hepatitis B virus": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Hepatitis C virus": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Hepatitis E virus": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Herpes simplex virus 1": {
+        "datasets": [],
+        "genomes": 19,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Human adenovirus C": {
+        "datasets": [],
+        "genomes": 19,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Human metapneumovirus": {
+        "datasets": [
+          "nextstrain/hmpv/all-clades/NC_039199"
+        ],
+        "genomes": 20,
+        "routed": 19,
+        "with_clade": 19
+      },
+      "Human papillomavirus 16": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Influenza A virus": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Influenza B virus": {
+        "datasets": [
+          "nextstrain/flu/b/ha/KX058884",
+          "nextstrain/flu/yam/ha/JN993010"
+        ],
+        "genomes": 20,
+        "routed": 2,
+        "with_clade": 2
+      },
+      "Measles virus": {
+        "datasets": [
+          "nextstrain/measles/genome/WHO-2012"
+        ],
+        "genomes": 20,
+        "routed": 18,
+        "with_clade": 18
+      },
+      "Mpox virus": {
+        "datasets": [
+          "nextstrain/mpox/all-clades"
+        ],
+        "genomes": 20,
+        "routed": 20,
+        "with_clade": 20
+      },
+      "Mumps virus": {
+        "datasets": [
+          "nextstrain/mumps/genome"
+        ],
+        "genomes": 20,
+        "routed": 17,
+        "with_clade": 17
+      },
+      "Norovirus GII": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Rabies virus": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Respiratory syncytial virus": {
+        "datasets": [
+          "nextstrain/rsv/a/EPI_ISL_412866",
+          "nextstrain/rsv/b/EPI_ISL_1653999"
+        ],
+        "genomes": 20,
+        "routed": 20,
+        "with_clade": 20
+      },
+      "Rotavirus A": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "Rubella virus": {
+        "datasets": [
+          "nextstrain/rubella/genome"
+        ],
+        "genomes": 20,
+        "routed": 6,
+        "with_clade": 6
+      },
+      "SARS-CoV-2": {
+        "datasets": [
+          "nextstrain/sars-cov-2/wuhan-hu-1/orfs"
+        ],
+        "genomes": 18,
+        "routed": 18,
+        "with_clade": 18
+      },
+      "Tick-borne encephalitis virus": {
+        "datasets": [],
+        "genomes": 20,
+        "routed": 0,
+        "with_clade": 0
+      },
+      "West Nile virus": {
+        "datasets": [
+          "nextstrain/wnv/all-lineages"
+        ],
+        "genomes": 19,
+        "routed": 19,
+        "with_clade": 19
+      },
+      "Zika virus": {
+        "datasets": [],
+        "genomes": 19,
+        "routed": 0,
+        "with_clade": 0
+      }
+    },
+    "genomes": 593,
+    "routed": 178,
+    "seconds": 8.94138,
+    "with_clade": 178,
+    "wrong_dataset": []
+  },
+  "primers": {
+    "amplicons": 98,
+    "amplicons_used": 90,
+    "primer_sites_differing_from_genome": 9,
+    "trimmed": {
+      "differences": 0,
+      "n_where_genome_has_base": 0
+    },
+    "untrimmed": {
+      "differences": 0,
+      "n_where_genome_has_base": 9
+    }
+  },
+  "seconds": 1031.662,
+  "trees": {
+    "collapse_below": 1.0e-5,
+    "fasttree_splits_found": [
+      {
+        "collapse_below": 1.0e-5,
+        "fasttree": 431,
+        "found": {
+          "nj": 370,
+          "veryfasttree": 415
+        }
+      },
+      {
+        "collapse_below": 5.0e-5,
+        "fasttree": 251,
+        "found": {
+          "nj": 211,
+          "veryfasttree": 249
+        }
+      },
+      {
+        "collapse_below": 0.0001,
+        "fasttree": 162,
+        "found": {
+          "nj": 123,
+          "veryfasttree": 162
+        }
+      }
+    ],
+    "newick": {
+      "fasttree": "4c441ab1f569be37cd1b18abcdaa33bd61e019df99fa331edfa39747d90a39c5",
+      "nj": "b06e5e9fd95a7a5161ac4cf488f937df7f1e223c5591ad5bc63c39a8623b93cb",
+      "veryfasttree": "2fcf6d137949f2adebc2622c9ee029a2dd7b0bac3125eb40a37cbfb620598316"
+    },
+    "rf_nj_fasttree": {
+      "normalised": 0.24335378323108384,
+      "rf": 238,
+      "splits_a": 547,
+      "splits_b": 431
+    },
+    "rf_veryfasttree_fasttree": {
+      "normalised": 0.41631504922644164,
+      "rf": 592,
+      "splits_a": 991,
+      "splits_b": 431
+    },
+    "seconds": {
+      "fasttree": 697.630483,
+      "nj": 3.515474,
+      "veryfasttree": 249.808414
+    }
+  },
+  "usher": {
+    "build_seconds": 1.954066,
+    "built_from": 900,
+    "place_seconds": 0.836717,
+    "placed": 100,
+    "rows": [
+      {
+        "clade": "XBB.1.5",
+        "nextclade": "XBB.1.5",
+        "parsimony": 6,
+        "placements": 8,
+        "query": "PX916517.1"
+      },
+      {
+        "clade": "XBB.1.16.2",
+        "nextclade": "XBB.1.16.2",
+        "parsimony": 2,
+        "placements": 1,
+        "query": "PX916545.1"
+      },
+      {
+        "clade": "XBB.1.5",
+        "nextclade": "XBB.1.5.25",
+        "parsimony": 8,
+        "placements": 1,
+        "query": "PX916566.1"
+      },
+      {
+        "clade": "EG.1.2",
+        "nextclade": "EG.1.2",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "PX916586.1"
+      },
+      {
+        "clade": "XBB.1.9.2",
+        "nextclade": "EG.1.3",
+        "parsimony": 3,
+        "placements": 1,
+        "query": "PX916604.1"
+      },
+      {
+        "clade": "FL.2.7.1",
+        "nextclade": "FL.2.7.1",
+        "parsimony": 1,
+        "placements": 2,
+        "query": "PX916621.1"
+      },
+      {
+        "clade": "XBB.1.5.7",
+        "nextclade": "XBB.1.5.7",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "PX916648.1"
+      },
+      {
+        "clade": "FL.5",
+        "nextclade": "FL.5",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "PX916691.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "XBB.1.16.11",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "PX916749.1"
+      },
+      {
+        "clade": "FY.1.2.2",
+        "nextclade": "FY.1.2.2",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "PX916771.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "B.1.1",
+        "parsimony": 3,
+        "placements": 8,
+        "query": "MT577605.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "B.1",
+        "parsimony": 6,
+        "placements": 1,
+        "query": "MT577615.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "B.1",
+        "parsimony": 7,
+        "placements": 1,
+        "query": "MT577625.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "B.1",
+        "parsimony": 3,
+        "placements": 5,
+        "query": "MT577635.1"
+      },
+      {
+        "clade": "B",
+        "nextclade": "A.3",
+        "parsimony": 3,
+        "placements": 1,
+        "query": "MT594109.1"
+      },
+      {
+        "clade": "A.1",
+        "nextclade": "A.1",
+        "parsimony": 2,
+        "placements": 2,
+        "query": "MT642135.1"
+      },
+      {
+        "clade": "XBB.1.9.2",
+        "nextclade": "HK.30",
+        "parsimony": 2,
+        "placements": 1,
+        "query": "PX916791.1"
+      },
+      {
+        "clade": "GE.1.1",
+        "nextclade": "GE.1.1",
+        "parsimony": 1,
+        "placements": 2,
+        "query": "PX916812.1"
+      },
+      {
+        "clade": "FL.1.5.1",
+        "nextclade": "FL.1.5.1",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "PX916828.1"
+      },
+      {
+        "clade": "FL.1.5.1",
+        "nextclade": "FL.1.5.1",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "PX916844.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "B.1.371",
+        "parsimony": 0,
+        "placements": 3,
+        "query": "MT642147.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "B.1",
+        "parsimony": 0,
+        "placements": 1,
+        "query": "MT642157.1"
+      },
+      {
+        "clade": "B.1.371",
+        "nextclade": "B.1.371",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "MT642167.1"
+      },
+      {
+        "clade": "A.1",
+        "nextclade": "A.1",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "MT642177.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "B.1.391",
+        "parsimony": 3,
+        "placements": 1,
+        "query": "MT642187.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "B.1.371",
+        "parsimony": 0,
+        "placements": 3,
+        "query": "MT642197.1"
+      },
+      {
+        "clade": "B.1.1",
+        "nextclade": "B.1.1",
+        "parsimony": 0,
+        "placements": 3,
+        "query": "MT642207.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "B.1",
+        "parsimony": 1,
+        "placements": 6,
+        "query": "MT642217.1"
+      },
+      {
+        "clade": "A.1",
+        "nextclade": "A.1",
+        "parsimony": 3,
+        "placements": 1,
+        "query": "MT642227.1"
+      },
+      {
+        "clade": "B.1.371",
+        "nextclade": "B.1.371",
+        "parsimony": 1,
+        "placements": 7,
+        "query": "MT642238.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "B.1",
+        "parsimony": 0,
+        "placements": 17,
+        "query": "MT642249.1"
+      },
+      {
+        "clade": "B.1.1.7",
+        "nextclade": "B.1.1.7",
+        "parsimony": 11,
+        "placements": 2,
+        "query": "MZ450726.1"
+      },
+      {
+        "clade": "B.1.1.7",
+        "nextclade": "B.1.1.7",
+        "parsimony": 6,
+        "placements": 7,
+        "query": "MZ450736.1"
+      },
+      {
+        "clade": "B.1.1.7",
+        "nextclade": "B.1.1.7",
+        "parsimony": 0,
+        "placements": 1,
+        "query": "MZ450746.1"
+      },
+      {
+        "clade": "P.1",
+        "nextclade": "P.1",
+        "parsimony": 9,
+        "placements": 1,
+        "query": "MZ450756.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "AY.3",
+        "parsimony": 2,
+        "placements": 1,
+        "query": "MZ450766.1"
+      },
+      {
+        "clade": "B.1.1.7",
+        "nextclade": "B.1.1.7",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "MZ450776.1"
+      },
+      {
+        "clade": "A.2.5",
+        "nextclade": "A.2.5",
+        "parsimony": 0,
+        "placements": 1,
+        "query": "MZ450786.1"
+      },
+      {
+        "clade": "P.1",
+        "nextclade": "P.1",
+        "parsimony": 10,
+        "placements": 1,
+        "query": "MZ451702.1"
+      },
+      {
+        "clade": "P.1",
+        "nextclade": "P.1",
+        "parsimony": 3,
+        "placements": 1,
+        "query": "MZ451712.1"
+      },
+      {
+        "clade": "B.1.1.7",
+        "nextclade": "B.1.1.7",
+        "parsimony": 4,
+        "placements": 1,
+        "query": "MZ451722.1"
+      },
+      {
+        "clade": "AY.25",
+        "nextclade": "AY.25",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "MZ451732.1"
+      },
+      {
+        "clade": "B.1.1.7",
+        "nextclade": "B.1.1.7",
+        "parsimony": 5,
+        "placements": 1,
+        "query": "MZ451742.1"
+      },
+      {
+        "clade": "B.1.1.7",
+        "nextclade": "B.1.1.7",
+        "parsimony": 9,
+        "placements": 3,
+        "query": "MZ451752.1"
+      },
+      {
+        "clade": "B.1.1.7",
+        "nextclade": "B.1.1.7",
+        "parsimony": 0,
+        "placements": 1,
+        "query": "MZ451762.1"
+      },
+      {
+        "clade": "B.1.637",
+        "nextclade": "B.1.637",
+        "parsimony": 3,
+        "placements": 1,
+        "query": "MZ451772.1"
+      },
+      {
+        "clade": "B.1.637",
+        "nextclade": "B.1.637",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "MZ451782.1"
+      },
+      {
+        "clade": "B.1.1.7",
+        "nextclade": "B.1.1.7",
+        "parsimony": 0,
+        "placements": 1,
+        "query": "MZ451792.1"
+      },
+      {
+        "clade": "BA.2.12.1",
+        "nextclade": "BA.2.12.1",
+        "parsimony": 1,
+        "placements": 35,
+        "query": "ON702667.1"
+      },
+      {
+        "clade": "BA.2",
+        "nextclade": "BA.2",
+        "parsimony": 4,
+        "placements": 4,
+        "query": "ON702712.1"
+      },
+      {
+        "clade": "BA.2.3",
+        "nextclade": "BA.2.3",
+        "parsimony": 5,
+        "placements": 3,
+        "query": "ON702733.1"
+      },
+      {
+        "clade": "BA.2.12.1",
+        "nextclade": "BA.2.12.1",
+        "parsimony": 3,
+        "placements": 1,
+        "query": "ON702757.1"
+      },
+      {
+        "clade": "BA.2.12.1",
+        "nextclade": "BA.2.12.1",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "ON702767.1"
+      },
+      {
+        "clade": "BA.2.12.1",
+        "nextclade": "BA.2.12.1",
+        "parsimony": 3,
+        "placements": 1,
+        "query": "ON702777.1"
+      },
+      {
+        "clade": "BA.2",
+        "nextclade": "BA.2",
+        "parsimony": 5,
+        "placements": 26,
+        "query": "ON702787.1"
+      },
+      {
+        "clade": "BA.4.4",
+        "nextclade": "BA.4.4",
+        "parsimony": 1,
+        "placements": 3,
+        "query": "ON702797.1"
+      },
+      {
+        "clade": "BA.2.12.1",
+        "nextclade": "BA.2.12.1",
+        "parsimony": 2,
+        "placements": 1,
+        "query": "ON702822.1"
+      },
+      {
+        "clade": "BA.2.12.1",
+        "nextclade": "BA.2.12.1",
+        "parsimony": 3,
+        "placements": 1,
+        "query": "ON702846.1"
+      },
+      {
+        "clade": "BA.2",
+        "nextclade": "BA.2.10",
+        "parsimony": 5,
+        "placements": 2,
+        "query": "ON702856.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "BA.5.5",
+        "parsimony": 2,
+        "placements": 1,
+        "query": "ON702866.1"
+      },
+      {
+        "clade": "BF.5",
+        "nextclade": "BF.5",
+        "parsimony": 1,
+        "placements": 7,
+        "query": "LC772122.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "BF.8",
+        "parsimony": 2,
+        "placements": 2,
+        "query": "ON702876.1"
+      },
+      {
+        "clade": "BA.4.1",
+        "nextclade": "BA.4.1",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "ON702886.1"
+      },
+      {
+        "clade": "BA.2",
+        "nextclade": "BA.2",
+        "parsimony": 7,
+        "placements": 2,
+        "query": "ON702897.1"
+      },
+      {
+        "clade": "BA.2.12.1",
+        "nextclade": "BA.2.12.1",
+        "parsimony": 0,
+        "placements": 1,
+        "query": "ON702907.1"
+      },
+      {
+        "clade": "BA.2",
+        "nextclade": "BA.2",
+        "parsimony": 9,
+        "placements": 8,
+        "query": "ON702917.1"
+      },
+      {
+        "clade": "BA.4.6",
+        "nextclade": "BA.4.6",
+        "parsimony": 6,
+        "placements": 1,
+        "query": "OR083050.2"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "EF.1.2",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "OR083060.2"
+      },
+      {
+        "clade": "XBB.1.16.2",
+        "nextclade": "GY.5",
+        "parsimony": 4,
+        "placements": 1,
+        "query": "OR177352.2"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "AY.100",
+        "parsimony": 5,
+        "placements": 2,
+        "query": "OR180574.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "AY.20",
+        "parsimony": 5,
+        "placements": 1,
+        "query": "OR180584.1"
+      },
+      {
+        "clade": "AY.25",
+        "nextclade": "AY.25",
+        "parsimony": 6,
+        "placements": 7,
+        "query": "OR180594.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "B.1.617.2",
+        "parsimony": 7,
+        "placements": 1,
+        "query": "OR180604.1"
+      },
+      {
+        "clade": "AY.103",
+        "nextclade": "AY.103",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "OR182539.1"
+      },
+      {
+        "clade": "AY.25",
+        "nextclade": "AY.25",
+        "parsimony": 7,
+        "placements": 2,
+        "query": "OR182549.1"
+      },
+      {
+        "clade": "AY.44",
+        "nextclade": "AY.44",
+        "parsimony": 6,
+        "placements": 3,
+        "query": "OR182559.1"
+      },
+      {
+        "clade": "AY.100",
+        "nextclade": "AY.100",
+        "parsimony": 7,
+        "placements": 1,
+        "query": "OR182569.1"
+      },
+      {
+        "clade": "AY.25",
+        "nextclade": "AY.25",
+        "parsimony": 12,
+        "placements": 1,
+        "query": "OR182579.1"
+      },
+      {
+        "clade": "B.1.617.2",
+        "nextclade": "AY.65",
+        "parsimony": 2,
+        "placements": 2,
+        "query": "OR182589.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "AY.5",
+        "parsimony": 13,
+        "placements": 14,
+        "query": "OX652055.1"
+      },
+      {
+        "clade": "B.1",
+        "nextclade": "B.1.1",
+        "parsimony": 2,
+        "placements": 1,
+        "query": "OX659696.2"
+      },
+      {
+        "clade": "B",
+        "nextclade": "A.2",
+        "parsimony": 7,
+        "placements": 2,
+        "query": "OX660207.2"
+      },
+      {
+        "clade": "KP.3.1",
+        "nextclade": "KP.3.1.4",
+        "parsimony": 5,
+        "placements": 1,
+        "query": "PP897501.1"
+      },
+      {
+        "clade": "KP.3.2",
+        "nextclade": "KP.3.2.5",
+        "parsimony": 5,
+        "placements": 1,
+        "query": "PP897511.1"
+      },
+      {
+        "clade": "LP.1",
+        "nextclade": "LP.1",
+        "parsimony": 1,
+        "placements": 1,
+        "query": "PP897521.1"
+      },
+      {
+        "clade": "JN.1",
+        "nextclade": "JN.1.22",
+        "parsimony": 8,
+        "placements": 3,
+        "query": "PP897531.1"
+      },
+      {
+        "clade": "KP.2",
+        "nextclade": "KP.2",
+        "parsimony": 6,
+        "placements": 1,
+        "query": "PP897541.1"
+      },
+      {
+        "clade": "KP.2.3",
+        "nextclade": "KP.2.3.5",
+        "parsimony": 3,
+        "placements": 2,
+        "query": "PP897551.1"
+      },
+      {
+        "clade": "KP.2.3",
+        "nextclade": "KP.2.3",
+        "parsimony": 2,
+        "placements": 2,
+        "query": "PP897561.1"
+      },
+      {
+        "clade": "KP.1.1.1",
+        "nextclade": "KP.1.1.1",
+        "parsimony": 2,
+        "placements": 2,
+        "query": "PP897571.1"
+      },
+      {
+        "clade": "KP.2",
+        "nextclade": "KP.4.1.3",
+        "parsimony": 6,
+        "placements": 1,
+        "query": "PP897582.1"
+      },
+      {
+        "clade": "KP.3.1",
+        "nextclade": "KP.3.1",
+        "parsimony": 8,
+        "placements": 8,
+        "query": "PP897592.1"
+      },
+      {
+        "clade": "KP.2.2",
+        "nextclade": "KP.2.2",
+        "parsimony": 3,
+        "placements": 1,
+        "query": "PP897602.1"
+      },
+      {
+        "clade": "JN.1.16.1",
+        "nextclade": "KP.2.25",
+        "parsimony": 6,
+        "placements": 9,
+        "query": "PP897612.1"
+      },
+      {
+        "clade": "KP.2",
+        "nextclade": "KP.2.16",
+        "parsimony": 6,
+        "placements": 5,
+        "query": "PP897622.1"
+      },
+      {
+        "clade": "KP.2.3",
+        "nextclade": "KP.2.3",
+        "parsimony": 0,
+        "placements": 1,
+        "query": "PP897632.1"
+      },
+      {
+        "clade": "KP.3.2.3",
+        "nextclade": "KP.3.2.3",
+        "parsimony": 3,
+        "placements": 2,
+        "query": "PP938764.1"
+      },
+      {
+        "clade": "JN.1.7",
+        "nextclade": "JN.1.7.5",
+        "parsimony": 7,
+        "placements": 2,
+        "query": "PP938774.1"
+      },
+      {
+        "clade": "KP.3.2.3",
+        "nextclade": "KP.3.2.3",
+        "parsimony": 3,
+        "placements": 3,
+        "query": "PP938784.1"
+      },
+      {
+        "clade": "JN.1",
+        "nextclade": "JN.1.8",
+        "parsimony": 5,
+        "placements": 1,
+        "query": "PQ075559.1"
+      }
+    ],
+    "same_lineage": 69,
+    "same_or_related_lineage": 84,
+    "tree_seconds": 3.201009,
+    "with_clade": 100
+  }
+}

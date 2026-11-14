@@ -3,7 +3,7 @@
 %%   {fetch_public, Url} -> #{url, hash, bytes}
 -module(gh_fetch).
 -behaviour(pq_task).
--export([run/2, describe/1, get/1]).
+-export([run/2, describe/1, get/1, cached/1]).
 
 run({fetch_public, Url}, _Ctx) ->
     gh_store:with_tmp(
@@ -13,6 +13,23 @@ run({fetch_public, Url}, _Ctx) ->
               Bytes = filelib:file_size(F),
               #{url => Url, hash => gh_store:move_file(F), bytes => Bytes}
       end).
+
+%% The hash of a URL's content, downloaded once: for building reference bundles, where the same download is
+%% wanted again after a later step fails. <data_dir>/fetched/<sha256 of the URL> holds the content's hash.
+-spec cached(string()) -> gh_store:hash().
+cached(Url) ->
+    F = filename:join([application:get_env(genhub2, data_dir, "data"), "fetched",
+                       binary_to_list(binary:encode_hex(crypto:hash(sha256, Url), lowercase))]),
+    case file:read_file(F) of
+        {ok, H} -> case gh_store:has(H) of true -> H; false -> fetch_to(Url, F) end;
+        {error, _} -> fetch_to(Url, F)
+    end.
+
+fetch_to(Url, F) ->
+    #{hash := H} = run({fetch_public, Url}, #{}),
+    ok = filelib:ensure_dir(F),
+    ok = file:write_file(F, H),
+    H.
 
 %% the body of a GET, in memory
 -spec get(string() | binary()) -> binary().

@@ -46,7 +46,8 @@ Built:
 - **The acceptance test** (`acceptance/`): the SARS-CoV-2 example, a held-out set from NCBI Virus, and the
   specification's timing targets, measured. All 17 checks hold ([`acceptance/RESULTS.md`](acceptance/RESULTS.md)):
   - **reads:** human reads removed and the consensus exact;
-  - **held-out genomes:** species right for 95.1%, and for 99.6% at high confidence;
+  - **held-out genomes:** species right for 96.5% with proteins for MinHash's weak calls (95.1% by MinHash alone),
+    99.6% at high confidence;
   - **1,000 SARS-CoV-2 genomes:** our mutations agree with Nextclade's except at the genome ends and next to indels;
   - **targets:** a 10 MB upload in 4.5 s, 1,000 genomes classified in 0.7 s, a neighbour-joining tree of 1,000
     in 4 s.
@@ -76,6 +77,22 @@ Next:
 - **phase B:** two nodes of one owner, through PQCF's `{nodes, ...}` executor;
 - **phase C:** two sites through the FVLLMP gate, with sharing, accounts, roles and MFA.
 
+## Methods
+
+Each method is a PQCF task. Each one added to the first set was measured against what it adds to, on the same data,
+in [`acceptance/gh_methods_check.erl`](acceptance/gh_methods_check.erl) (results in
+[`acceptance/RESULTS.md`](acceptance/RESULTS.md)).
+
+| step | methods | added |
+| --- | --- | --- |
+| host removal | minimap2 against GRCh38; [Hostile](https://doi.org/10.1093/bioinformatics/btad728) against T2T + HLA, masked for viruses (default) | Hostile: keeps viral reads that GRCh38's analysis set would remove (it contains EBV) |
+| read composition | [Kraken 2](https://doi.org/10.1186/s13059-019-1891-0) + [Bracken](https://doi.org/10.7717/peerj-cs.104), prebuilt viral database | species and their shares in mixed samples |
+| primer trimming | [iVar](https://doi.org/10.1186/s13059-018-1618-7) `trim -e`, with a named scheme (ARTIC V4.1) | amplicon sequencing: primer bases kept out of the consensus |
+| classification | MinHash ([Mash](https://doi.org/10.1186/s13059-016-0997-x)) against RefSeq; for MinHash's weak calls, [DIAMOND](https://doi.org/10.1038/s41592-021-01101-x) blastx against all RefSeq viral proteins | proteins: divergent viruses that nucleotide matching misses |
+| lineages | [Nextclade](https://doi.org/10.21105/joss.03773): SARS-CoV-2, influenza HA, RSV A/B, mpox, Ebola, measles, dengue, hMPV, rubella, mumps, West Nile; `nextclade sort` picks the dataset | lineages beyond SARS-CoV-2 |
+| trees | neighbour-joining (gh2k); [FastTree](https://doi.org/10.1371/journal.pone.0009490); [VeryFastTree](https://doi.org/10.1093/gigascience/giaa055) | VeryFastTree: maximum likelihood of 1,000 genomes in 250 s (FastTree 700 s), within the 5-minute target |
+| placement | [UShER](https://doi.org/10.1038/s41588-021-00862-7) into a mutation-annotated tree, labelled with lineages | a new genome placed in seconds, without rebuilding the tree |
+
 ## Build and test
 
 ```sh
@@ -92,5 +109,6 @@ start the `genhub2` application. The page is then at the gateway's address.
 ## Licence
 
 Apache License 2.0 (see `LICENSE` and `NOTICE`). The external programs GenHub2 calls keep their own licences, and none
-is linked into GenHub2: minimap2, samtools, Nextclade (MIT); MAFFT (BSD); FastTree (GPL). The libraries in the release are permissive:
+is linked into GenHub2: minimap2, samtools, Nextclade, Kraken 2, Hostile, UShER (MIT); MAFFT (BSD); FastTree, VeryFastTree, DIAMOND, iVar,
+Bracken (GPL). The libraries in the release are permissive:
 cowboy, cowlib, ranch, gun (ISC), getopt (BSD), emqtt (Apache 2.0); EMQX 5.8.9 (Apache 2.0) runs as its own service.

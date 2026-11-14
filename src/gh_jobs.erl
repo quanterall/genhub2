@@ -144,6 +144,7 @@ run(#gh_job{id = Id, kind = Kind} = J) ->
 topics(validate) -> [];
 topics(consensus) -> [<<"genhub/sequences/processed">>];
 topics(classify) -> [<<"genhub/results/classification">>];
+topics(protein) -> [<<"genhub/results/classification">>];
 topics(mutations) -> [<<"genhub/results/mutations">>];
 topics(lineage) -> [<<"genhub/results/mutations">>];
 topics(knowledge) -> [<<"genhub/results/knowledge">>];
@@ -151,6 +152,7 @@ topics(_) -> [].
 
 summary(classify, [Calls]) ->
     [#{query => maps:get(<<"query">>, Q), call => maps:get(<<"call">>, Q)} || Q <- Calls];
+summary(protein, Rs) -> [maps:with([query, call], P) || P <- lists:append(Rs)];
 summary(mutations, Rs) ->
     [#{query => maps:get(query, M), substitutions => length(maps:get(substitutions, M, [])),
        insertions => length(maps:get(insertions, M, [])), deletions => length(maps:get(deletions, M, []))}

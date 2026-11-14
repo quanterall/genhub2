@@ -1,7 +1,8 @@
 %% The gateway (FS 3.1, 4.2): cowboy serving the web pages (priv/www) and the API.
 %%   POST /api/uploads               the request body (FASTA/FASTQ, gzipped or not, up to 100 MB) into the store:
 %%                                   {"hash", "bytes"}
-%%   POST /api/jobs                  {"kind": "genome" | "reads", "inputs": [hash, ...]}: {"id"}
+%%   POST /api/jobs                  {"kind": "genome" | "reads", "inputs": [hash, ...], "primers": scheme (optional,
+%%                                   for amplicon reads, e.g. "artic-v4.1")}: {"id"}
 %%   GET  /api/jobs                  the jobs, newest first
 %%   GET  /api/jobs/:id              a job with every step's results and provenance records
 %%   GET  /api/jobs/:id/:export      report.csv, report.pdf, job.json; for a tree job tree.svg, tree.nwk
