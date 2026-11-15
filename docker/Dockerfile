@@ -6,7 +6,7 @@
 FROM pqcf-variants
 RUN apt-get update && apt-get install -y --no-install-recommends mafft=7.505-1 fasttree=2.1.11-2 && rm -rf /var/lib/apt/lists/*
 RUN curl -sL -o /usr/local/bin/nextclade \
-      https://github.com/nextstrain/nextclade/releases/download/3.29.0/nextclade-aarch64-unknown-linux-gnu \
+      "https://github.com/nextstrain/nextclade/releases/download/3.29.0/nextclade-$(uname -m)-unknown-linux-gnu" \
  && chmod +x /usr/local/bin/nextclade
 # Added tools (README, "Methods"). Packaged: DIAMOND (GPL-3, protein search), iVar (GPL-3, primer trimming),
 # Kraken 2 (MIT, read classification), bowtie2 (GPL-3, for Hostile).

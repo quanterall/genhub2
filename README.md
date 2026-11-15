@@ -98,7 +98,7 @@ in [`acceptance/gh_methods_check.erl`](acceptance/gh_methods_check.erl) (results
 ```sh
 docker build -t pqcf-dev ~/pqcf && docker build -t pqcf-variants ~/pqcf/research/variants/docker
 docker build -t genhub2-dev docker
-docker run --rm -v "$PWD:$PWD" -w "$PWD" -e HOME="$PWD/.cache-home" genhub2-dev rebar3 eunit
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:$PWD" -w "$PWD" -e HOME="$PWD/.cache-home" genhub2-dev rebar3 eunit
 sh acceptance/run.sh <GRCh38 minimap2 index> <GRCh38 FASTA>
 sh acceptance/run_gateway.sh          # starts emqx/emqx:5.8.9 on 127.0.0.1:21883 for the check, then stops it
 ```
