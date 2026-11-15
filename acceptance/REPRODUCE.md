@@ -26,10 +26,14 @@ mkdir -p ~/genhub2-repro && cd ~/genhub2-repro
 git clone https://github.com/quanterall/pqcf.git
 git clone -b research/variants https://github.com/quanterall/pqcf.git pqcf-variants
 git clone https://github.com/quanterall/genhub2.git
+git -C pqcf checkout d77ead6 && git -C pqcf-variants checkout 98fcfda && git -C genhub2 checkout d6a1733
 docker build -t pqcf-dev pqcf
 docker build -t pqcf-variants pqcf-variants/research/variants/docker
 docker build -t genhub2-dev genhub2/docker
 ```
+
+The `checkout` line **reproduces the published run**: the commits of the three repositories it was tested at (see
+"Tested"). To **run the latest** versions, leave it out; the results must still be the published ones.
 
 The images build in a few minutes. `genhub2-dev` adds MAFFT, FastTree, Nextclade 3.29.0, DIAMOND, iVar, Kraken 2 and
 bowtie2 at fixed versions ([docker/Dockerfile](../docker/Dockerfile)).
