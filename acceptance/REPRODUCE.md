@@ -80,6 +80,14 @@ the reference bundles (the first 8 minutes, downloads included) and the maximum-
 (about 9 minutes). The genomes it uses are listed by accession in [held-out.tsv](held-out.tsv) and
 [sars-cov-2.tsv](sars-cov-2.tsv), so every run uses the same ones.
 
+The reference genomes are RefSeq as NCBI serves it on the day of the download. To see whether yours are the
+published run's 19,607 ([REFERENCE-DATA.md](REFERENCE-DATA.md)):
+
+```sh
+cd genhub2
+docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:$PWD" -w "$PWD" genhub2-dev sh acceptance/check_reference.sh
+```
+
 ## What you should see
 
 The stages with their times, then one line per check:

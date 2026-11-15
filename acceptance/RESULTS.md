@@ -12,6 +12,8 @@ How it is run: [`run.sh`](run.sh) and [`gh_acceptance.erl`](gh_acceptance.erl). 
 All 19,607 complete viral genomes in NCBI RefSeq, from NCBI Datasets, each labelled with its species, genus and
 family from NCBI Taxonomy. They are sketched with MinHash (K = 21, 1,000 hashes a genome; Mash, Ondov et al. 2016,
 [doi:10.1186/s13059-016-0997-x](https://doi.org/10.1186/s13059-016-0997-x)).
+The snapshot (13 November 2026), its accession list, checksums and how to check a rebuilt copy:
+[REFERENCE-DATA.md](REFERENCE-DATA.md).
 
 ## 1. The SARS-CoV-2 example (FS section 13)
 
