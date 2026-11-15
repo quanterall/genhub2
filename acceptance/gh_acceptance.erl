@@ -13,7 +13,9 @@
 %%
 %% The accessions are kept in acceptance/*.tsv, so the test reruns on the same genomes. Results:
 %% acceptance/results/phase-a-<host>-<date>.json; exit status 0 when every check holds.
-%%   sh acceptance/run.sh
+%%   sh acceptance/run.sh HOST_INDEX GRCH38_FASTA [cpuset]     every check (20)
+%%   sh acceptance/run.sh --reduced [cpuset]                   without the human reference: part 1's reads example (6
+%%                                                             checks) is skipped and said so; the other 14 run
 -module(gh_acceptance).
 -export([main/1]).
 %% for looking into a part of the test from a shell
@@ -36,16 +38,20 @@
 -define(PER_VIRUS, 20).
 
 -spec main([string()]) -> no_return().
-%% Args: [HostIndex (minimap2 -x sr index of GRCh38), Grch38Fasta (indexed), OutJson]
-main([HostIndex, Grch38, Out]) ->
+%% Args: [HostIndex (minimap2 -x sr index of GRCh38), Grch38Fasta (indexed), OutJson], or ["--reduced", OutJson]
+main(["--reduced", Out]) -> run(none, none, Out);
+main([HostIndex, Grch38, Out]) -> run(HostIndex, Grch38, Out).
+
+run(HostIndex, Grch38, Out) ->
     {ok, _} = application:ensure_all_started(genhub2),
     T0 = erlang:monotonic_time(millisecond),
     log("reference bundles"),
     Refs = gh_refdb:refseq_viral(),
-    Host = gh_refdb:host(HostIndex),
+    Host = case HostIndex of none -> null; _ -> gh_refdb:host(HostIndex) end,
     Next = gh_refdb:nextclade(?NEXTCLADE_TAG),
     Proteins = gh_refdb:viral_proteins(),
-    Params = #{refs => Refs, proteins => Proteins, host => Host, nextclade => Next, min_depth => 10},
+    Params0 = #{refs => Refs, proteins => Proteins, nextclade => Next, min_depth => 10},
+    Params = case Host of null -> Params0; _ -> Params0#{host => Host} end,
     log("data: held-out set and SARS-CoV-2 genomes"),
     Held = held_out(Refs),
     Sars = sars_cov_2(),
@@ -53,7 +59,10 @@ main([HostIndex, Grch38, Out]) ->
     Mut = mutations_vs_nextclade(Sars, Params),
     log("1. the SARS-CoV-2 example"),
     ExGenome = example_genome(Params),
-    ExReads = example_reads(Params, Sars, Mut, Grch38),
+    ExReads = case Grch38 of
+                  none -> log("   the reads example skipped: no human reference (--reduced)"), skipped;
+                  _ -> example_reads(Params, Sars, Mut, Grch38)
+              end,
     log("2. held-out classification"),
     Class = classification(Held, Refs),
     log("2b. held-out classification by proteins"),
@@ -67,8 +76,14 @@ main([HostIndex, Grch38, Out]) ->
           host => list_to_binary(net_adm:localhost()), cpus => erlang:system_info(schedulers_online),
           pqcf => <<"2a90a1f">>, nextclade_dataset => list_to_binary(?NEXTCLADE_TAG),
           bundles => #{refseq_viral => Refs, refseq_viral_proteins => Proteins, host => Host, nextclade => Next},
+          reduced => Grch38 =:= none,
+          skipped => case ExReads of
+                         skipped -> [<<"part 1, the reads example (6 checks): it needs the human reference, GRCh38">>];
+                         _ -> []
+                     end,
           references => length(maps:keys(gh_refs:taxonomy(Refs, node()))),
-          example_genome => ExGenome, example_reads => ExReads, held_out => Class, held_out_protein => Prot,
+          example_genome => ExGenome, example_reads => case ExReads of skipped -> null; _ -> ExReads end,
+          held_out => Class, held_out_protein => Prot,
           sars_cov_2_1000 => Mut,
           targets => Targets, checks => Checks,
           seconds => (erlang:monotonic_time(millisecond) - T0) / 1000},
@@ -77,6 +92,7 @@ main([HostIndex, Grch38, Out]) ->
     Failed = [C || #{ok := false} = C <- Checks],
     [io:format("~s ~s: ~s~n", [case Ok of true -> "ok  "; false -> "FAIL" end, N, V])
      || #{name := N, ok := Ok, value := V} <- Checks],
+    [io:format("skip part 1's reads example (6 checks): no human reference, a reduced run~n") || ExReads =:= skipped],
     io:format("written ~s~n", [Out]),
     halt(case Failed of [] -> 0; _ -> 1 end).
 
@@ -434,8 +450,29 @@ checks(G, R, C, M, T) ->
            maps:get(<<"species">>, maps:get(call, G))),
      check(<<"example genome: no mutations against itself">>, maps:get(substitutions, G) =:= 0, maps:get(substitutions, G)),
      check(<<"example genome: lineage B, clade 19A">>, {maps:get(pango, G), maps:get(clade, G)} =:= {<<"B">>, <<"19A">>},
-           [maps:get(pango, G), <<" ">>, maps:get(clade, G)]),
-     check(<<"example reads: job done">>, maps:get(state, R) =:= done, maps:get(state, R)),
+           [maps:get(pango, G), <<" ">>, maps:get(clade, G)])]
+    ++ case R of skipped -> []; _ -> reads_checks(R, Sp) end
+    ++ [check(<<"held-out: species accuracy at high confidence >= 95%">>,
+              acc(maps:get(species, maps:get(<<"high">>, maps:get(by_confidence, C)))) >= 0.95,
+              maps:get(species, maps:get(<<"high">>, maps:get(by_confidence, C)))),
+        check(<<"held-out: family accuracy >= 95%">>, acc(maps:get(family, C)) >= 0.95, maps:get(family, C)),
+        check(<<"SARS-CoV-2 1,000: substitutions = Nextclade's in genomes it rates good, except at genome ends and next to indels">>,
+              maps:get(other, maps:get(differences_among_good, M), 0) =:= 0,
+              [integer_to_binary(maps:get(identical_among_good, M)), <<" of ">>, integer_to_binary(maps:get(nextclade_good, M)),
+               <<" identical; differences ">>, fmt(maps:get(differences_among_good, M))]),
+        check(<<"target: 10 MB processed in < 5 s">>, maps:get(seconds, maps:get(ten_mb, T)) < 5, maps:get(seconds, maps:get(ten_mb, T))),
+        check(<<"target: 1,000 sequences classified in < 60 s">>, maps:get(seconds, maps:get(classify_1000, T)) < 60,
+              maps:get(seconds, maps:get(classify_1000, T))),
+        check(<<"target: tree of 1,000 in < 300 s, all leaves (neighbour-joining)">>, tree_ok(nj, T, 300),
+              maps:get(nj, maps:get(trees, T))),
+        %% the maximum-likelihood tree is measured, not held to the target: FastTree takes 8-11 minutes on 10 cores for
+        %% 1,000 SARS-CoV-2 genomes whatever its options (acceptance/RESULTS.md)
+        check(<<"maximum-likelihood tree of 1,000 (FastTree): all leaves; time measured">>, tree_ok(fasttree, T, infinity),
+              maps:get(fasttree, maps:get(trees, T)))].
+
+%% part 1's reads example: the only checks that need the human reference (a reduced run skips them)
+reads_checks(R, Sp) ->
+    [check(<<"example reads: job done">>, maps:get(state, R) =:= done, maps:get(state, R)),
      check(<<"example reads: human pairs removed (>= 99%)">>, maps:get(human_kept, R) =< 200, maps:get(human_kept, R)),
      check(<<"example reads: viral pairs kept (>= 99%)">>, maps:get(viral_kept, R) >= 19800, maps:get(viral_kept, R)),
      check(<<"example reads: consensus = source at every called base">>,
@@ -443,24 +480,7 @@ checks(G, R, C, M, T) ->
      check(<<"example reads: SARS-CoV-2 species">>, maps:get(<<"species">>, maps:get(call, R)) =:= Sp,
            maps:get(<<"species">>, maps:get(call, R))),
      check(<<"example reads: lineage of the source genome">>, maps:get(pango, R) =:= maps:get(source_pango, R),
-           [maps:get(pango, R), <<" vs ">>, maps:get(source_pango, R)]),
-     check(<<"held-out: species accuracy at high confidence >= 95%">>,
-           acc(maps:get(species, maps:get(<<"high">>, maps:get(by_confidence, C)))) >= 0.95,
-           maps:get(species, maps:get(<<"high">>, maps:get(by_confidence, C)))),
-     check(<<"held-out: family accuracy >= 95%">>, acc(maps:get(family, C)) >= 0.95, maps:get(family, C)),
-     check(<<"SARS-CoV-2 1,000: substitutions = Nextclade's in genomes it rates good, except at genome ends and next to indels">>,
-           maps:get(other, maps:get(differences_among_good, M), 0) =:= 0,
-           [integer_to_binary(maps:get(identical_among_good, M)), <<" of ">>, integer_to_binary(maps:get(nextclade_good, M)),
-            <<" identical; differences ">>, fmt(maps:get(differences_among_good, M))]),
-     check(<<"target: 10 MB processed in < 5 s">>, maps:get(seconds, maps:get(ten_mb, T)) < 5, maps:get(seconds, maps:get(ten_mb, T))),
-     check(<<"target: 1,000 sequences classified in < 60 s">>, maps:get(seconds, maps:get(classify_1000, T)) < 60,
-           maps:get(seconds, maps:get(classify_1000, T))),
-     check(<<"target: tree of 1,000 in < 300 s, all leaves (neighbour-joining)">>, tree_ok(nj, T, 300),
-           maps:get(nj, maps:get(trees, T))),
-     %% the maximum-likelihood tree is measured, not held to the target: FastTree takes 8-11 minutes on 10 cores for
-     %% 1,000 SARS-CoV-2 genomes whatever its options (acceptance/RESULTS.md)
-     check(<<"maximum-likelihood tree of 1,000 (FastTree): all leaves; time measured">>, tree_ok(fasttree, T, infinity),
-           maps:get(fasttree, maps:get(trees, T)))].
+           [maps:get(pango, R), <<" vs ">>, maps:get(source_pango, R)])].
 
 tree_ok(M, T, Limit) ->
     #{seconds := S, sequences := N, leaves := L} = maps:get(M, maps:get(trees, T)),

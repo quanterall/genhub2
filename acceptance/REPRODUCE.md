@@ -88,6 +88,26 @@ cd genhub2
 docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:$PWD" -w "$PWD" genhub2-dev sh acceptance/check_reference.sh
 ```
 
+### A reduced run, without the human reference
+
+Only part 1's reads example needs GRCh38: it simulates human reads from it and removes them with its minimap2 index.
+Without it, skip step 2 and run:
+
+```sh
+cd genhub2
+sh acceptance/run.sh --reduced 0-9
+```
+
+The reads example's 6 checks are skipped, and the output and the results file say so (`"reduced": true` and
+`"skipped"`); the other 14 run unchanged: the genome example, the held-out classification with and without proteins,
+the 1,000 SARS-CoV-2 genomes against Nextclade, the targets and both trees. It needs neither the 12 GB of the human
+reference and its indexes nor the 11.3 GB peak of building the index.
+
+Tested on 16 November 2026 on our machine (cores 0-9), with the reference bundles already built: all 14 checks hold,
+every answer equal to the published run's (both trees' hashes too; only the four timings differ), in 7.5 minutes
+([results/phase-a-dgx-spark-2026-11-15T2221Z.json](results/phase-a-dgx-spark-2026-11-15T2221Z.json)). A first run
+also downloads and builds the reference bundles (about 8 minutes here).
+
 ## What you should see
 
 The stages with their times, then one line per check:
