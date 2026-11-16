@@ -42,6 +42,7 @@
 main(["--reduced", Out]) -> run(none, none, Out);
 main([HostIndex, Grch38, Out]) -> run(HostIndex, Grch38, Out).
 
+-spec run(string() | none, string() | none, string()) -> no_return().
 run(HostIndex, Grch38, Out) ->
     {ok, _} = application:ensure_all_started(genhub2),
     T0 = erlang:monotonic_time(millisecond),

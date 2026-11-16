@@ -370,12 +370,23 @@ fn hit_json(db: &Db, h: &Hit) -> String {
     )
 }
 
-/// f over xs on all cores, results in xs' order.
+/// Threads for the parallel loops: GH2K_THREADS if set (a task given one of PQCF's slots uses one), otherwise the
+/// machine's.
+pub fn threads() -> usize {
+    std::env::var("GH2K_THREADS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .filter(|&n: &usize| n > 0)
+        .unwrap_or_else(|| {
+            std::thread::available_parallelism()
+                .map(|n| n.get())
+                .unwrap_or(1)
+        })
+}
+
+/// f over xs on threads() threads, results in xs' order.
 pub fn par_map<T: Sync, U: Send, F: Fn(&T) -> U + Sync>(xs: &[T], f: F) -> Vec<U> {
-    let threads = std::thread::available_parallelism()
-        .map(|n| n.get())
-        .unwrap_or(1)
-        .min(xs.len().max(1));
+    let threads = threads().min(xs.len().max(1));
     let chunk = xs.len().div_ceil(threads).max(1);
     std::thread::scope(|sc| {
         let hs: Vec<_> = xs

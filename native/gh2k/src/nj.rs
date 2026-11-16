@@ -23,27 +23,40 @@ struct Sparse {
 }
 
 pub fn run(path: &str) -> Result<i32, String> {
+    let recs = match aligned(path, "nj")? {
+        Some(r) => r,
+        None => return Ok(2),
+    };
+    let seqs: Vec<&[u8]> = recs.iter().map(|r| r.seq.as_slice()).collect();
+    let d = distances(&seqs);
+    println!("{}", newick(&names(&recs), d));
+    Ok(0)
+}
+
+/// The records of an alignment, or None (said on standard error) when it is empty or its rows differ in length.
+pub fn aligned(path: &str, cmd: &str) -> Result<Option<Vec<fasta::Record>>, String> {
     let recs = fasta::read(path)?;
     if recs.is_empty() {
-        eprintln!("gh2k nj: no sequences");
-        return Ok(2);
+        eprintln!("gh2k {cmd}: no sequences");
+        return Ok(None);
     }
     let len = recs[0].seq.len();
     if let Some(r) = recs.iter().find(|r| r.seq.len() != len) {
         eprintln!(
-            "gh2k nj: not aligned: {} has {} columns, {} has {}",
+            "gh2k {cmd}: not aligned: {} has {} columns, {} has {}",
             recs[0].id,
             len,
             r.id,
             r.seq.len()
         );
-        return Ok(2);
+        return Ok(None);
     }
-    let seqs: Vec<&[u8]> = recs.iter().map(|r| r.seq.as_slice()).collect();
-    let d = distances(&seqs);
-    let names: Vec<String> = recs.iter().map(|r| clean(&r.id)).collect();
-    println!("{}", newick(&names, d));
-    Ok(0)
+    Ok(Some(recs))
+}
+
+/// The leaf names of an alignment's records, as Newick allows them.
+pub fn names(recs: &[fasta::Record]) -> Vec<String> {
+    recs.iter().map(|r| clean(&r.id)).collect()
 }
 
 fn clean(s: &str) -> String {
@@ -61,6 +74,46 @@ fn clean(s: &str) -> String {
 /// The Jukes-Cantor distance matrix of aligned sequences (row-major, n x n).
 pub fn distances(seqs: &[&[u8]]) -> Vec<f64> {
     let n = seqs.len();
+    let sparse = sparse_all(seqs);
+    let len = seqs.first().map_or(0, |s| s.len());
+    let rows: Vec<usize> = (0..n).collect();
+    let upper: Vec<Vec<f64>> = par_map(&rows, |&i| {
+        (i + 1..n)
+            .map(|j| pair(&sparse[i], &sparse[j], len))
+            .collect()
+    });
+    let mut d = vec![0.0; n * n];
+    for (i, row) in upper.iter().enumerate() {
+        for (k, &v) in row.iter().enumerate() {
+            let j = i + 1 + k;
+            d[i * n + j] = v;
+            d[j * n + i] = v;
+        }
+    }
+    d
+}
+
+/// A block of the distance matrix: rows [i0, i1) against columns [j0, j1), row-major. A pair's distance depends only
+/// on the two sequences (the majority base is only how they are stored), so a block computed on its own has exactly
+/// the values of the whole matrix.
+pub fn block(seqs: &[&[u8]], i0: usize, i1: usize, j0: usize, j1: usize) -> Vec<f64> {
+    let len = seqs.first().map_or(0, |s| s.len());
+    let majority = majority(seqs);
+    let mut wanted: Vec<usize> = (i0..i1).chain(j0..j1).collect();
+    wanted.sort_unstable();
+    wanted.dedup();
+    let sp: Vec<Sparse> = par_map(&wanted, |&k| to_sparse(seqs[k], &majority));
+    let at = |k: usize| &sp[wanted.binary_search(&k).unwrap()];
+    let rows: Vec<usize> = (i0..i1).collect();
+    par_map(&rows, |&i| {
+        (j0..j1)
+            .map(|j| if i == j { 0.0 } else { pair(at(i), at(j), len) })
+            .collect::<Vec<f64>>()
+    })
+    .concat()
+}
+
+fn majority(seqs: &[&[u8]]) -> Vec<u8> {
     let len = seqs.first().map_or(0, |s| s.len());
     let mut majority = vec![255u8; len];
     for (c, m) in majority.iter_mut().enumerate() {
@@ -77,36 +130,28 @@ pub fn distances(seqs: &[&[u8]]) -> Vec<f64> {
             *m = best as u8;
         }
     }
-    let sparse: Vec<Sparse> = par_map(seqs, |s| {
-        let mut diffs = Vec::new();
-        let mut unknown: Vec<(u32, u32)> = Vec::new();
-        for (c, &b) in s.iter().enumerate() {
-            match code(b) {
-                Some(x) if x as u8 != majority[c] => diffs.push((c as u32, x as u8)),
-                Some(_) => {}
-                None => match unknown.last_mut() {
-                    Some(last) if last.1 == c as u32 => last.1 += 1,
-                    _ => unknown.push((c as u32, c as u32 + 1)),
-                },
-            }
-        }
-        Sparse { diffs, unknown }
-    });
-    let rows: Vec<usize> = (0..n).collect();
-    let upper: Vec<Vec<f64>> = par_map(&rows, |&i| {
-        (i + 1..n)
-            .map(|j| pair(&sparse[i], &sparse[j], len))
-            .collect()
-    });
-    let mut d = vec![0.0; n * n];
-    for (i, row) in upper.iter().enumerate() {
-        for (k, &v) in row.iter().enumerate() {
-            let j = i + 1 + k;
-            d[i * n + j] = v;
-            d[j * n + i] = v;
+    majority
+}
+
+fn sparse_all(seqs: &[&[u8]]) -> Vec<Sparse> {
+    let majority = majority(seqs);
+    par_map(seqs, |s| to_sparse(s, &majority))
+}
+
+fn to_sparse(s: &[u8], majority: &[u8]) -> Sparse {
+    let mut diffs = Vec::new();
+    let mut unknown: Vec<(u32, u32)> = Vec::new();
+    for (c, &b) in s.iter().enumerate() {
+        match code(b) {
+            Some(x) if x as u8 != majority[c] => diffs.push((c as u32, x as u8)),
+            Some(_) => {}
+            None => match unknown.last_mut() {
+                Some(last) if last.1 == c as u32 => last.1 += 1,
+                _ => unknown.push((c as u32, c as u32 + 1)),
+            },
         }
     }
-    d
+    Sparse { diffs, unknown }
 }
 
 fn covered(iv: &[(u32, u32)], c: u32) -> bool {

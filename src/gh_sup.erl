@@ -1,9 +1,14 @@
 -module(gh_sup).
 -behaviour(supervisor).
--export([start_link/0, init/1]).
+-export([start_link/0, start_link/1, init/1]).
 
 start_link() -> supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
+%% a worker node's: no services
+start_link(worker) -> supervisor:start_link({local, ?MODULE}, ?MODULE, worker).
+
+init(worker) ->
+    {ok, {#{strategy => one_for_one, intensity => 5, period => 10}, []}};
 init([]) ->
     {ok, {#{strategy => one_for_one, intensity => 5, period => 10},
           [#{id => gh_events, start => {pg, start_link, [gh_events]}},

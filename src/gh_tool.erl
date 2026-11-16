@@ -1,17 +1,21 @@
 %% External programs (FS 4.2): every tool runs as a separate OS process, so a tool's crash fails one task and never
 %% the node. Arguments are passed as a list (no shell quoting); pipelines run under bash with the arguments as $1..$n.
 -module(gh_tool).
--export([run/2, must/2, bash/2, gh2k/1, gh2k_must/1, threads/0]).
+-export([run/2, run/3, must/2, bash/2, gh2k/1, gh2k_must/1, gh2k_must/2, threads/0]).
 
 %% {ExitStatus, Stdout}; standard error goes to the node's own.
 -spec run(string(), [string() | binary()]) -> {non_neg_integer(), binary()}.
-run(Exe, Args) ->
+run(Exe, Args) -> run(Exe, Args, []).
+
+%% the same, with variables added to the program's environment
+-spec run(string(), [string() | binary()], [{string(), string()}]) -> {non_neg_integer(), binary()}.
+run(Exe, Args, Env) ->
     Path = case filename:pathtype(Exe) of
                absolute -> Exe;
                _ -> os:find_executable(Exe)
            end,
     Path =/= false orelse error({tool_not_found, Exe}),
-    Port = open_port({spawn_executable, Path}, [{args, Args}, exit_status, binary, use_stdio, hide]),
+    Port = open_port({spawn_executable, Path}, [{args, Args}, {env, Env}, exit_status, binary, use_stdio, hide]),
     collect(Port, []).
 
 collect(Port, Acc) ->
@@ -50,6 +54,15 @@ gh2k(Args) ->
 -spec gh2k_must([string() | binary()]) -> binary().
 gh2k_must(Args) ->
     case gh2k(Args) of
+        {0, Out} -> Out;
+        {S, Out} -> error({tool_failed, gh2k, S, tail(Out)})
+    end.
+
+%% the same on Threads threads (GH2K_THREADS): a task that has one of PQCF's slots uses one
+-spec gh2k_must([string() | binary()], pos_integer()) -> binary().
+gh2k_must(Args, Threads) ->
+    case run(filename:absname(filename:join(code:priv_dir(genhub2), "gh2k")), Args,
+             [{"GH2K_THREADS", integer_to_list(Threads)}]) of
         {0, Out} -> Out;
         {S, Out} -> error({tool_failed, gh2k, S, tail(Out)})
     end.

@@ -9,8 +9,12 @@
            {http, #{ip => {127, 0, 0, 1}, port => 8480}},
            %% the site's EMQX broker (undefined: no MQTT; the services still talk through gh_events)
            {mqtt, undefined},
+           %% site: the site's services; worker: one of the lab's further nodes, running tasks only (gh_app)
+           {role, site},
+           %% the executor of the steps that may leave this node (gh_jobs): local, or {nodes, [Node]}
+           {executor, local},
            %% the task types this node runs for PQCF's executors (pq_task's allow-list)
            {task_modules, [gh_validate, gh_dehost, gh_screen, gh_consensus, gh_classify, gh_protein, gh_mutations, gh_lineage,
-                           gh_tree, gh_usher, gh_kraken, gh_knowledge, gh_fetch]}]},
+                           gh_tree, gh_phylo, gh_usher, gh_kraken, gh_knowledge, gh_fetch]}]},
     {licenses, ["Apache-2.0"]}
 ]}.

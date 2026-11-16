@@ -56,11 +56,18 @@ handle(export, <<"GET">>, Req) ->
                             <<"content-disposition">> => <<"inline; filename=\"", Name/binary, "\"">>}, Body, Req);
 handle(trees, <<"POST">>, Req) ->
     {ok, Body, Req2} = cowboy_req:read_body(Req, #{length => 100000}),
-    {Ids, Method} = case catch json:decode(Body) of
-                        #{<<"jobs">> := L, <<"method">> := M} when is_list(L), M =:= <<"nj">>; M =:= <<"fasttree">> ->
-                            {L, binary_to_existing_atom(M)};
-                        _ -> throw({status, 400, <<"expected {\"jobs\": [id, ...], \"method\": \"nj\" | \"fasttree\"}">>})
-                    end,
+    Usage = <<"expected {\"jobs\": [id, ...], \"method\": \"nj\" | \"fasttree\" | \"veryfasttree\", "
+              "\"bootstrap\": 0-1000 (neighbour-joining only)}">>,
+    {Ids, Method, Boot} = case catch json:decode(Body) of
+                              #{<<"jobs">> := L, <<"method">> := M} = Q
+                                when is_list(L), (M =:= <<"nj">> orelse M =:= <<"fasttree">> orelse M =:= <<"veryfasttree">>) ->
+                                  case maps:get(<<"bootstrap">>, Q, 0) of
+                                      0 -> {L, binary_to_existing_atom(M), 0};
+                                      B when is_integer(B), B > 0, B =< 1000, M =:= <<"nj">> -> {L, nj, B};
+                                      _ -> throw({status, 400, Usage})
+                                  end;
+                              _ -> throw({status, 400, Usage})
+                          end,
     Views = [case gh_jobs:view(I) of
                  #{state := done, kind := K} = V when K =/= tree -> V;
                  _ -> throw({status, 400, <<"not a finished genome or reads job: ", I/binary>>})
@@ -70,7 +77,7 @@ handle(trees, <<"POST">>, Req) ->
     length(Refs) >= 2 orelse throw({status, 400, <<"a tree needs at least two sequences">>}),
     Reference = most_common(Refs),
     Fasta = gh_store:put_binary([named(maps:get(id, V), gh_store:read(G)) || {V, {G, _}} <- lists:zip(Views, Genomes)]),
-    Params = (gh_config:params())#{reference => Reference, method => Method, from_jobs => Ids},
+    Params = (gh_config:params())#{reference => Reference, method => Method, bootstrap => Boot, from_jobs => Ids},
     reply(201, #{id => gh_jobs:submit(tree, [Fasta], Params), reference => Reference}, Req2);
 handle(summary, <<"GET">>, Req) ->
     reply(200, gh_monitor:summary(), Req);
@@ -89,6 +96,8 @@ view(Req) ->
         J -> J
     end.
 
+%% a tree job's tree, with its branches' bootstrap support when it has replicates
+newick(#{kind := tree, state := done, steps := #{support := #{results := [#{newick := H}]}}}) -> H;
 newick(#{kind := tree, state := done, steps := #{tree := #{results := [#{newick := H}]}}}) -> H;
 newick(_) -> throw({status, 404, <<"not a finished tree job">>}).
 

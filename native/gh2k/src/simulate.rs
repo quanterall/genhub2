@@ -8,17 +8,18 @@
 use crate::fasta::{self, revcomp};
 use std::io::{BufWriter, Write};
 
-struct Rng(u64);
+/// SplitMix64 (Steele, Lea and Flood 2014, doi:10.1145/2714064.2660195): a seed gives the same stream on every machine.
+pub struct Rng(pub u64);
 
 impl Rng {
-    fn next(&mut self) -> u64 {
+    pub fn next(&mut self) -> u64 {
         self.0 = self.0.wrapping_add(0x9e3779b97f4a7c15);
         let mut z = self.0;
         z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
         z = (z ^ (z >> 27)).wrapping_mul(0x94d049bb133111eb);
         z ^ (z >> 31)
     }
-    fn below(&mut self, n: u64) -> u64 {
+    pub fn below(&mut self, n: u64) -> u64 {
         self.next() % n
     }
     fn unit(&mut self) -> f64 {

@@ -6,6 +6,10 @@
 //!   gh2k classify DB.sketch QUERY.fasta TOP  the nearest references of every query sequence (task classify)
 //!   gh2k screen DB.sketch TOP R1.fastq [R2.fastq]  the nearest references of a read set (task screen)
 //!   gh2k nj ALIGNED.fasta                    a neighbour-joining tree of aligned genomes, in Newick (task tree)
+//!   gh2k dist ALIGNED.fasta I0 I1 J0 J1 OUT  a tile of the distance matrix (task distance_block; phylo.rs)
+//!   gh2k njtiles ALIGNED.fasta TILE...       neighbour-joining on the matrix put together from tiles
+//!   gh2k boot ALIGNED.fasta SEED             one bootstrap replicate's tree (task bootstrap)
+//!   gh2k support TREE REPLICATES...          the tree with each branch's bootstrap support
 //!   gh2k simulate GENOME.fa PAIRS LEN INSERT ERR SEED OUT [SPIKE.fa SPIKE_PAIRS]   paired reads for tests
 //!
 //! Exit status: 0 done; 2 the input is invalid (validate: the report says why); 1 a usage or I/O error.
@@ -13,6 +17,7 @@
 mod fasta;
 mod minhash;
 mod nj;
+mod phylo;
 mod simulate;
 mod validate;
 
@@ -29,6 +34,12 @@ fn main() {
             minhash::screen_cmd(db, fastqs, num(top))
         }
         ["nj", aligned] => nj::run(aligned),
+        ["dist", aligned, i0, i1, j0, j1, out] => {
+            phylo::dist(aligned, num(i0), num(i1), num(j0), num(j1), out)
+        }
+        ["njtiles", aligned, tiles @ ..] if !tiles.is_empty() => phylo::njtiles(aligned, tiles),
+        ["boot", aligned, seed] => phylo::boot(aligned, num(seed) as u64),
+        ["support", tree, reps @ ..] if !reps.is_empty() => phylo::support(tree, reps),
         ["simulate", genome, pairs, len, insert, err, seed, out] => simulate::run(
             genome,
             num(pairs),
@@ -53,7 +64,7 @@ fn main() {
         }
         _ => {
             eprintln!(
-                "usage: gh2k validate|sketch|classify|screen|nj|simulate ... (see the source's header)"
+                "usage: gh2k validate|sketch|classify|screen|nj|dist|njtiles|boot|support|simulate ... (see the source's header)"
             );
             exit(1)
         }

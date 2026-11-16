@@ -83,6 +83,15 @@ wait_loop(Id, Deadline) ->
             end
     end.
 
+%% the executor of a step's tasks: this node for those that read the lab's raw data (gh_pipeline:placement/1), the
+%% site's executor (application setting executor: local, or {nodes, Nodes}, the lab's own Erlang nodes) for the rest
+-spec executor(atom()) -> local | {nodes, [node()]}.
+executor(Step) ->
+    case gh_pipeline:placement(Step) of
+        home -> local;
+        spread -> application:get_env(genhub2, executor, local)
+    end.
+
 to_map(#gh_job{id = Id, kind = K, inputs = I, params = P, state = S, created = C, updated = U, error = E}) ->
     #{id => Id, kind => K, inputs => I, params => P, state => S, created => C, updated => U, error => E}.
 
@@ -119,7 +128,7 @@ start_run(#gh_job{id = Id} = J, Runs) ->
 run(#gh_job{id = Id, kind = Kind} = J) ->
     update(Id, running, undefined),
     Job = to_map(J),
-    Exec = application:get_env(genhub2, executor, local),
+    Opts = #{task_timeout => application:get_env(genhub2, task_timeout, 6 * 3600 * 1000)},
     _ = lists:foldl(
       fun(Step, Done) ->
               case mnesia:dirty_read(gh_step, {Id, Step}) of
@@ -127,7 +136,7 @@ run(#gh_job{id = Id, kind = Kind} = J) ->
                   [] ->
                       T0 = erlang:monotonic_time(),
                       Tasks = gh_pipeline:tasks(Step, Job, Done),
-                      R = pq_rexec:map_traced(Tasks, Exec, #{}),
+                      R = pq_rexec:map_traced(Tasks, executor(Step), Opts),
                       Secs = erlang:convert_time_unit(erlang:monotonic_time() - T0, native, microsecond) / 1.0e6,
                       ok = mnesia:dirty_write(#gh_step{key = {Id, Step}, results = R, seconds = Secs}),
                       gh_events:publish(<<"genhub/tasks/status">>, #{job => Id, step => Step, seconds => Secs}),

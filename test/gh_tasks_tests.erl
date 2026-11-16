@@ -6,7 +6,7 @@ tasks_test_() ->
     {setup,
      fun() ->
              Dir = filename:join("/tmp", "gh-tasks-" ++ os:getpid()),
-             ok = application:load(genhub2),
+             _ = application:load(genhub2),
              ok = application:set_env(genhub2, data_dir, Dir),
              [pq_task:allow(M) || M <- [gh_validate, gh_knowledge, gh_classify]],
              Dir

@@ -7,22 +7,51 @@
 %% kraken runs when the site has a Kraken 2 database (params kraken); consensus trims primers when the job names a
 %% primer scheme (params primers).
 %% protein runs only for the sequences MinHash classified with low confidence or not at all (gh_protein).
-%%   tree:   tree, of the genomes of earlier jobs ({tree, [GenomesHash]}, params reference and method)
+%%   tree:   align, distance, tree, bootstrap, support: a tree of the genomes of earlier jobs ({tree, [GenomesHash]},
+%%           params reference, method and bootstrap, the number of replicates; gh_phylo). Distance tiles and
+%%           replicates are for neighbour-joining; a maximum-likelihood tree is one task.
+%%
+%% Placement (FS 3.3): the steps that read a lab's raw data (the upload, its reads) run on the coordinating node
+%% (home), the others on whichever nodes the site's executor has (spread). Only results and genomes leave the
+%% home node, and only to the lab's own nodes.
 %% Params: #{refs := ViralRefBundle, host := HostBundle, nextclade := DatasetBundle, min_depth := N}
 -module(gh_pipeline).
--export([steps/1, tasks/3, genome/2]).
+-export([steps/1, placement/1, tasks/3, genome/2]).
 
 -define(SARS_COV_2_REF, <<"NC_045512.2">>).
+%% genomes per align task, rows per distance tile
+-define(ALIGN_CHUNK, 100).
+-define(TILE_ROWS, 128).
 
 -spec steps(genome | reads | tree) -> [atom()].
 steps(genome) -> [validate, classify, protein, mutations, lineage, knowledge];
 steps(reads) -> [validate, dehost, kraken, screen, consensus, classify, protein, mutations, lineage, knowledge];
-steps(tree) -> [tree].
+steps(tree) -> [align, distance, tree, bootstrap, support].
+
+%% where a step's tasks run: home (the coordinating node: the lab's raw data) or spread (the site's executor)
+-spec placement(atom()) -> home | spread.
+placement(S) when S =:= validate; S =:= dehost; S =:= kraken; S =:= screen; S =:= consensus -> home;
+placement(_) -> spread.
 
 %% The step's tasks; Done: Step => [Result] of the steps before it.
 -spec tasks(atom(), map(), #{atom() => [term()]}) -> [pq_task:task()].
-tasks(tree, #{inputs := [Genomes], params := #{refs := Refs, reference := Acc, method := M}}, _) ->
-    [{pq_task, gh_tree, {tree, Genomes, Refs, Acc, M}}];
+tasks(align, #{inputs := [Genomes], params := #{refs := Refs, reference := Acc}}, _) ->
+    [{pq_task, gh_phylo, {align, C, Refs, Acc, K =:= 1}} || {K, C} <- lists:enumerate(gh_phylo:chunks(Genomes, ?ALIGN_CHUNK))];
+tasks(distance, #{params := #{method := nj}}, #{align := A}) ->
+    Aligned = gh_phylo:join(A),
+    N = 1 + lists:sum([S || #{sequences := S} <- A]),
+    [{pq_task, gh_phylo, {distance_block, Aligned, I0, I1, J0, J1}} || {I0, I1, J0, J1} <- gh_phylo:tiles(N, ?TILE_ROWS)];
+tasks(distance, _Job, _Done) -> [];
+tasks(tree, #{params := #{method := nj}}, #{align := A, distance := Tiles}) ->
+    [{pq_task, gh_phylo, {njtiles, gh_phylo:join(A), Tiles}}];
+tasks(tree, #{params := #{method := M}}, #{align := A}) ->
+    [{pq_task, gh_tree, {ml, gh_phylo:join(A), M}}];
+tasks(bootstrap, #{params := #{method := nj} = P}, #{align := A}) ->
+    [{pq_task, gh_phylo, {bootstrap, gh_phylo:join(A), Seed}} || Seed <- lists:seq(1, maps:get(bootstrap, P, 0))];
+tasks(bootstrap, _Job, _Done) -> [];
+tasks(support, _Job, #{bootstrap := []}) -> [];
+tasks(support, _Job, #{tree := [#{newick := T}], bootstrap := Reps}) ->
+    [{pq_task, gh_phylo, {support, T, Reps}}];
 tasks(validate, #{inputs := Files}, _) ->
     [{pq_task, gh_validate, {validate, F}} || F <- Files];
 tasks(dehost, #{params := #{host := Host}}, #{validate := V}) ->
