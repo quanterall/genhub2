@@ -60,12 +60,26 @@ The published run is [results/phase-b-dgx-spark-2026-11-16T1227Z.json](results/p
 - **These must be the same:**
   - the neighbour-joining tree's SHA-256, `b06e5e9f...`, which is also phase A's;
   - the tree with its 100 bootstrap supports, `054bc67e...`;
-  - the 1.5 GB (1,523,890,428 bytes) the worker fetched;
   - identical results in all four runs of every workload.
+- **The worker's fetch, about 1.5 GB,** depends on your reference bundles. Phase A's run builds them from NCBI's
+  current RefSeq, which changes a little over time ([REFERENCE-DATA.md](REFERENCE-DATA.md)): the published run
+  fetched 1,523,890,428 bytes, and a rebuild on 16 November fetched 1,523,892,670.
 - **The times differ** with the machine, its cores and its load. The speed-ups should be near 2 on two equal nodes.
   They were 1.87-1.97 here.
 
 ## Tested
 
-The published run was made in the development worktree on phase A's data. The fresh-clone test of this page is
-below.
+From a fresh clone of GenHub2 at 3a68ed5 on 16 November 2026, on the same DGX Spark, with the images already built:
+- GenHub2's 25 tests passed;
+- `run.sh --reduced` built the reference bundles from NCBI;
+- `run_phase_b.sh` passed all 20 checks in 10 minutes
+  ([results/phase-b-dgx-spark-2026-11-16T1502Z.json](results/phase-b-dgx-spark-2026-11-16T1502Z.json)). Both tree
+  hashes equal the published run's, and the speed-ups were 1.86-1.96.
+
+The rebuilt RefSeq bundles differ from the published ones (NCBI's snapshot had changed), which is why the worker's
+fetch differs by 2,242 bytes.
+
+In that clone, phase A's reduced run failed one of its 14 checks: the 10 MB upload took 6.8 s, against the 5 s
+target. Its classify and lineage steps took 1.06 s and 4.39 s, against 0.43 s and 2.71 s in phase A's published run.
+Three later runs of the same job at the same commit took 4.34-4.45 s with phase A's step times, so the machine,
+which other projects share, was busy at the time. Every result of that run matched the published one.
