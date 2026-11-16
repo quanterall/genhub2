@@ -41,7 +41,10 @@
     <p class="hint">A tree of the genomes of every finished analysis, against the reference most of them are nearest
       to.</p>
     <label>Method <select id="t-method"><option value="nj">neighbour-joining (seconds)</option>
+      <option value="veryfasttree">maximum likelihood, VeryFastTree (minutes)</option>
       <option value="fasttree">maximum likelihood, FastTree (minutes)</option></select></label>
+    <label>Bootstrap replicates <input id="t-boot" type="number" min="0" max="1000" step="1" value="0"
+      title="neighbour-joining only: each replicate is a task, spread over the site's nodes"></label>
     <button id="t-go">Build tree</button>
     <p id="t-msg" role="status"></p>
   </section>

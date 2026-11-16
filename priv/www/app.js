@@ -40,12 +40,19 @@ $("#go").addEventListener("click", async () => {
   }
 });
 
+// replicates apply to neighbour-joining only
+function boot() {
+  const n = Math.max(0, Math.min(1000, parseInt($("#t-boot").value, 10) || 0));
+  return $("#t-method").value === "nj" ? n : 0;
+}
+$("#t-method").addEventListener("change", () => { $("#t-boot").disabled = $("#t-method").value !== "nj"; });
+
 $("#t-go").addEventListener("click", async () => {
   $("#t-go").disabled = true;
   try {
     const jobs = (await api("/api/jobs")).filter((j) => j.state === "done" && j.kind !== "tree").map((j) => j.id);
     const r = await api("/api/trees", {method: "POST", headers: {"content-type": "application/json"},
-                                       body: JSON.stringify({jobs, method: $("#t-method").value})});
+                                       body: JSON.stringify({jobs, method: $("#t-method").value, bootstrap: boot()})});
     $("#t-msg").textContent = `Started ${r.id}: ${jobs.length} analyses against ${r.reference}.`;
     selected = r.id;
     await refresh();

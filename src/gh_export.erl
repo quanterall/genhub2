@@ -209,7 +209,7 @@ svg(Newick) ->
     Bar = bar(Depth),
     ["<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"", integer_to_list(W), "\" height=\"", integer_to_list(H),
      "\" viewBox=\"0 0 ", integer_to_list(W), " ", integer_to_list(H), "\" font-family=\"sans-serif\" font-size=\"11\">",
-     "<style>line{stroke:#555;stroke-width:1.2}text{fill:#222}</style>",
+     "<style>line{stroke:#555;stroke-width:1.2}text{fill:#222}text.s{fill:#777;font-size:9px}</style>",
      Lines,
      case Note of
          none -> ["<line x1=\"20\" y1=\"", n(H - 20), "\" x2=\"", n(20 + Bar * Scale), "\" y2=\"", n(H - 20), "\"/>",
@@ -232,7 +232,7 @@ draw({node, [], Name, L}, X, Scale, I) ->
     X2 = 20 + (X + max(L, 0.0)) * Scale,
     {Y, I + 1, [ln(20 + X * Scale, Y, X2, Y),
                 ["<text x=\"", n(X2 + 4), "\" y=\"", n(Y + 4), "\">", xml(Name), "</text>"]]};
-draw({node, Kids, _, L}, X, Scale, I) ->
+draw({node, Kids, Name, L}, X, Scale, I) ->
     X1 = X + max(L, 0.0),
     {Ys, Next, Svgs} = lists:foldl(fun(K, {Ys0, I0, S0}) ->
                                            {Yk, I1, Sk} = draw(K, X1, Scale, I0),
@@ -240,7 +240,12 @@ draw({node, Kids, _, L}, X, Scale, I) ->
                                    end, {[], I, []}, Kids),
     Y = (lists:min(Ys) + lists:max(Ys)) / 2,
     XP = 20 + X1 * Scale,
-    {Y, Next, [Svgs, ln(XP, lists:min(Ys), XP, lists:max(Ys)), ln(20 + X * Scale, Y, XP, Y)]}.
+    %% an internal node's label is its branch's bootstrap support (gh_phylo), drawn just left of the node
+    Support = case Name of
+                  <<>> -> [];
+                  _ -> ["<text class=\"s\" x=\"", n(XP - 2), "\" y=\"", n(Y - 3), "\" text-anchor=\"end\">", xml(Name), "</text>"]
+              end,
+    {Y, Next, [Svgs, ln(XP, lists:min(Ys), XP, lists:max(Ys)), ln(20 + X * Scale, Y, XP, Y), Support]}.
 
 ln(X1, Y1, X2, Y2) -> ["<line x1=\"", n(X1), "\" y1=\"", n(Y1), "\" x2=\"", n(X2), "\" y2=\"", n(Y2), "\"/>"].
 

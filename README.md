@@ -65,16 +65,30 @@ Built:
 
   A message on `genhub/sequences/new` from another publisher, for example a sequencer's integration, starts a job.
 - **Exports** (`gh_export`): CSV, PDF and JSON of a job's results; phylogenetic trees as SVG and Newick.
-- **Trees from the page:** a tree job of the genomes of chosen analyses, by neighbour-joining or FastTree, drawn in
-  the page.
+- **Trees from the page:** a tree job of the genomes of chosen analyses, by neighbour-joining, FastTree or
+  VeryFastTree, drawn in the page.
 - **Monitoring at the site** (`gh_monitor`): counts by species, lineage and week, each with the job and date it was
   first seen. A finished job that brings a species or lineage the site has not seen before raises an alert on
   `genhub/alerts`. Exchanging these counts between sites, without sequences, is phase D.
 - **The gateway check** passes all 13 of its checks against a real EMQX 5.8.9
   ([`acceptance/RESULTS.md`](acceptance/RESULTS.md)).
 
+## Status: phase B, a lab's nodes (two local nodes done)
+
+- **The executor per step** (`gh_jobs`, `gh_pipeline:placement/1`): steps on the lab's raw data (validate, dehost,
+  kraken, screen, consensus) run on the site's node. The others run on the site's executor: `local`, or
+  `{nodes, [Node, ...]}`, the lab's own Erlang nodes.
+- **Worker nodes** (`{role, worker}`): they run only the tasks the site sends them, with their own store, and fetch
+  inputs and reference bundles from the site by hash.
+- **Trees in parts** (`gh_phylo`, gh2k): align in chunks, the distance matrix in tiles, neighbour-joining on the
+  tiles, bootstrap replicates one task each, and support values on the tree. The page asks for up to 1,000 replicates
+  and draws the supports.
+- **The acceptance test:** two nodes give exactly one node's results, nearly twice as fast (1.87-1.97). The tree from
+  tiles is byte for byte phase A's. All 20 checks hold ([`acceptance/RESULTS-PHASE-B.md`](acceptance/RESULTS-PHASE-B.md),
+  how to reproduce: [`acceptance/REPRODUCE-PHASE-B.md`](acceptance/REPRODUCE-PHASE-B.md)).
+
 Next:
-- **phase B:** two nodes of one owner, through PQCF's `{nodes, ...}` executor;
+- **phase B on two machines:** a second DGX Spark as a worker;
 - **phase C:** two sites through the FVLLMP gate, with sharing, accounts, roles and MFA.
 
 ## Methods
@@ -90,7 +104,7 @@ in [`acceptance/gh_methods_check.erl`](acceptance/gh_methods_check.erl) (results
 | primer trimming | [iVar](https://doi.org/10.1186/s13059-018-1618-7) `trim -e`, with a named scheme (ARTIC V4.1) | amplicon sequencing: primer bases kept out of the consensus |
 | classification | MinHash ([Mash](https://doi.org/10.1186/s13059-016-0997-x)) against RefSeq; for MinHash's weak calls, [DIAMOND](https://doi.org/10.1038/s41592-021-01101-x) blastx against all RefSeq viral proteins | proteins: divergent viruses that nucleotide matching misses |
 | lineages | [Nextclade](https://doi.org/10.21105/joss.03773): SARS-CoV-2, influenza HA, RSV A/B, mpox, Ebola, measles, dengue, hMPV, rubella, mumps, West Nile; `nextclade sort` picks the dataset | lineages beyond SARS-CoV-2 |
-| trees | neighbour-joining (gh2k); [FastTree](https://doi.org/10.1371/journal.pone.0009490); [VeryFastTree](https://doi.org/10.1093/gigascience/giaa055) | VeryFastTree: maximum likelihood of 1,000 genomes in 250 s (FastTree 700 s), within the 5-minute target |
+| trees | neighbour-joining (gh2k); [FastTree](https://doi.org/10.1371/journal.pone.0009490); [VeryFastTree](https://doi.org/10.1093/gigascience/giaa055); bootstrap replicates ([Felsenstein 1985](https://doi.org/10.1111/j.1558-5646.1985.tb00420.x)) for neighbour-joining | VeryFastTree: maximum likelihood of 1,000 genomes in 250 s (FastTree 700 s), within the 5-minute target; replicates: support for every branch, one task each |
 | placement | [UShER](https://doi.org/10.1038/s41588-021-00862-7) into a mutation-annotated tree, labelled with lineages | a new genome placed in seconds, without rebuilding the tree |
 
 ## Build and test
@@ -101,6 +115,7 @@ docker build -t genhub2-dev docker
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:$PWD" -w "$PWD" -e HOME="$PWD/.cache-home" genhub2-dev rebar3 eunit
 sh acceptance/run.sh <GRCh38 minimap2 index> <GRCh38 FASTA>
 sh acceptance/run_gateway.sh          # starts emqx/emqx:5.8.9 on 127.0.0.1:21883 for the check, then stops it
+sh acceptance/run_phase_b.sh          # two nodes on this machine (after run.sh, which builds the bundles)
 ```
 
 To run a site: set `{genhub2, [{http, #{ip => ..., port => ...}}, {mqtt, #{host => "127.0.0.1", port => 1883}}]}` and
