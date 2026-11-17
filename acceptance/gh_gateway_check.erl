@@ -12,7 +12,10 @@
 %%   8. accounts and the audit log (FS 3.1, 3.4): a login needs the password and a one-time code; each role reaches
 %%      only its endpoints; without a session, nothing but the page and the login; an admin creates and disables
 %%      users; the audit log holds the logins, uploads, jobs (also MQTT's), alerts and refusals, and its chain is
-%%      whole.
+%%      whole;
+%%   9. aggregates (phase D, inside the site): the genome job's sample metadata counted by week, region and lineage;
+%%      bad metadata refused; another site's aggregate imported by an admin (not by an analyst); the alerts of both
+%%      merged name the other site's new lineage; a researcher reads the aggregates.
 %% Parts 1-7 run as an analyst who logged in through the API.
 %%
 %% Needs the reference bundles of the phase A acceptance test, and EMQX on 127.0.0.1:21883 (run_gateway.sh); the
@@ -57,14 +60,17 @@ main([Out]) ->
     Alerts = [M || {<<"genhub/alerts">>, M} <- collected(Mqtt)],
     Refused = refused(maps:get(id, Job)),
     Accounts = accounts(Users),
+    Aggregates = aggregates(Users),
     Checks = checks(Page, Job, MqttMsgs, WsMsgs, Viamqtt, Refused)
-        ++ more_checks(Job, Viamqtt, Exports, Tree, Summary, Alerts) ++ accounts_checks(Accounts),
+        ++ more_checks(Job, Viamqtt, Exports, Tree, Summary, Alerts) ++ accounts_checks(Accounts)
+        ++ aggregates_checks(Aggregates),
     R = #{date => list_to_binary(calendar:system_time_to_rfc3339(erlang:system_time(second), [{offset, "Z"}])),
           host => list_to_binary(net_adm:localhost()), emqx => <<"emqx/emqx:5.8.9">>,
           upload => Upload, job_seconds => maps:get(seconds, Job), job_state => maps:get(state, Job),
           mqtt_topics => count([T || {T, _} <- MqttMsgs]), websocket_topics => count([T || {T, _} <- WsMsgs]),
           job_from_mqtt => Viamqtt, exports => Exports, tree => maps:remove(svg, Tree), summary => Summary,
-          alerts => Alerts, refused => Refused, accounts => Accounts, usher_tree => UsherTree, checks => Checks,
+          alerts => Alerts, refused => Refused, accounts => Accounts, aggregates => Aggregates, usher_tree => UsherTree,
+          checks => Checks,
           seconds => (erlang:monotonic_time(millisecond) - T0) / 1000},
     ok = filelib:ensure_dir(Out),
     ok = file:write_file(Out, json:format(gh_json:term(R))),
@@ -174,7 +180,9 @@ genome_job() ->
     {201, _, U} = http(post, "/api/uploads", {"application/octet-stream", Fasta}),
     #{<<"hash">> := Hash, <<"bytes">> := Bytes} = json:decode(U),
     T0 = erlang:monotonic_time(millisecond),
-    {201, _, J} = http(post, "/api/jobs", {"application/json", json:encode(#{kind => genome, inputs => [Hash]})}),
+    {201, _, J} = http(post, "/api/jobs", {"application/json", json:encode(#{kind => genome, inputs => [Hash],
+                                                                             metadata => #{region => <<"BG-22">>,
+                                                                                           collection_date => <<"2026-11-10">>}})}),
     #{<<"id">> := Id} = json:decode(J),
     Job = poll(Id, 600),
     Secs = (erlang:monotonic_time(millisecond) - T0) / 1000,
@@ -350,6 +358,62 @@ accounts_checks(A) ->
                            <<"check-researcher denied_request denied">>, <<"check-admin user_create ok">>,
                            <<"check-admin user_disable ok">>, <<"check-researcher logout ok">>]), Seen),
      check(<<"audit: the chain is whole">>, maps:get(<<"whole">>, maps:get(audit_verify, A)) =:= true, maps:get(audit_verify, A))].
+
+%%% 9. aggregates
+
+aggregates(Users) ->
+    {AnName, AnSecret} = maps:get(analyst, Users),
+    {AdName, AdSecret} = maps:get(admin, Users),
+    {ReName, ReSecret} = maps:get(researcher, Users),
+    {200, <<"analyst">>} = login(AnName, AnSecret),
+    {200, _, A} = http(get, "/api/aggregates", none),
+    Own = json:decode(A),
+    %% a file in the store, so the refusals below are the metadata's
+    {201, _, U} = http(post, "/api/uploads", {"application/octet-stream", <<">x\nACGTACGT\n">>}),
+    #{<<"hash">> := H} = json:decode(U),
+    Refusal = fun(Meta) ->
+                      {S, _, B} = http(post, "/api/jobs", {"application/json", json:encode(#{kind => genome, inputs => [H],
+                                                                                            metadata => Meta})}),
+                      {S, maps:get(<<"error">>, json:decode(B))}
+              end,
+    BadRegion = Refusal(#{region => <<"Sofia">>}),
+    BadDate = Refusal(#{collection_date => <<"2099-01-01">>}),
+    %% another site's counts: an earlier week with lineage B, and the week of the job with a lineage new to both
+    Other = #{format => <<"genhub2-aggregates/1">>, site => <<"check-other-site">>, generated => 1,
+              lineages => [#{week => <<"2026-W45">>, region => <<"BG-02">>, lineage => <<"B">>, n => 3},
+                           #{week => <<"2026-W46">>, region => <<"BG-02">>, lineage => <<"Z.9">>, n => 2}],
+              mutations => [], totals => [#{week => <<"2026-W45">>, region => <<"BG-02">>, n => 3},
+                                          #{week => <<"2026-W46">>, region => <<"BG-02">>, n => 2}]},
+    {AnalystImport, _, _} = http(post, "/api/aggregates", {"application/json", json:encode(Other)}),
+    {200, <<"admin">>} = login(AdName, AdSecret),
+    {Imported, _, _} = http(post, "/api/aggregates", {"application/json", json:encode(Other)}),
+    {NotAgg, _, _} = http(post, "/api/aggregates", {"application/json", <<"{\"format\": \"other\"}">>}),
+    {200, _, Al} = http(get, "/api/aggregates/alerts", none),
+    {200, <<"researcher">>} = login(ReName, ReSecret),
+    {ResAgg, _, _} = http(get, "/api/aggregates", none),
+    {ResAlerts, _, _} = http(get, "/api/aggregates/alerts", none),
+    #{own => maps:with([<<"site">>, <<"lineages">>, <<"totals">>, <<"not_counted">>], Own), bad_region => BadRegion,
+      bad_date => BadDate, analyst_import => AnalystImport, admin_import => Imported, not_an_aggregate => NotAgg,
+      alerts => json:decode(Al), researcher => #{aggregates => ResAgg, alerts => ResAlerts}}.
+
+aggregates_checks(A) ->
+    Own = maps:get(own, A),
+    Al = maps:get(alerts, A),
+    [check(<<"aggregates: the genome job counted by week, region and lineage (2026-W46, BG-22, B)">>,
+           lists:member(#{<<"week">> => <<"2026-W46">>, <<"region">> => <<"BG-22">>, <<"lineage">> => <<"B">>, <<"n">> => 1},
+                        maps:get(<<"lineages">>, Own)), Own),
+     check(<<"aggregates: bad region 400, future collection date 400, each saying why">>,
+           case {maps:get(bad_region, A), maps:get(bad_date, A)} of
+               {{400, <<"region:", _/binary>>}, {400, <<"collection_date:", _/binary>>}} -> true;
+               _ -> false
+           end, {maps:get(bad_region, A), maps:get(bad_date, A)}),
+     check(<<"aggregates: an admin imports another site's aggregate (201), an analyst cannot (403), a malformed one 400">>,
+           {maps:get(admin_import, A), maps:get(analyst_import, A), maps:get(not_an_aggregate, A)} =:= {201, 403, 400}, A),
+     check(<<"aggregates: the merged alerts name the other site's new lineage, Z.9, and both sites">>,
+           [L || #{<<"type">> := <<"new_lineage">>, <<"lineage">> := L} <- maps:get(<<"alerts">>, Al)] =:= [<<"Z.9">>]
+           andalso lists:member(<<"check-other-site">>, maps:get(<<"sites">>, Al)), Al),
+     check(<<"aggregates: a researcher reads the aggregates and the alerts">>,
+           maps:get(researcher, A) =:= #{aggregates => 200, alerts => 200}, maps:get(researcher, A))].
 
 %%% checks
 

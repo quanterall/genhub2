@@ -27,6 +27,7 @@ init(Req, What) ->
 allowed(login) -> public;
 allowed(W) when W =:= logout; W =:= me -> [admin, analyst, researcher];
 allowed(summary) -> [admin, analyst, researcher];
+allowed(W) when W =:= aggregates; W =:= aggregate_alerts -> [admin, analyst, researcher];
 allowed(W) when W =:= users; W =:= user_disable; W =:= audit; W =:= audit_verify -> [admin];
 allowed(_) -> [admin, analyst].
 
@@ -143,7 +144,8 @@ handle(jobs, <<"POST">>, Req) ->
                                                     "{\"kind\": \"reads\", \"inputs\": [hash1, hash2]}">>})
                      end,
     [gh_store:has(H) orelse throw({status, 400, <<"not in the store: ", H/binary>>}) || H <- Inputs],
-    Params = (gh_config:params())#{primers => gh_config:primers(maps:get(<<"primers">>, Req0, undefined))},
+    Params = (gh_config:params())#{primers => gh_config:primers(maps:get(<<"primers">>, Req0, undefined)),
+                                   metadata => metadata(maps:get(<<"metadata">>, Req0, #{}))},
     Id = gh_jobs:submit(Kind, Inputs, Params),
     audit(job_submit, Id, ok, #{kind => Kind, inputs => Inputs}),
     reply(201, #{id => Id}, Req2);
@@ -195,6 +197,28 @@ handle(trees, <<"POST">>, Req) ->
     Id = gh_jobs:submit(tree, [Fasta], Params),
     audit(job_submit, Id, ok, #{kind => tree, from_jobs => Ids, method => Method, bootstrap => Boot}),
     reply(201, #{id => Id, reference => Reference}, Req2);
+handle(aggregates, <<"GET">>, Req) ->
+    {A, NotCounted} = gh_monitor:aggregate(),
+    audit(aggregates_export, maps:get(site, A), ok, #{}),
+    reply(200, A#{not_counted => NotCounted}, Req);
+handle(aggregates, <<"POST">>, Req) ->
+    get(gh_role) =:= admin orelse throw({status, 403, <<"only an admin imports another site's aggregates">>}),
+    {ok, Body, Req2} = cowboy_req:read_body(Req, #{length => 50000000}),
+    case gh_agg:from_json(Body) of
+        {ok, A} ->
+            case gh_monitor:import(A) of
+                ok ->
+                    audit(aggregates_import, maps:get(site, A), ok, #{generated => maps:get(generated, A)}),
+                    reply(201, #{site => maps:get(site, A)}, Req2);
+                {error, own_site} -> throw({status, 400, <<"these are this site's own aggregates">>})
+            end;
+        {error, _} -> throw({status, 400, <<"not an aggregate (format genhub2-aggregates/1)">>})
+    end;
+handle(aggregate_alerts, <<"GET">>, Req) ->
+    Opts = maps:from_list([{K, V} || {K, V} <- maps:to_list(application:get_env(genhub2, alert_thresholds, #{}))]),
+    R = gh_monitor:merged_alerts(Opts),
+    audit(aggregate_alerts_view, <<>>, ok, #{alerts => length(maps:get(alerts, R))}),
+    reply(200, R, Req);
 handle(summary, <<"GET">>, Req) ->
     audit(summary_view, <<>>, ok, #{}),
     reply(200, gh_monitor:summary(), Req);
@@ -207,6 +231,28 @@ handle(file, <<"GET">>, Req) ->
                      {sendfile, 0, filelib:file_size(P), P}, Req);
 handle(_, _, _) ->
     throw({status, 405, <<"method not allowed">>}).
+
+%% a job's sample metadata: region (ISO 3166-2) and collection date (ISO, not in the future), for the whole upload
+%% and, under "sequences", per sequence; both optional, checked when given
+metadata(M) when is_map(M) ->
+    One = fun(X) ->
+                  maps:from_list(
+                    [case K of
+                         <<"region">> -> gh_agg:valid_region(V) orelse throw({status, 400, <<"region: ISO 3166-2, e.g. BG-22">>}),
+                                         {region, V};
+                         <<"collection_date">> -> gh_agg:valid_date(V) orelse
+                                                      throw({status, 400, <<"collection_date: an ISO date, not in the future">>}),
+                                                  {collection_date, V};
+                         _ -> throw({status, 400, <<"metadata: region, collection_date, sequences">>})
+                     end || {K, V} <- maps:to_list(X)])
+          end,
+    Seqs = case maps:get(<<"sequences">>, M, #{}) of
+               S when is_map(S) -> maps:map(fun(_, X) when is_map(X) -> One(X);
+                                               (_, _) -> throw({status, 400, <<"metadata sequences: name => {...}">>}) end, S);
+               _ -> throw({status, 400, <<"metadata sequences: name => {...}">>})
+           end,
+    (One(maps:without([<<"sequences">>], M)))#{sequences => Seqs};
+metadata(_) -> throw({status, 400, <<"metadata: an object">>}).
 
 %% the session cookie: not readable by scripts, never sent with another site's requests; Secure when the gateway is
 %% behind TLS (setting {http, #{secure_cookies => true}})

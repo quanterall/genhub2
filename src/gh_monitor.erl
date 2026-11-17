@@ -2,8 +2,81 @@
 %% lineage and ISO week, each with the job and date it was first seen; and an alert on genhub/alerts when a finished
 %% job brings a species or a lineage the site has not seen before. Computed from the job table, so nothing is kept
 %% twice. Exchanging the counts between sites, without sequences, is phase D.
+%%
+%% Aggregates (gh_agg, phase D): the site's counts per week, region, lineage and mutation, from the jobs that carry a
+%% region and a collection date (params metadata, per job or per sequence); other sites' aggregates are imported and
+%% kept (gh_agg_import), and the alerts are computed from all of them merged.
 -module(gh_monitor).
--export([summary/0, job_done/1]).
+-export([summary/0, job_done/1, tables/0, site/0, aggregate/0, import/1, imported/0, merged_alerts/1,
+         rows_for_aggregates/0]).
+
+-record(gh_agg_import, {site, aggregate, imported}).
+
+-spec tables() -> ok.
+tables() ->
+    case mnesia:create_table(gh_agg_import, [{attributes, record_info(fields, gh_agg_import)}, {disc_copies, [node()]}]) of
+        {atomic, ok} -> ok;
+        {aborted, {already_exists, gh_agg_import}} -> ok
+    end,
+    ok = mnesia:wait_for_tables([gh_agg_import], 60000).
+
+%% this site's name in aggregates: the setting site, or the host's name
+-spec site() -> binary().
+site() ->
+    case application:get_env(genhub2, site) of
+        {ok, S} when is_binary(S) -> S;
+        _ -> list_to_binary(net_adm:localhost())
+    end.
+
+%% {Aggregate, NotCounted}: this site's aggregate now
+-spec aggregate() -> {map(), non_neg_integer()}.
+aggregate() -> gh_agg:from_rows(site(), rows_for_aggregates(), erlang:system_time(millisecond)).
+
+%% another site's aggregate kept (the newest per site wins in the merge); not this site's own
+-spec import(map()) -> ok | {error, own_site}.
+import(#{site := S} = A) ->
+    case S =:= site() of
+        true -> {error, own_site};
+        false -> mnesia:dirty_write(#gh_agg_import{site = S, aggregate = A, imported = erlang:system_time(millisecond)})
+    end.
+
+-spec imported() -> [map()].
+imported() -> [A || #gh_agg_import{aggregate = A} <- mnesia:dirty_match_object(#gh_agg_import{_ = '_'})].
+
+%% #{alerts, sites, latest_week}: the alerts of this site's aggregate merged with the imported ones
+-spec merged_alerts(map()) -> map().
+merged_alerts(Opts) ->
+    {Own, _} = aggregate(),
+    M = gh_agg:merge([Own | imported()]),
+    #{alerts => gh_agg:alerts(M, Opts), sites => maps:get(sites, M),
+      latest_week => case [W || #{week := W} <- maps:get(totals, M)] of [] -> null; Ws -> lists:max(Ws) end}.
+
+%% one row per sequence of every finished analysis: #{lineage, mutations, region, collection_date}; the metadata is
+%% the job's (params metadata), a sequence's own (metadata sequences) overriding it
+-spec rows_for_aggregates() -> [map()].
+rows_for_aggregates() ->
+    lists:append(
+      [begin
+           V = gh_jobs:view(Id),
+           Meta = maps:get(metadata, maps:get(params, V, #{}), #{}),
+           Per = maps:get(sequences, Meta, #{}),
+           Muts = maps:from_list([{Q, [mutation(Acc, S) || S <- Ss]}
+                                  || #{query := Q, aligned := true, reference := Acc, substitutions := Ss}
+                                         <- results(V, mutations)]),
+           [begin
+                M = maps:merge(maps:with([region, collection_date], Meta), maps:get(Q, Per, #{})),
+                #{lineage => P, mutations => maps:get(Q, Muts, []), region => maps:get(region, M, none),
+                  collection_date => maps:get(collection_date, M, none)}
+            end || #{query := Q, pango := P} <- gh_export:rows(V)]
+       end || #{id := Id, state := done, kind := K} <- gh_jobs:list(), K =/= tree]).
+
+results(#{steps := Steps}, Step) ->
+    case Steps of
+        #{Step := #{results := R}} -> lists:append([X || X <- R, is_list(X)]);
+        _ -> []
+    end.
+
+mutation(Acc, [Pos, Ref, Alt]) -> iolist_to_binary([Acc, ":", Ref, integer_to_list(Pos), Alt]).
 
 %% #{species, lineages: [#{name, count, first_seen, first_job}], weeks: [#{week, lineage, count}], analyses}
 -spec summary() -> map().

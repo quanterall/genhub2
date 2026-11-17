@@ -113,11 +113,23 @@ Built:
 - **The page:** a login form, sections by role, and for admins the users and the audit log.
 - **Placement in the site's tree:** the step `place` of genome and read jobs (UShER), once the site has built its
   SARS-CoV-2 tree.
-- **The gateway check:** all 22 checks hold, 8 of them for accounts and the audit log, 1 for placement
+- **The gateway check:** all 27 checks hold, 8 of them for accounts and the audit log, 1 for placement, 5 for the
+  aggregated counts
   ([`acceptance/RESULTS.md`](acceptance/RESULTS.md), section 5).
 
+## Status: monitoring from aggregated counts (phase D, inside the labs)
+
+- **Sample metadata:** uploads carry a region (ISO 3166-2) and a collection date, for the whole upload or per
+  sequence.
+- **Aggregates** (`gh_agg`): a site's counts per week, region, lineage and mutation, with no sequences or sample
+  names. They are exported and imported through the gateway, and merged the same way at every site.
+- **Alerts from the merged counts:** a new lineage; a mutation rising in frequency.
+- **The check:** three simulated sites with phase A's genomes and a lineage planted at one. After the exchange, every
+  site raises the same alert for it; before it, only the planted site sees it; without it, none. All 6 checks hold
+  ([`acceptance/RESULTS-PHASE-D.md`](acceptance/RESULTS-PHASE-D.md)). Between labs, the counts will travel through the
+  federation.
+
 Next:
-- **monitoring from aggregated counts** (phase D, the part inside a lab);
 - **sharing under GA4GH** (phase C, the part inside a lab), then the federation's part of phases C and D.
 
 ## Methods
@@ -146,6 +158,7 @@ sh acceptance/run.sh <GRCh38 minimap2 index> <GRCh38 FASTA>
 sh acceptance/run_gateway.sh          # starts emqx/emqx:5.8.9 on 127.0.0.1:21883 for the check, then stops it
 sh acceptance/run_phase_b.sh          # two nodes on this machine (after run.sh, which builds the bundles)
 sh acceptance/run_federation.sh       # tasks through the FVLLMP node this machine runs (acceptance/FEDERATION.md)
+sh acceptance/run_monitoring.sh       # monitoring from aggregated counts, three simulated sites (after run.sh)
 ```
 
 To run a site: set `{genhub2, [{http, #{ip => ..., port => ...}}, {mqtt, #{host => "127.0.0.1", port => 1883}}]}` and

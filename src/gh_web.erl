@@ -16,6 +16,10 @@
 %%   GET  /api/users, POST /api/users      the users; a new user {"user", "role", "password"}: its TOTP secret, once
 %%   POST /api/users/:name/disable   a user disabled, their sessions ended
 %%   GET  /api/audit?from=N&limit=M, GET /api/audit/verify    the audit log (gh_audit); whether its chain is whole
+%%   GET  /api/aggregates            this site's aggregated counts (gh_agg, format genhub2-aggregates/1)
+%%   POST /api/aggregates            another site's aggregates, imported (admin)
+%%   GET  /api/aggregates/alerts     the alerts of this site's and the imported aggregates, merged
+%%   (POST /api/jobs also takes "metadata": {"region", "collection_date", "sequences": {name: {...}}})
 %% Every endpoint but login needs a session, and allows only some roles (gh_web_api:allowed/1); changing requests also
 %% need the header x-genhub2: 1. The gateway listens on this machine by default; behind TLS, set secure_cookies.
 -module(gh_web).
@@ -35,6 +39,8 @@ start() ->
                          {"/api/trees", gh_web_api, trees},
                          {"/api/summary", gh_web_api, summary},
                          {"/api/files/:hash", gh_web_api, file},
+                         {"/api/aggregates", gh_web_api, aggregates},
+                         {"/api/aggregates/alerts", gh_web_api, aggregate_alerts},
                          {"/api/login", gh_web_api, login},
                          {"/api/logout", gh_web_api, logout},
                          {"/api/me", gh_web_api, me},

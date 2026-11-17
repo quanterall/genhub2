@@ -121,8 +121,8 @@ neighbour-joining, `4c441ab1...` for FastTree).
 
 [`gh_gateway_check.erl`](gh_gateway_check.erl), run by [`run_gateway.sh`](run_gateway.sh) against EMQX 5.8.9, on a site
 with no earlier jobs.
-- **17 November 2026, with accounts and placement:** **all 22 checks hold**
-  ([`results/gateway-dgx-spark-2026-11-17T1805Z.json`](results/gateway-dgx-spark-2026-11-17T1805Z.json)).
+- **17 November 2026, with accounts, placement and aggregates:** **all 27 checks hold**
+  ([`results/gateway-dgx-spark-2026-11-17T1812Z.json`](results/gateway-dgx-spark-2026-11-17T1812Z.json)).
   - The 13 below now run as an analyst who logged in through the API.
   - 8 more cover accounts and the audit log (at the end of this section).
   - 1 covers placement: the site's SARS-CoV-2 tree is built from phase A's 1,000 public genomes, and the genome
@@ -130,6 +130,8 @@ with no earlier jobs.
     equally good placements among identical genomes.
   - The first run found that UShER does not place a genome named like a sample already in the tree (here the
     reference itself). GenHub2 now gives each genome a name of its own for UShER, and maps the results back.
+  - 5 cover the aggregated counts of phase D at the site: the genome job is uploaded with a region and collection
+    date ([RESULTS-PHASE-D.md](RESULTS-PHASE-D.md), "At a site").
 - **14 November 2026, before accounts:** all 13
   ([`results/gateway-dgx-spark-2026-11-14T0102Z.json`](results/gateway-dgx-spark-2026-11-14T0102Z.json)).
 
