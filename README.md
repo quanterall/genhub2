@@ -87,9 +87,17 @@ Built:
   tiles is byte for byte phase A's. All 20 checks hold ([`acceptance/RESULTS-PHASE-B.md`](acceptance/RESULTS-PHASE-B.md),
   how to reproduce: [`acceptance/REPRODUCE-PHASE-B.md`](acceptance/REPRODUCE-PHASE-B.md)).
 
+## Status: the FVLLMP federation (started)
+
+- **Tasks through the federation:** GenHub2 sends tasks to the FVLLMP node it runs on, which runs them on itself or
+  on a peer: GA4GH TES and content-addressed data (`gh_fed`, `gh_fedexec`, executor setting `federation`).
+- **The first container tasks:** distance tiles and bootstrap replicates, in the arm64 `genhub2-task` image.
+- **First check:** a task from DGX-A ran on DGX-B, its output came back checked by hash. GenHub2's own tasks follow
+  once the image is allowed on the nodes ([`acceptance/FEDERATION.md`](acceptance/FEDERATION.md)).
+
 Next:
-- **phase B on two machines:** a second DGX Spark as a worker;
-- **phase C:** two sites through the FVLLMP gate, with sharing, accounts, roles and MFA.
+- **GenHub2's tasks on DGX-B:** identical results to one node, through the federation;
+- **phase C:** two sites through the federation, with sharing, accounts, roles and MFA.
 
 ## Methods
 
@@ -116,6 +124,7 @@ docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:$PWD" -w "$PWD" -e HOME="$PW
 sh acceptance/run.sh <GRCh38 minimap2 index> <GRCh38 FASTA>
 sh acceptance/run_gateway.sh          # starts emqx/emqx:5.8.9 on 127.0.0.1:21883 for the check, then stops it
 sh acceptance/run_phase_b.sh          # two nodes on this machine (after run.sh, which builds the bundles)
+sh acceptance/run_federation.sh       # tasks through the FVLLMP node this machine runs (acceptance/FEDERATION.md)
 ```
 
 To run a site: set `{genhub2, [{http, #{ip => ..., port => ...}}, {mqtt, #{host => "127.0.0.1", port => 1883}}]}` and

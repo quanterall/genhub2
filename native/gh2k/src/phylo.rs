@@ -5,7 +5,7 @@
 //!                                   distances (f64, little endian, row-major)
 //!   njtiles ALIGNED TILE...         neighbour-joining on the matrix put together from tiles that cover every pair;
 //!                                   the same tree, byte for byte, as `nj ALIGNED`
-//!   boot ALIGNED SEED               one bootstrap replicate (Felsenstein 1985, doi:10.1111/j.1558-5646.1985.tb00420.x):
+//!   boot ALIGNED SEED [OUT]         one bootstrap replicate (Felsenstein 1985, doi:10.1111/j.1558-5646.1985.tb00420.x):
 //!                                   the alignment's columns drawn with replacement by SplitMix64 from SEED, then
 //!                                   distances and neighbour-joining as `nj`
 //!   support TREE REPLICATES...      TREE with each internal branch labelled by the percentage of replicate trees that
@@ -91,12 +91,16 @@ pub fn njtiles(path: &str, tiles: &[&str]) -> Result<i32, String> {
     Ok(0)
 }
 
-pub fn boot(path: &str, seed: u64) -> Result<i32, String> {
+pub fn boot(path: &str, seed: u64, out: Option<&str>) -> Result<i32, String> {
     let recs = match nj::aligned(path, "boot")? {
         Some(r) => r,
         None => return Ok(2),
     };
-    println!("{}", replicate(&recs, seed));
+    let tree = format!("{}\n", replicate(&recs, seed));
+    match out {
+        Some(o) => std::fs::write(o, tree).map_err(|e| format!("{o}: {e}"))?,
+        None => print!("{tree}"),
+    }
     Ok(0)
 }
 

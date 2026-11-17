@@ -12,9 +12,13 @@
 %%                                                                    -> #{newick, replicates}
 %% Each result is a pure function of its task, and the tiling only says which tasks compute which pairs: the tree is
 %% byte for byte gh2k nj's on the whole alignment, however the tiles were spread.
+%%
+%% distance_block and bootstrap also have a container form (container/1, result/2): the same gh2k command in the
+%% genhub2-task image, inputs and outputs by hash, for the federation executor (gh_fedexec). Its result is the same
+%% file, so the same hash, as run/2's.
 -module(gh_phylo).
 -behaviour(pq_task).
--export([run/2, resources/1, describe/1]).
+-export([run/2, resources/1, describe/1, container/1, result/2]).
 -export([chunks/2, join/1, tiles/2, shape/1]).
 
 run({align, Chunk, Refs, Acc, First}, #{home := Home}) ->
@@ -47,6 +51,28 @@ run({support, Newick, Reps}, #{home := Home}) ->
               Out = gh_tool:gh2k_must(["support", gh_store:ensure(Newick, Home), All]),
               #{newick => gh_store:put_binary(Out), replicates => length(Reps)}
       end).
+
+%% the task as a container command (gh_fed:run/2): only for the tasks that need nothing but gh2k
+-spec container(term()) -> map() | none.
+container({distance_block, Aligned, I0, I1, J0, J1}) ->
+    #{name => <<"distance block">>,
+      description => <<"Jukes-Cantor distances between aligned viral genomes (a block of the matrix for a phylogenetic tree)">>,
+      inputs => [{<<"/work/in/aligned.fa">>, Aligned}], outputs => [<<"/work/out/tile">>],
+      command => [<<"gh2k">>, <<"dist">>, <<"/work/in/aligned.fa">> | [integer_to_binary(X) || X <- [I0, I1, J0, J1]]]
+          ++ [<<"/work/out/tile">>],
+      resources => #{cpu => 1, ram_gb => 2, disk_gb => 1}};
+container({bootstrap, Aligned, Seed}) ->
+    #{name => <<"bootstrap replicate">>,
+      description => <<"one bootstrap replicate of a neighbour-joining tree of aligned viral genomes">>,
+      inputs => [{<<"/work/in/aligned.fa">>, Aligned}], outputs => [<<"/work/out/tree.nwk">>],
+      command => [<<"gh2k">>, <<"boot">>, <<"/work/in/aligned.fa">>, integer_to_binary(Seed), <<"/work/out/tree.nwk">>],
+      resources => #{cpu => 1, ram_gb => 2, disk_gb => 1}};
+container(_) -> none.
+
+%% the task's result from its container outputs (Path => Hash): run/2's result
+-spec result(term(), #{binary() => gh_store:hash()}) -> term().
+result({distance_block, _, _, _, _, _}, #{<<"/work/out/tile">> := H}) -> H;
+result({bootstrap, _, _}, #{<<"/work/out/tree.nwk">> := H}) -> H.
 
 resources({align, _, _, _, _}) -> #{cpu => gh_tool:threads()};
 resources(_) -> #{cpu => 1}.

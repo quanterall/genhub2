@@ -8,7 +8,7 @@
 //!   gh2k nj ALIGNED.fasta                    a neighbour-joining tree of aligned genomes, in Newick (task tree)
 //!   gh2k dist ALIGNED.fasta I0 I1 J0 J1 OUT  a tile of the distance matrix (task distance_block; phylo.rs)
 //!   gh2k njtiles ALIGNED.fasta TILE...       neighbour-joining on the matrix put together from tiles
-//!   gh2k boot ALIGNED.fasta SEED             one bootstrap replicate's tree (task bootstrap)
+//!   gh2k boot ALIGNED.fasta SEED [OUT]       one bootstrap replicate's tree (task bootstrap), to OUT or stdout
 //!   gh2k support TREE REPLICATES...          the tree with each branch's bootstrap support
 //!   gh2k simulate GENOME.fa PAIRS LEN INSERT ERR SEED OUT [SPIKE.fa SPIKE_PAIRS]   paired reads for tests
 //!
@@ -38,7 +38,8 @@ fn main() {
             phylo::dist(aligned, num(i0), num(i1), num(j0), num(j1), out)
         }
         ["njtiles", aligned, tiles @ ..] if !tiles.is_empty() => phylo::njtiles(aligned, tiles),
-        ["boot", aligned, seed] => phylo::boot(aligned, num(seed) as u64),
+        ["boot", aligned, seed] => phylo::boot(aligned, num(seed) as u64, None),
+        ["boot", aligned, seed, out] => phylo::boot(aligned, num(seed) as u64, Some(out)),
         ["support", tree, reps @ ..] if !reps.is_empty() => phylo::support(tree, reps),
         ["simulate", genome, pairs, len, insert, err, seed, out] => simulate::run(
             genome,
