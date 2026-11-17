@@ -103,6 +103,20 @@
     <details><summary>Provenance</summary><pre id="d-prov"></pre></details>
   </section>
 
+  <section class="card wide" id="datasets" hidden>
+    <h2>Shared datasets</h2>
+    <p class="hint">Datasets the lab approved for sharing: genomes renamed and results with the week of collection, served
+      through GA4GH DRS. Raw reads are never shared.</p>
+    <div class="scroll"><table id="ds-list"><thead><tr><th>Dataset</th><th>Consent (DUO)</th><th>State</th>
+      <th>Files (DRS)</th><th></th></tr></thead><tbody></tbody></table></div>
+    <form id="ds-new" class="row" hidden>
+      <label>Title <input id="ds-title" required></label>
+      <label>Consent <select id="ds-consent"></select></label>
+      <button type="submit">Share all finished analyses</button>
+    </form>
+    <p id="ds-msg" role="status"></p>
+  </section>
+
   <section class="card wide admin" id="admin" hidden>
     <h2>Administration</h2>
     <h3>Users</h3>

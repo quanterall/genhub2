@@ -35,7 +35,38 @@ async function start() {
   $("#admin").hidden = me.role !== "admin";
   if (lab) { $("#live").hidden = false; await refresh(); connect(); } else { await monitor(); }
   if (me.role === "admin") await admin();
+  $("#datasets").hidden = false; $("#ds-new").hidden = me.role !== "admin";
+  await datasets();
 }
+
+async function datasets() {
+  const {datasets: ds, duo} = await api("/api/datasets");
+  if (!$("#ds-consent").options.length)
+    $("#ds-consent").innerHTML = Object.entries(duo).sort().map(([c, l]) => `<option value="${esc(c)}">${esc(c)} ${esc(l)}</option>`).join("");
+  $("#ds-list tbody").innerHTML = ds.map((d) => `<tr><td><b>${esc(d.title)}</b><br><code>${esc(d.id)}</code></td>
+    <td>${d.consent.map((c) => `${esc(c.code)} ${esc(c.label)}`).join("<br>")}</td><td>${esc(d.state)}</td>
+    <td>${d.state === "approved" ? d.files.map((f) => `<a href="/ga4gh/drs/v1/objects/${esc(f.id)}/data">${esc(f.name)}</a>`).join("<br>") : ""}</td>
+    <td>${me.role === "admin" && d.state === "approved" ? `<button class="small" data-withdraw="${esc(d.id)}">Withdraw</button>` : ""}</td></tr>`).join("");
+  document.querySelectorAll("[data-withdraw]").forEach((b) => b.addEventListener("click", async () => {
+    if (!confirm(`Withdraw ${b.dataset.withdraw}? It is no longer served.`)) return;
+    try { await api(`/api/datasets/${encodeURIComponent(b.dataset.withdraw)}/withdraw`, {method: "POST"}); }
+    catch (e) { $("#ds-msg").textContent = "Failed: " + e.message; }
+    await datasets();
+  }));
+}
+
+$("#ds-new").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  try {
+    const jobs = (await api("/api/jobs")).filter((j) => j.state === "done" && j.kind !== "tree").map((j) => j.id);
+    const d = await api("/api/datasets", {method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({title: $("#ds-title").value.trim(), consent: [$("#ds-consent").value], jobs})});
+    $("#ds-msg").textContent = `Shared ${d.id}: ${d.jobs} analyses.`;
+    await datasets();
+  } catch (e) {
+    $("#ds-msg").textContent = "Failed: " + e.message;
+  }
+});
 
 $("#login-form").addEventListener("submit", async (ev) => {
   ev.preventDefault();

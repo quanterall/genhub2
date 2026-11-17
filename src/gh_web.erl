@@ -19,6 +19,11 @@
 %%   GET  /api/aggregates            this site's aggregated counts (gh_agg, format genhub2-aggregates/1)
 %%   POST /api/aggregates            another site's aggregates, imported (admin)
 %%   GET  /api/aggregates/alerts     the alerts of this site's and the imported aggregates, merged
+%%   GET  /api/datasets, POST /api/datasets (admin)   shared datasets (gh_share): {"title", "description",
+%%                                   "consent": [DUO codes], "jobs": [id, ...]}; GET /api/datasets/:id; POST
+%%                                   /api/datasets/:id/withdraw (admin)
+%%   GET  /ga4gh/drs/v1/service-info, /ga4gh/drs/v1/objects/:id[/access/:access_id], /ga4gh/drs/v1/objects/:id/data
+%%                                   GA4GH DRS 1.4: the files of approved datasets (id = SHA-256), datasets as bundles
 %%   (POST /api/jobs also takes "metadata": {"region", "collection_date", "sequences": {name: {...}}})
 %% Every endpoint but login needs a session, and allows only some roles (gh_web_api:allowed/1); changing requests also
 %% need the header x-genhub2: 1. The gateway listens on this machine by default; behind TLS, set secure_cookies.
@@ -40,6 +45,13 @@ start() ->
                          {"/api/summary", gh_web_api, summary},
                          {"/api/files/:hash", gh_web_api, file},
                          {"/api/aggregates", gh_web_api, aggregates},
+                         {"/api/datasets", gh_web_api, datasets},
+                         {"/api/datasets/:id", gh_web_api, dataset},
+                         {"/api/datasets/:id/withdraw", gh_web_api, dataset_withdraw},
+                         {"/ga4gh/drs/v1/service-info", gh_web_api, drs_info},
+                         {"/ga4gh/drs/v1/objects/:id", gh_web_api, drs_object},
+                         {"/ga4gh/drs/v1/objects/:id/access/:access_id", gh_web_api, drs_access},
+                         {"/ga4gh/drs/v1/objects/:id/data", gh_web_api, drs_data},
                          {"/api/aggregates/alerts", gh_web_api, aggregate_alerts},
                          {"/api/login", gh_web_api, login},
                          {"/api/logout", gh_web_api, logout},

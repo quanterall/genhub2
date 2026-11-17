@@ -28,6 +28,9 @@ allowed(login) -> public;
 allowed(W) when W =:= logout; W =:= me -> [admin, analyst, researcher];
 allowed(summary) -> [admin, analyst, researcher];
 allowed(W) when W =:= aggregates; W =:= aggregate_alerts -> [admin, analyst, researcher];
+allowed(W) when W =:= datasets; W =:= dataset; W =:= drs_info; W =:= drs_object; W =:= drs_access; W =:= drs_data ->
+    [admin, analyst, researcher];
+allowed(dataset_withdraw) -> [admin];
 allowed(W) when W =:= users; W =:= user_disable; W =:= audit; W =:= audit_verify -> [admin];
 allowed(_) -> [admin, analyst].
 
@@ -197,6 +200,63 @@ handle(trees, <<"POST">>, Req) ->
     Id = gh_jobs:submit(tree, [Fasta], Params),
     audit(job_submit, Id, ok, #{kind => tree, from_jobs => Ids, method => Method, bootstrap => Boot}),
     reply(201, #{id => Id, reference => Reference}, Req2);
+handle(datasets, <<"GET">>, Req) ->
+    Ds = [D || #{state := S} = D <- gh_share:list(), S =:= approved orelse get(gh_role) =/= researcher],
+    reply(200, #{datasets => Ds, duo => gh_share:duo()}, Req);
+handle(datasets, <<"POST">>, Req) ->
+    get(gh_role) =:= admin orelse throw({status, 403, <<"only an admin approves a dataset for sharing">>}),
+    {ok, Body, Req2} = cowboy_req:read_body(Req, #{length => 100000}),
+    Usage = <<"expected {\"title\", \"description\", \"consent\": [DUO codes], \"jobs\": [finished genome or reads jobs]}">>,
+    {T, De, C, J} = case catch json:decode(Body) of
+                        #{<<"title">> := T0, <<"consent">> := C0, <<"jobs">> := J0} = Q
+                          when is_binary(T0), is_list(C0), is_list(J0) -> {T0, maps:get(<<"description">>, Q, <<>>), C0, J0};
+                        _ -> throw({status, 400, Usage})
+                    end,
+    case gh_share:create(T, De, C, J, actor()) of
+        {ok, D} ->
+            audit(dataset_create, maps:get(id, D), ok, #{jobs => J, consent => C}),
+            reply(201, D, Req2);
+        {error, Why} ->
+            audit(dataset_create, <<>>, failed, #{reason => Why}),
+            throw({status, 400, iolist_to_binary(io_lib:format("~0p", [Why]))})
+    end;
+handle(dataset, <<"GET">>, Req) ->
+    reply(200, dataset(Req), Req);
+handle(dataset_withdraw, <<"POST">>, Req) ->
+    Id = maps:get(id, dataset(Req)),
+    ok = gh_share:withdraw(Id),
+    audit(dataset_withdraw, Id, ok, #{}),
+    reply(200, gh_share:get(Id), Req);
+handle(drs_info, <<"GET">>, Req) ->
+    reply(200, #{id => <<"genhub2.drs">>, name => <<"GenHub2 DRS">>, organization => #{name => gh_monitor:site()},
+                 type => #{group => <<"org.ga4gh">>, artifact => <<"drs">>, version => <<"1.4.0">>}, version => <<"0.1.0">>},
+          Req);
+handle(drs_object, <<"GET">>, Req) ->
+    Id = cowboy_req:binding(id, Req),
+    Obj = case drs_object(Id, Req) of
+              none -> throw({status, 404, <<"no such object, or not in an approved dataset">>});
+              O -> O
+          end,
+    audit(drs_object, Id, ok, #{}),
+    reply(200, Obj, Req);
+handle(drs_access, <<"GET">>, Req) ->
+    Id = cowboy_req:binding(id, Req),
+    (cowboy_req:binding(access_id, Req) =:= <<"data">> andalso gh_share:served_file(Id) =/= none)
+        orelse throw({status, 404, <<"no such access method">>}),
+    reply(200, #{url => data_url(Id, Req)}, Req);
+handle(drs_data, <<"GET">>, Req) ->
+    Id = cowboy_req:binding(id, Req),
+    case gh_share:served_file(Id) of
+        {ok, Name, #{id := Ds}} ->
+            audit(drs_download, Id, ok, #{dataset => Ds, name => Name}),
+            P = gh_store:path(Id),
+            cowboy_req:reply(200, #{<<"content-type">> => <<"application/octet-stream">>,
+                                    <<"content-disposition">> => <<"attachment; filename=\"", Name/binary, "\"">>},
+                             {sendfile, 0, filelib:file_size(P), P}, Req);
+        none ->
+            audit(drs_download, Id, denied, #{}),
+            throw({status, 404, <<"no such object, or not in an approved dataset">>})
+    end;
 handle(aggregates, <<"GET">>, Req) ->
     {A, NotCounted} = gh_monitor:aggregate(),
     audit(aggregates_export, maps:get(site, A), ok, #{}),
@@ -263,6 +323,47 @@ cookie_opts() ->
 peer(Req) ->
     {Ip, _} = cowboy_req:peer(Req),
     list_to_binary(inet:ntoa(Ip)).
+
+%% a dataset; a researcher sees only approved ones
+dataset(Req) ->
+    Role = get(gh_role),
+    case gh_share:get(cowboy_req:binding(id, Req)) of
+        #{state := approved} = D -> D;
+        #{} = D when Role =/= researcher -> D;
+        _ -> throw({status, 404, <<"no such dataset">>})
+    end.
+
+%% A DRS object: a file of an approved dataset (its id is its SHA-256), or an approved dataset as a bundle (its
+%% contents its files; its checksum the SHA-256 of its files' checksums, sorted and joined); none otherwise
+drs_object(Id, Req) ->
+    Self = fun(X) -> <<"drs://", (cowboy_req:host(Req))/binary, "/", X/binary>> end,
+    Time = fun(Ms) -> list_to_binary(calendar:system_time_to_rfc3339(Ms, [{unit, millisecond}, {offset, "Z"}])) end,
+    case gh_share:served_file(Id) of
+        {ok, Name, #{created := C, id := Ds}} ->
+            #{id => Id, name => Name, self_uri => Self(Id), size => filelib:file_size(gh_store:path(Id)),
+              created_time => Time(C), description => <<"a file of dataset ", Ds/binary>>,
+              checksums => [#{type => <<"sha-256">>, checksum => Id}],
+              access_methods => [#{type => scheme(Req), access_id => <<"data">>, access_url => #{url => data_url(Id, Req)}}]};
+        none ->
+            case gh_share:get(Id) of
+                #{state := approved, files := Fs, title := T, description := De, created := C} ->
+                    Sums = lists:sort([H || #{id := H} <- Fs]),
+                    #{id => Id, name => T, description => De, self_uri => Self(Id), created_time => Time(C),
+                      size => lists:sum([filelib:file_size(gh_store:path(H)) || H <- Sums]),
+                      checksums => [#{type => <<"sha-256">>,
+                                      checksum => binary:encode_hex(crypto:hash(sha256, Sums), lowercase)}],
+                      contents => [#{name => N, id => H, drs_uri => [Self(H)]} || #{name := N, id := H} <- Fs]};
+                _ -> none
+            end
+    end.
+
+scheme(Req) -> cowboy_req:scheme(Req).
+
+data_url(Id, Req) ->
+    iolist_to_binary([scheme(Req), "://", cowboy_req:host(Req), case cowboy_req:port(Req) of
+                                                                    P when P =:= 80; P =:= 443 -> "";
+                                                                    P -> [":", integer_to_list(P)]
+                                                                end, "/ga4gh/drs/v1/objects/", Id, "/data"]).
 
 view(Req) ->
     case gh_jobs:view(cowboy_req:binding(id, Req)) of

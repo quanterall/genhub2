@@ -59,5 +59,6 @@ button.small { margin-top: 0; padding: 3px 10px; font-size: 13px; }
 form label, .row label { display: block; margin: 8px 0; }
 input { font: inherit; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px; max-width: 100%; }
 .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
-.row label { margin: 0; }
+.row label { margin: 0; min-width: 0; max-width: 100%; }
+#ds-consent { width: 100%; }
 #a-secret code { word-break: break-all; }

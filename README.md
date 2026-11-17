@@ -113,8 +113,8 @@ Built:
 - **The page:** a login form, sections by role, and for admins the users and the audit log.
 - **Placement in the site's tree:** the step `place` of genome and read jobs (UShER), once the site has built its
   SARS-CoV-2 tree.
-- **The gateway check:** all 27 checks hold, 8 of them for accounts and the audit log, 1 for placement, 5 for the
-  aggregated counts
+- **The gateway check:** all 27 checks hold then (34 with sharing), 8 of them for accounts and the audit log, 1 for
+  placement, 5 for the aggregated counts
   ([`acceptance/RESULTS.md`](acceptance/RESULTS.md), section 5).
 
 ## Status: monitoring from aggregated counts (phase D, inside the labs)
@@ -129,8 +129,20 @@ Built:
   ([`acceptance/RESULTS-PHASE-D.md`](acceptance/RESULTS-PHASE-D.md)). Between labs, the counts will travel through the
   federation.
 
+## Status: sharing under GA4GH (phase C, inside the lab)
+
+- **Datasets the lab approves** (`gh_share`): an admin shares finished analyses with consent coded in the
+  [Data Use Ontology](https://www.ga4gh.org/product/data-use-ontology-duo/) (DUO), and can withdraw them.
+- **Anonymised:** genomes renamed after the dataset, results with the week of collection instead of the date, no
+  job or sample names. Raw reads are never shared.
+- **Served through [GA4GH DRS](https://www.ga4gh.org/product/data-repository-service-drs/) 1.4:** each file is an
+  object whose id and checksum are its SHA-256; a dataset is a bundle. Nothing outside an approved dataset is served,
+  and every access is in the audit log.
+- **The gateway check:** all 34 checks hold, 7 of them for sharing.
+- **With the federation (phase C proper):** GA4GH Passports for researchers of other labs, and Beacon discovery.
+
 Next:
-- **sharing under GA4GH** (phase C, the part inside a lab), then the federation's part of phases C and D.
+- **GA4GH Passports and Beacon**, with the federation (phase C, the part inside a lab), then the federation's part of phases C and D.
 
 ## Methods
 

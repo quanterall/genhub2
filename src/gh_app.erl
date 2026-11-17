@@ -17,6 +17,7 @@ site() ->
     ok = gh_accounts:tables(),
     ok = gh_audit:tables(),
     ok = gh_monitor:tables(),
+    ok = gh_share:tables(),
     {ok, Sup} = gh_sup:start_link(),
     _ = case application:get_env(genhub2, http) of
             {ok, undefined} -> ok;

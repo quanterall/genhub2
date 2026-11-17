@@ -15,7 +15,10 @@
 %%      whole;
 %%   9. aggregates (phase D, inside the site): the genome job's sample metadata counted by week, region and lineage;
 %%      bad metadata refused; another site's aggregate imported by an admin (not by an analyst); the alerts of both
-%%      merged name the other site's new lineage; a researcher reads the aggregates.
+%%      merged name the other site's new lineage; a researcher reads the aggregates;
+%%  10. sharing (phase C, inside the site): an admin approves a dataset of the two genome jobs with DUO consent; a
+%%      researcher reads it through GA4GH DRS, anonymised (genomes renamed, the week instead of the date), checked by
+%%      hash; files outside approved datasets are not served; a withdrawn dataset is gone.
 %% Parts 1-7 run as an analyst who logged in through the API.
 %%
 %% Needs the reference bundles of the phase A acceptance test, and EMQX on 127.0.0.1:21883 (run_gateway.sh); the
@@ -61,15 +64,17 @@ main([Out]) ->
     Refused = refused(maps:get(id, Job)),
     Accounts = accounts(Users),
     Aggregates = aggregates(Users),
+    Sharing = sharing(Users, [maps:get(id, Job), maps:get(id, Viamqtt)], maps:get(hash, Upload), Tree),
     Checks = checks(Page, Job, MqttMsgs, WsMsgs, Viamqtt, Refused)
         ++ more_checks(Job, Viamqtt, Exports, Tree, Summary, Alerts) ++ accounts_checks(Accounts)
-        ++ aggregates_checks(Aggregates),
+        ++ aggregates_checks(Aggregates) ++ sharing_checks(Sharing, [maps:get(id, Job), maps:get(id, Viamqtt)]),
     R = #{date => list_to_binary(calendar:system_time_to_rfc3339(erlang:system_time(second), [{offset, "Z"}])),
           host => list_to_binary(net_adm:localhost()), emqx => <<"emqx/emqx:5.8.9">>,
           upload => Upload, job_seconds => maps:get(seconds, Job), job_state => maps:get(state, Job),
           mqtt_topics => count([T || {T, _} <- MqttMsgs]), websocket_topics => count([T || {T, _} <- WsMsgs]),
           job_from_mqtt => Viamqtt, exports => Exports, tree => maps:remove(svg, Tree), summary => Summary,
-          alerts => Alerts, refused => Refused, accounts => Accounts, aggregates => Aggregates, usher_tree => UsherTree,
+          alerts => Alerts, refused => Refused, accounts => Accounts, aggregates => Aggregates, sharing => Sharing,
+          usher_tree => UsherTree,
           checks => Checks,
           seconds => (erlang:monotonic_time(millisecond) - T0) / 1000},
     ok = filelib:ensure_dir(Out),
@@ -414,6 +419,93 @@ aggregates_checks(A) ->
            andalso lists:member(<<"check-other-site">>, maps:get(<<"sites">>, Al)), Al),
      check(<<"aggregates: a researcher reads the aggregates and the alerts">>,
            maps:get(researcher, A) =:= #{aggregates => 200, alerts => 200}, maps:get(researcher, A))].
+
+%%% 10. sharing
+
+sharing(Users, Jobs, UploadHash, Tree) ->
+    {AnName, AnSecret} = maps:get(analyst, Users),
+    {AdName, AdSecret} = maps:get(admin, Users),
+    {ReName, ReSecret} = maps:get(researcher, Users),
+    Make = fun(Body) ->
+                   {S, _, B} = http(post, "/api/datasets", {"application/json", json:encode(Body)}),
+                   {S, json:decode(B)}
+           end,
+    Good = #{title => <<"SARS-CoV-2 genomes of the check">>, description => <<"two genomes">>,
+             consent => [<<"DUO:0000042">>], jobs => Jobs},
+    {200, <<"analyst">>} = login(AnName, AnSecret),
+    {AnalystMake, _} = Make(Good),
+    {200, <<"admin">>} = login(AdName, AdSecret),
+    {BadDuo, _} = Make(Good#{consent => [<<"DUO:9999999">>]}),
+    {TreeJob, _} = Make(Good#{jobs => [maps:get(id, Tree)]}),
+    {Made, D} = Make(Good),
+    Id = maps:get(<<"id">>, D),
+    {200, <<"researcher">>} = login(ReName, ReSecret),
+    {200, _, L} = http(get, "/api/datasets", none),
+    Listed = [maps:get(<<"id">>, X) || X <- maps:get(<<"datasets">>, json:decode(L))],
+    {200, _, Bu} = http(get, "/ga4gh/drs/v1/objects/" ++ binary_to_list(Id), none),
+    Bundle = json:decode(Bu),
+    Files = maps:from_list([{N, H} || #{<<"name">> := N, <<"id">> := H} <- maps:get(<<"contents">>, Bundle, [])]),
+    Get = fun(H) ->
+                  {200, _, O} = http(get, "/ga4gh/drs/v1/objects/" ++ binary_to_list(H), none),
+                  Obj = json:decode(O),
+                  [#{<<"access_url">> := #{<<"url">> := Url}}] = maps:get(<<"access_methods">>, Obj),
+                  {DS, _, Data} = http(get, uri_string:normalize(maps:get(path, uri_string:parse(Url))), none),
+                  #{object => Obj, status => DS, data => Data,
+                    hash_ok => binary:encode_hex(crypto:hash(sha256, Data), lowercase) =:= H
+                               andalso [maps:get(<<"checksum">>, C) || C <- maps:get(<<"checksums">>, Obj)] =:= [H]}
+          end,
+    G = Get(maps:get(<<"genomes.fasta">>, Files)),
+    R = Get(maps:get(<<"results.json">>, Files)),
+    Fasta = maps:get(data, G),
+    Results = json:decode(maps:get(data, R)),
+    {Outside, _, _} = http(get, "/ga4gh/drs/v1/objects/" ++ binary_to_list(UploadHash), none),
+    {OutsideData, _, _} = http(get, "/ga4gh/drs/v1/objects/" ++ binary_to_list(UploadHash) ++ "/data", none),
+    {200, <<"admin">>} = login(AdName, AdSecret),
+    {Withdrawn, _, _} = http(post, "/api/datasets/" ++ binary_to_list(Id) ++ "/withdraw", {"application/json", <<"{}">>}),
+    {200, _, AuditB} = http(get, "/api/audit?from=1&limit=10000", none),
+    Audit = lists:usort([maps:get(<<"action">>, X) || X <- json:decode(AuditB)]),
+    {200, <<"researcher">>} = login(ReName, ReSecret),
+    {AfterBundle, _, _} = http(get, "/ga4gh/drs/v1/objects/" ++ binary_to_list(Id), none),
+    {AfterFile, _, _} = http(get, "/ga4gh/drs/v1/objects/" ++ binary_to_list(maps:get(<<"genomes.fasta">>, Files)) ++ "/data", none),
+    {AfterDataset, _, _} = http(get, "/api/datasets/" ++ binary_to_list(Id), none),
+    #{analyst_make => AnalystMake, bad_duo => BadDuo, tree_job => TreeJob, made => Made, id => Id,
+      listed => lists:member(Id, Listed), bundle_files => lists:sort(maps:keys(Files)),
+      bundle_checksum => maps:get(<<"checksums">>, Bundle, []),
+      genomes => #{status => maps:get(status, G), hash_ok => maps:get(hash_ok, G),
+                   headers => [H || <<">", H/binary>> <- binary:split(Fasta, <<"\n">>, [global])],
+                   names_jobs => [J || J <- [<<"job-">>, <<"NC_045512.2">>], binary:match(Fasta, J) =/= nomatch]},
+      results => #{status => maps:get(status, R), hash_ok => maps:get(hash_ok, R), rows => Results,
+                   has_date => binary:match(maps:get(data, R), <<"2026-11-10">>) =/= nomatch},
+      outside => {Outside, OutsideData}, withdrawn => Withdrawn, after_withdraw => {AfterBundle, AfterFile, AfterDataset},
+      audit_actions => [A || A <- Audit, lists:member(A, [<<"dataset_create">>, <<"dataset_withdraw">>, <<"drs_object">>,
+                                                          <<"drs_download">>])]}.
+
+sharing_checks(S, Jobs) ->
+    Id = maps:get(id, S),
+    [check(<<"sharing: an admin approves a dataset (201); an analyst cannot (403); an unknown DUO code or a tree job 400">>,
+           {maps:get(made, S), maps:get(analyst_make, S), maps:get(bad_duo, S), maps:get(tree_job, S)} =:= {201, 403, 400, 400},
+           maps:with([made, analyst_make, bad_duo, tree_job], S)),
+     check(<<"sharing: a researcher lists it and reads it through DRS as a bundle of genomes.fasta and results.json">>,
+           maps:get(listed, S) andalso maps:get(bundle_files, S) =:= [<<"genomes.fasta">>, <<"results.json">>],
+           maps:with([listed, bundle_files, bundle_checksum], S)),
+     check(<<"sharing: both files downloaded through DRS, each checked against its SHA-256 id and checksum">>,
+           maps:get(hash_ok, maps:get(genomes, S)) andalso maps:get(hash_ok, maps:get(results, S)),
+           {maps:get(genomes, S), maps:without([rows], maps:get(results, S))}),
+     check(<<"sharing: anonymised: genomes renamed after the dataset, no job or sample names, the week and not the date">>,
+           maps:get(headers, maps:get(genomes, S)) =:= [<<Id/binary, "-1">>, <<Id/binary, "-2">>]
+           andalso maps:get(names_jobs, maps:get(genomes, S)) =:= []
+           andalso not maps:get(has_date, maps:get(results, S))
+           andalso lists:all(fun(#{<<"collection_week">> := W, <<"region">> := R}) -> {W, R} =:= {<<"2026-W46">>, <<"BG-22">>}
+                                                                                     orelse {W, R} =:= {null, null} end,
+                             maps:get(rows, maps:get(results, S))),
+           {maps:get(genomes, S), maps:get(rows, maps:get(results, S)), length(Jobs)}),
+     check(<<"sharing: a file outside approved datasets is not served through DRS (404)">>,
+           maps:get(outside, S) =:= {404, 404}, maps:get(outside, S)),
+     check(<<"sharing: withdrawn, the dataset and its files are gone for a researcher (404)">>,
+           {maps:get(withdrawn, S), maps:get(after_withdraw, S)} =:= {200, {404, 404, 404}}, maps:get(after_withdraw, S)),
+     check(<<"sharing: the dataset's creation and withdrawal, and every DRS access, in the audit log">>,
+           maps:get(audit_actions, S) =:= [<<"dataset_create">>, <<"dataset_withdraw">>, <<"drs_download">>, <<"drs_object">>],
+           maps:get(audit_actions, S))].
 
 %%% checks
 

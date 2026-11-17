@@ -121,8 +121,8 @@ neighbour-joining, `4c441ab1...` for FastTree).
 
 [`gh_gateway_check.erl`](gh_gateway_check.erl), run by [`run_gateway.sh`](run_gateway.sh) against EMQX 5.8.9, on a site
 with no earlier jobs.
-- **17 November 2026, with accounts, placement and aggregates:** **all 27 checks hold**
-  ([`results/gateway-dgx-spark-2026-11-17T1812Z.json`](results/gateway-dgx-spark-2026-11-17T1812Z.json)).
+- **17 November 2026, with accounts, placement, aggregates and sharing:** **all 34 checks hold**
+  ([`results/gateway-dgx-spark-2026-11-17T2123Z.json`](results/gateway-dgx-spark-2026-11-17T2123Z.json)).
   - The 13 below now run as an analyst who logged in through the API.
   - 8 more cover accounts and the audit log (at the end of this section).
   - 1 covers placement: the site's SARS-CoV-2 tree is built from phase A's 1,000 public genomes, and the genome
@@ -132,6 +132,7 @@ with no earlier jobs.
     reference itself). GenHub2 now gives each genome a name of its own for UShER, and maps the results back.
   - 5 cover the aggregated counts of phase D at the site: the genome job is uploaded with a region and collection
     date ([RESULTS-PHASE-D.md](RESULTS-PHASE-D.md), "At a site").
+  - 7 cover sharing (below).
 - **14 November 2026, before accounts:** all 13
   ([`results/gateway-dgx-spark-2026-11-14T0102Z.json`](results/gateway-dgx-spark-2026-11-14T0102Z.json)).
 
@@ -175,6 +176,21 @@ with no earlier jobs.
   - the user's creation and disabling, the logout.
 
   Its chain of 42 records is whole.
+
+**Sharing** (FS 3.3, 3.4; phase C, the part inside a lab), the 7 checks added on 17 November:
+- **Approval:** an admin approves a dataset of the two genome jobs, with consent DUO:0000042 (general research use,
+  [GA4GH DUO](https://www.ga4gh.org/product/data-use-ontology-duo/)). An analyst cannot; an unknown DUO code and a
+  tree job are refused.
+- **Through GA4GH DRS** ([GA4GH](https://www.ga4gh.org/product/data-repository-service-drs/)), as a researcher:
+  - the dataset is a bundle of two files, `genomes.fasta` and `results.json`;
+  - each file's DRS id and checksum are its SHA-256, and each download matches them.
+- **Anonymised:**
+  - the genomes are renamed after the dataset (`<dataset>-1`, `-2`), with no job id and no sample name, not even
+    the reference's own;
+  - the results give the week of collection (2026-W46) and the region, not the date.
+- **Only what is approved:** a file outside approved datasets (the uploaded genome itself) is not served (404).
+  Once the dataset is withdrawn, it and its files are gone (404).
+- **Audit:** the dataset's creation and withdrawal, and every DRS object read and download, are in the audit log.
 
 **The page** was looked at in Chromium:
 - 14 November: at 1280 px and at a phone's 390 px (no horizontal scrolling); the PDF report and the tree drawings too.
