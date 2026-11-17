@@ -267,7 +267,7 @@ pub fn nearest(db: &Db, q: &[u64], top: usize) -> Vec<Hit> {
     hits
 }
 
-pub fn classify_cmd(db: &str, query: &str, top: usize) -> Result<i32, String> {
+pub fn classify_cmd(db: &str, query: &str, top: usize, to: Option<&str>) -> Result<i32, String> {
     let db = load(db)?;
     let qs = fasta::read(query)?;
     let lines = par_map(&qs, |q| {
@@ -294,9 +294,13 @@ pub fn classify_cmd(db: &str, query: &str, top: usize) -> Result<i32, String> {
             hs.join(",")
         )
     });
-    let mut out = std::io::stdout().lock();
-    for l in lines {
-        writeln!(out, "{l}").map_err(|e| e.to_string())?;
+    let text: String = lines.iter().map(|l| format!("{l}\n")).collect();
+    match to {
+        Some(f) => std::fs::write(f, text).map_err(|e| format!("{f}: {e}"))?,
+        None => std::io::stdout()
+            .lock()
+            .write_all(text.as_bytes())
+            .map_err(|e| e.to_string())?,
     }
     Ok(0)
 }

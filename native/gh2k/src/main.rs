@@ -3,7 +3,8 @@
 //!
 //!   gh2k validate IN OUT                     check a FASTA/FASTQ file, write it normalised (FS 3.1, task validate)
 //!   gh2k sketch K S DB.fasta OUT.sketch      MinHash sketches of the reference genomes, with an index
-//!   gh2k classify DB.sketch QUERY.fasta TOP  the nearest references of every query sequence (task classify)
+//!   gh2k classify DB.sketch QUERY.fasta TOP [OUT]  the nearest references of every query sequence (task classify),
+//!                                            to OUT or stdout
 //!   gh2k screen DB.sketch TOP R1.fastq [R2.fastq]  the nearest references of a read set (task screen)
 //!   gh2k nj ALIGNED.fasta                    a neighbour-joining tree of aligned genomes, in Newick (task tree)
 //!   gh2k dist ALIGNED.fasta I0 I1 J0 J1 OUT  a tile of the distance matrix (task distance_block; phylo.rs)
@@ -30,7 +31,8 @@ fn main() {
     let r = match a.as_slice() {
         ["validate", input, output] => validate::run(input, output),
         ["sketch", k, s, db, out] => minhash::sketch_cmd(num(k), num(s), db, out),
-        ["classify", db, query, top] => minhash::classify_cmd(db, query, num(top)),
+        ["classify", db, query, top] => minhash::classify_cmd(db, query, num(top), None),
+        ["classify", db, query, top, out] => minhash::classify_cmd(db, query, num(top), Some(out)),
         ["screen", db, top, fastqs @ ..] if !fastqs.is_empty() => {
             minhash::screen_cmd(db, fastqs, num(top))
         }

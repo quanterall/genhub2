@@ -8,7 +8,12 @@
 %%      owners allow it: distance tiles and a batch of bootstrap replicates of the 1,000 SARS-CoV-2 genomes and the
 %%      reference.
 %%      Each result must be the local executor's, byte for byte, and the tree from the federation's tiles phase A's.
-%%      Without the image setting, part 2 is skipped and said so.
+%%   3. Classification (MinHash, gh2k) of the 1,593 genomes of phase A (the 1,000 SARS-CoV-2 and the 593 held-out)
+%%      and mutations (minimap2) of the 1,000 SARS-CoV-2 genomes, through the federation executor: the same results as
+%%      this node's, call for call and mutation for mutation.
+%%   4. A genome job through the job service with executor federation: its upload validated on this node (the lab's
+%%      data), its classification and mutations through the federation, the same results as a job on this node.
+%%      Without the image setting, parts 2-4 are skipped and said so.
 %%
 %% Results: acceptance/results/federation-<host>-<date>.json; exit status 0 when every check holds.
 %%   sh acceptance/run_federation.sh [genhub2-task@sha256:...]
@@ -31,23 +36,32 @@ main([Image, Out]) ->
                        maps:get(<<"free_slots">>, Info), maps:get(<<"room_gb">>, Info)])),
     log("1. the client, with the test image"),
     Client = client(Fed),
-    Own = case Image of
-              "none" -> log("2. skipped: no genhub2-task image allowed yet"), skipped;
-              _ -> log("2. GenHub2's tasks through the federation executor"), own(Fed#{image => Image})
-          end,
+    {Own, Analyses, Job} =
+        case Image of
+            "none" -> log("2-4. skipped: no genhub2-task image allowed yet"), {skipped, skipped, skipped};
+            _ ->
+                F = Fed#{image => Image},
+                log("2. GenHub2's trees through the federation executor"),
+                O = own(F),
+                log("3. classification and mutations through the federation executor"),
+                A = analyses(F),
+                log("4. a genome job with executor federation"),
+                {O, A, job(F)}
+        end,
     Usage = gh_fed:usage(),
-    Checks = checks(Client, Own),
+    Checks = checks(Client, Own) ++ analyses_checks(Analyses) ++ job_checks(Job),
     R = #{date => list_to_binary(calendar:system_time_to_rfc3339(erlang:system_time(second), [{offset, "Z"}])),
           host => list_to_binary(net_adm:localhost()), node => maps:get(<<"node">>, Info), service_info => Info,
-          client => Client, genhub2_tasks => Own, usage => Usage, checks => Checks,
-          skipped => case Own of skipped -> [<<"part 2: the genhub2-task image is not allowed on the nodes yet">>]; _ -> [] end,
+          image => list_to_binary(Image), client => Client, genhub2_tasks => Own, analyses => Analyses, genome_job => Job,
+          usage => Usage, checks => Checks,
+          skipped => case Own of skipped -> [<<"parts 2-4: the genhub2-task image is not allowed on the nodes yet">>]; _ -> [] end,
           seconds => (erlang:monotonic_time(millisecond) - T0) / 1000},
     ok = filelib:ensure_dir(Out),
     ok = file:write_file(Out, json:format(R)),
     Failed = [C || #{ok := false} = C <- Checks],
     [io:format("~s ~s: ~s~n", [case Ok of true -> "ok  "; false -> "FAIL" end, N, V])
      || #{name := N, ok := Ok, value := V} <- Checks],
-    [io:format("skip part 2: the genhub2-task image is not allowed on the nodes yet~n") || Own =:= skipped],
+    [io:format("skip parts 2-4: the genhub2-task image is not allowed on the nodes yet~n") || Own =:= skipped],
     io:format("~b of ~b checks hold~nwritten ~s~n", [length(Checks) - length(Failed), length(Checks), Out]),
     halt(case Failed of [] -> 0; _ -> 1 end).
 
@@ -93,6 +107,71 @@ own(Fed) ->
     #{newick := Nwk} = pq_task:run({pq_task, gh_phylo, {njtiles, Aligned, lists:sublist(Remote, NTiles)}}, node()),
     #{tasks => length(Tasks), identical => Local =:= Remote, local_seconds => SL, federation_seconds => SF,
       ran_on => Where, newick => Nwk, aligned => Aligned}.
+
+%% 3. classification and mutations, here and through the federation
+analyses(Fed) ->
+    application:set_env(genhub2, federation, Fed),
+    Refs = gh_refdb:refseq_viral(),
+    #{fasta := Sars} = gh_acceptance:sars_cov_2(),
+    #{fasta := Held} = gh_acceptance:held_out(Refs),
+    Tasks = [{pq_task, gh_classify, {classify, C, Refs, 10}} || G <- [Sars, Held], C <- gh_phylo:chunks(G, 200)]
+        ++ [{pq_task, gh_mutations, {mutations, C, Refs, ?REF}} || C <- gh_phylo:chunks(Sars, 200)],
+    {Local, SL} = secs(fun() -> pq_rexec:map(Tasks, local, #{}) end),
+    log(io_lib:format("   ~b tasks here: ~.1f s", [length(Tasks), SL])),
+    {Traced, SF} = secs(fun() -> gh_fedexec:map_traced(Tasks, #{}) end),
+    Remote = [R || {R, _} <- Traced],
+    Where = lists:foldl(fun({_, #{node := W}}, M) -> maps:update_with(W, fun(K) -> K + 1 end, 1, M) end, #{}, Traced),
+    log(io_lib:format("   ~b tasks through the federation: ~.1f s, ran on ~p", [length(Tasks), SF, Where])),
+    Calls = lists:append([R || {{pq_task, gh_classify, _}, R} <- lists:zip(Tasks, Remote)]),
+    Muts = lists:append([R || {{pq_task, gh_mutations, _}, R} <- lists:zip(Tasks, Remote)]),
+    #{tasks => length(Tasks), identical => Local =:= Remote, local_seconds => SL, federation_seconds => SF,
+      ran_on => Where, genomes_classified => length(Calls), genomes_with_mutations => length(Muts),
+      sars_cov_2_called => length([C || #{<<"call">> := #{<<"species">> := <<"Betacoronavirus pandemicum">>}} = C <- Calls])}.
+
+%% 4. one genome job on this node, the same through the federation
+job(Fed) ->
+    Params = #{refs => gh_refdb:refseq_viral(), proteins => gh_refdb:viral_proteins(),
+               nextclade => gh_refdb:nextclade("2026-10-28--15-04-26Z"), min_depth => 10},
+    #{fasta := Sars} = gh_acceptance:sars_cov_2(),
+    [Chunk | _] = gh_phylo:chunks(Sars, 20),
+    Run = fun(Exec) ->
+                  application:set_env(genhub2, executor, Exec),
+                  {J, S} = secs(fun() -> Id = gh_jobs:submit(genome, [Chunk], Params), gh_jobs:wait(Id, 1800000) end),
+                  application:set_env(genhub2, executor, local),
+                  V = gh_jobs:view(maps:get(id, J)),
+                  Steps = maps:get(steps, V),
+                  #{state => maps:get(state, V), seconds => S,
+                    results => maps:map(fun(_, #{results := R}) -> R end, Steps),
+                    step_nodes => maps:map(fun(_, #{provenance := P}) -> lists:usort([N || #{node := N} <- P]) end, Steps)}
+          end,
+    application:set_env(genhub2, federation, Fed),
+    Here = Run(local),
+    There = Run(federation),
+    log(io_lib:format("   genome job here ~.1f s, with the federation ~.1f s", [maps:get(seconds, Here), maps:get(seconds, There)])),
+    #{here_state => maps:get(state, Here), state => maps:get(state, There), seconds_here => maps:get(seconds, Here),
+      seconds => maps:get(seconds, There), step_nodes => maps:get(step_nodes, There),
+      identical => maps:get(results, Here) =:= maps:get(results, There)}.
+
+analyses_checks(skipped) -> [];
+analyses_checks(A) ->
+    [check(<<"classification and mutations: identical to this node's">>, maps:get(identical, A), maps:get(tasks, A)),
+     check(<<"classification and mutations: ran through the federation">>,
+           lists:all(fun(W) -> binary:match(W, <<"federation:">>) =/= nomatch end, maps:keys(maps:get(ran_on, A))),
+           maps:get(ran_on, A)),
+     check(<<"classification: all 1,593 genomes, the 1,000 SARS-CoV-2 called SARS-CoV-2">>,
+           maps:get(genomes_classified, A) =:= 1593 andalso maps:get(sars_cov_2_called, A) >= 1000,
+           {maps:get(genomes_classified, A), maps:get(sars_cov_2_called, A)})].
+
+job_checks(skipped) -> [];
+job_checks(J) ->
+    #{step_nodes := SN} = J,
+    Fed = fun(St) -> [N || N <- maps:get(St, SN), is_binary(N), binary:match(N, <<"federation:">>) =/= nomatch] =/= [] end,
+    [check(<<"genome job: done here and with the federation">>, {maps:get(here_state, J), maps:get(state, J)} =:= {done, done},
+           {maps:get(here_state, J), maps:get(state, J)}),
+     check(<<"genome job: the same results with the federation">>, maps:get(identical, J), maps:get(identical, J)),
+     check(<<"genome job: the upload validated on this node only">>, maps:get(validate, SN) =:= [node()], maps:get(validate, SN)),
+     check(<<"genome job: classification and mutations through the federation">>, Fed(classify) andalso Fed(mutations),
+           maps:with([classify, mutations], SN))].
 
 secs(F) ->
     T0 = erlang:monotonic_time(microsecond),
