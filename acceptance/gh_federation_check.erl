@@ -5,7 +5,8 @@
 %%      GenHub2's store uploaded by its hash, a task that reads it, its output downloaded and checked; where it ran;
 %%      GenHub2's usage.
 %%   2. GenHub2's own tasks through the federation executor (gh_fedexec), with the genhub2-task image once the nodes'
-%%      owners allow it: distance tiles and bootstrap replicates of the 1,000 SARS-CoV-2 genomes and the reference.
+%%      owners allow it: distance tiles and a batch of bootstrap replicates of the 1,000 SARS-CoV-2 genomes and the
+%%      reference.
 %%      Each result must be the local executor's, byte for byte, and the tree from the federation's tiles phase A's.
 %%      Without the image setting, part 2 is skipped and said so.
 %%
@@ -81,7 +82,7 @@ own(Fed) ->
     Aligned = gh_phylo:join(A),
     N = 1 + lists:sum([S || #{sequences := S} <- A]),
     Tasks = [{pq_task, gh_phylo, {distance_block, Aligned, I0, I1, J0, J1}} || {I0, I1, J0, J1} <- gh_phylo:tiles(N, 256)]
-        ++ [{pq_task, gh_phylo, {bootstrap, Aligned, Seed}} || Seed <- lists:seq(1, ?REPLICATES)],
+        ++ [{pq_task, gh_phylo, {bootstraps, Aligned, 1, ?REPLICATES}}],
     {Local, SL} = secs(fun() -> pq_rexec:map(Tasks, local, #{}) end),
     log(io_lib:format("   ~b tasks here: ~.1f s", [length(Tasks), SL])),
     {Traced, SF} = secs(fun() -> gh_fedexec:map_traced(Tasks, #{}) end),

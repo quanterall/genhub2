@@ -6,14 +6,15 @@
 %%                                                                    -> TileHash
 %%   tree       neighbour-joining on the tiles (gh2k njtiles)          {njtiles, AlignedHash, [TileHash]}
 %%              (maximum likelihood: gh_tree's {ml, ...})              -> #{newick, aligned, sequences, columns, method}
-%%   bootstrap  replicates, one a task (gh2k boot; Felsenstein 1985,  {bootstrap, AlignedHash, Seed} -> NewickHash
-%%              doi:10.1111/j.1558-5646.1985.tb00420.x)
+%%   bootstrap  replicates (gh2k boot; Felsenstein 1985,               {bootstrap, AlignedHash, Seed} -> NewickHash
+%%              doi:10.1111/j.1558-5646.1985.tb00420.x), in batches   {bootstraps, AlignedHash, First, Count}
+%%              of one task each (gh2k boots)                          -> Hash (one tree a line, seeds First..)
 %%   support    the tree with each branch's support (gh2k support)    {support, NewickHash, [NewickHash]}
 %%                                                                    -> #{newick, replicates}
 %% Each result is a pure function of its task, and the tiling only says which tasks compute which pairs: the tree is
 %% byte for byte gh2k nj's on the whole alignment, however the tiles were spread.
 %%
-%% distance_block and bootstrap also have a container form (container/1, result/2): the same gh2k command in the
+%% distance_block, bootstrap and bootstraps also have a container form (container/1, result/2): the same gh2k command in the
 %% genhub2-task image, inputs and outputs by hash, for the federation executor (gh_fedexec). Its result is the same
 %% file, so the same hash, as run/2's.
 -module(gh_phylo).
@@ -43,13 +44,24 @@ run({njtiles, Aligned, Tiles}, #{home := Home}) ->
     #{newick => gh_store:put_binary(Newick), aligned => Aligned, sequences => N, columns => Columns, method => nj};
 run({bootstrap, Aligned, Seed}, #{home := Home}) ->
     gh_store:put_binary(gh_tool:gh2k_must(["boot", gh_store:ensure(Aligned, Home), integer_to_list(Seed)], 1));
+run({bootstraps, Aligned, First, Count}, #{home := Home}) ->
+    gh_store:with_tmp(
+      fun(Dir) ->
+              Out = filename:join(Dir, "trees.nwk"),
+              <<>> = gh_tool:gh2k_must(["boots", gh_store:ensure(Aligned, Home), integer_to_list(First),
+                                        integer_to_list(Count), Out], 1),
+              gh_store:move_file(Out)
+      end);
 run({support, Newick, Reps}, #{home := Home}) ->
     gh_store:with_tmp(
       fun(Dir) ->
               All = filename:join(Dir, "replicates.nwk"),
-              ok = file:write_file(All, [gh_store:read_from(R, Home) || R <- Reps]),
+              Trees = [gh_store:read_from(R, Home) || R <- Reps],
+              ok = file:write_file(All, Trees),
               Out = gh_tool:gh2k_must(["support", gh_store:ensure(Newick, Home), All]),
-              #{newick => gh_store:put_binary(Out), replicates => length(Reps)}
+              %% the replicate trees, one a line, whether each file holds one (bootstrap) or a batch (bootstraps)
+              N = length(binary:split(iolist_to_binary(Trees), <<"\n">>, [global, trim_all])),
+              #{newick => gh_store:put_binary(Out), replicates => N}
       end).
 
 %% the task as a container command (gh_fed:run/2): only for the tasks that need nothing but gh2k
@@ -67,12 +79,20 @@ container({bootstrap, Aligned, Seed}) ->
       inputs => [{<<"/work/in/aligned.fa">>, Aligned}], outputs => [<<"/work/out/tree.nwk">>],
       command => [<<"gh2k">>, <<"boot">>, <<"/work/in/aligned.fa">>, integer_to_binary(Seed), <<"/work/out/tree.nwk">>],
       resources => #{cpu => 1, ram_gb => 2, disk_gb => 1}};
+container({bootstraps, Aligned, First, Count}) ->
+    #{name => <<"bootstrap replicates">>,
+      description => <<"a batch of bootstrap replicates of a neighbour-joining tree of aligned viral genomes">>,
+      inputs => [{<<"/work/in/aligned.fa">>, Aligned}], outputs => [<<"/work/out/trees.nwk">>],
+      command => [<<"gh2k">>, <<"boots">>, <<"/work/in/aligned.fa">>, integer_to_binary(First), integer_to_binary(Count),
+                  <<"/work/out/trees.nwk">>],
+      resources => #{cpu => 2, ram_gb => 2, disk_gb => 1}};
 container(_) -> none.
 
 %% the task's result from its container outputs (Path => Hash): run/2's result
 -spec result(term(), #{binary() => gh_store:hash()}) -> term().
 result({distance_block, _, _, _, _, _}, #{<<"/work/out/tile">> := H}) -> H;
-result({bootstrap, _, _}, #{<<"/work/out/tree.nwk">> := H}) -> H.
+result({bootstrap, _, _}, #{<<"/work/out/tree.nwk">> := H}) -> H;
+result({bootstraps, _, _, _}, #{<<"/work/out/trees.nwk">> := H}) -> H.
 
 resources({align, _, _, _, _}) -> #{cpu => gh_tool:threads()};
 resources(_) -> #{cpu => 1}.
@@ -81,6 +101,7 @@ describe({align, _, Refs, Acc, _}) -> #{task => align, tools => [minimap2], refs
 describe({distance_block, _, I0, I1, J0, J1}) -> #{task => distance_block, tools => [gh2k], rows => [I0, I1], columns => [J0, J1]};
 describe({njtiles, _, Tiles}) -> #{task => tree, tools => [gh2k], method => nj, tiles => length(Tiles)};
 describe({bootstrap, _, Seed}) -> #{task => bootstrap, tools => [gh2k], seed => Seed};
+describe({bootstraps, _, First, Count}) -> #{task => bootstrap, tools => [gh2k], seeds => [First, First + Count - 1]};
 describe({support, _, Reps}) -> #{task => support, tools => [gh2k], replicates => length(Reps)}.
 
 %%% for building a tree job's tasks (gh_pipeline), on the coordinating node

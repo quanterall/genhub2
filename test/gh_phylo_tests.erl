@@ -25,6 +25,7 @@ phylo_test_() ->
              [{"tiles give gh2k nj's tree", fun() -> tiles_equal_nj(A) end},
               {"replicates are seeded", fun() -> replicates(A) end},
               {"support labels the tree", fun() -> support(A) end},
+              {"a batch of replicates is its replicates", fun() -> batches(A) end},
               {"a second node gives the same results", {timeout, 120, fun() -> two_nodes(S) end}}]
      end}.
 
@@ -79,6 +80,16 @@ support(A) ->
     ?assert(lists:all(fun(L) -> L >= 0 andalso L =< 100 end, Labels)),
     ?assert(lists:max(Labels) > 50).
 
+batches(A) ->
+    Singles = [gh_store:read(run({bootstrap, A, K})) || K <- lists:seq(1, 12)],
+    ?assertEqual(iolist_to_binary(Singles),
+                 iolist_to_binary([gh_store:read(run({bootstraps, A, F, C})) || {F, C} <- [{1, 10}, {11, 2}]])),
+    #{newick := T} = run({njtiles, A, [run({distance_block, A, 0, 23, 0, 23})]}),
+    BySingle = run({support, T, [run({bootstrap, A, K}) || K <- lists:seq(1, 12)]}),
+    ByBatch = run({support, T, [run({bootstraps, A, 1, 10}), run({bootstraps, A, 11, 2})]}),
+    ?assertEqual(BySingle, ByBatch),
+    #{replicates := 12} = ByBatch.
+
 subtrees({node, Kids, _, _} = T) -> [T | lists:append([subtrees(K) || K <- Kids])].
 
 %% a peer node with this node's code and a store of its own: it fetches the alignment from this node by hash
@@ -96,6 +107,13 @@ two_nodes(#{dir := Dir, aligned := A}) ->
         Spread = tree_by_tiles(A, 5, {nodes, [node(), Node]}),
         ?assertEqual(Local, Spread),
         ?assert(erpc:call(Node, gh_store, has, [A])),          % it fetched the alignment and checked its hash
+        %% outputs made only on the peer are in its store; pull_traced/1 fetches them here, checked by hash
+        Batch = [{pq_task, gh_phylo, {bootstraps, A, 101, 3}}],
+        [{H, #{node := Node}}] = Traced = pq_rexec:map_traced(Batch, {nodes, [Node]}, #{slots => [Node]}),
+        ?assertNot(gh_store:has(H)),
+        ok = gh_store:pull_traced(Traced),
+        ?assert(gh_store:has(H)),
+        ?assertEqual(pq_rexec:map(Batch, local, #{}), [H]),
         Reps = [{pq_task, gh_phylo, {bootstrap, A, K}} || K <- lists:seq(1, 8)],
         ?assertEqual(pq_rexec:map(Reps, local, #{}), pq_rexec:map(Reps, {nodes, [Node]}, #{}))
     after

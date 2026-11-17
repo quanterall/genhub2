@@ -3,8 +3,8 @@
 %%
 %%   0. The worker: one of the lab's further nodes (role worker, its own store). Its first tasks fetch the reference
 %%      bundles from this node by hash; the time and size are recorded.
-%%   1. Workloads, each run on this node alone (local) and on this node and the worker ({nodes, ...}), alternately,
-%%      twice each: classification of 1,593 genomes (MinHash), of the 593 held-out genomes by proteins (DIAMOND),
+%%   1. Workloads, each run on this node and the worker ({nodes, ...}) and on this node alone (local), alternately,
+%%      twice each, two nodes first (so their results are not already in this node's store): classification of 1,593 genomes (MinHash), of the 593 held-out genomes by proteins (DIAMOND),
 %%      mutations and lineages of 1,000 SARS-CoV-2 genomes, and a tree of the 1,000 and the reference in its parts
 %%      (align, distance tiles, neighbour-joining, 100 bootstrap replicates, support). The results of all runs must be
 %%      identical, and the tree byte for byte phase A's (one task, gh2k nj on the whole alignment).
@@ -45,8 +45,8 @@ main([Worker, Out]) ->
             {protein, fun() -> chunked(Held, 60, fun(C) -> {gh_protein, {protein, C, Proteins}} end) end},
             {mutations, fun() -> chunked(Sars, 50, fun(C) -> {gh_mutations, {mutations, C, Refs, ?REF}} end) end},
             {lineage, fun() -> chunked(Sars, 50, fun(C) -> {gh_lineage, {lineage, C, Next}} end) end}],
-    Runs = [{Name, [run_tasks(Name, Make(), E) || _ <- [1, 2], E <- [local, Nodes]]} || {Name, Make} <- Work]
-        ++ [{tree, [tree(Sars, Refs, E) || _ <- [1, 2], E <- [local, Nodes]]}],
+    Runs = [{Name, [run_tasks(Name, Make(), E) || _ <- [1, 2], E <- [Nodes, local]]} || {Name, Make} <- Work]
+        ++ [{tree, [tree(Sars, Refs, E) || _ <- [1, 2], E <- [Nodes, local]]}],
     log("2. jobs on two nodes"),
     Jobs = jobs(Nodes, Sars, Refs, Proteins, Next),
     Summary = [{Name, summary(Rs, W)} || {Name, Rs} <- Runs],
@@ -89,13 +89,19 @@ exec_name({nodes, _}) -> nodes.
 
 %% the tasks on the executor: #{exec, seconds, results (without provenance), per_node}
 run_tasks(Name, Tasks, Exec) ->
-    {R, S} = secs(fun() -> pq_rexec:map_traced(Tasks, Exec, #{}) end),
+    {R, S} = secs(fun() -> traced(Tasks, Exec) end),
     log(io_lib:format("   ~s on ~s: ~b tasks, ~.1f s", [Name, exec_name(Exec), length(Tasks), S])),
     #{exec => exec_name(Exec), seconds => S, tasks => length(Tasks), results => [X || {X, _} <- R],
       per_node => per_node(R)}.
 
 per_node(Traced) ->
     lists:foldl(fun({_, #{node := N}}, M) -> maps:update_with(N, fun(K) -> K + 1 end, 1, M) end, #{}, Traced).
+
+%% the tasks' results, with every stored file they refer to fetched to this node (as the job service does)
+traced(Tasks, Exec) ->
+    R = pq_rexec:map_traced(Tasks, Exec, #{}),
+    ok = gh_store:pull_traced(R),
+    R.
 
 %% 0. the worker fetches the bundles its first tasks need from this node, by hash, and checks them
 replicate(W, Refs, Proteins, Next, Sars) ->
@@ -117,19 +123,18 @@ replicate(W, Refs, Proteins, Next, Sars) ->
 
 %% the tree of the genomes and the reference in its parts, each part's tasks on the executor
 tree(Sars, Refs, Exec) ->
-    {A, SA} = secs(fun() -> [X || {X, _} <- pq_rexec:map_traced([{pq_task, gh_phylo, {align, C, Refs, ?REF, K =:= 1}}
-                                                                 || {K, C} <- lists:enumerate(gh_phylo:chunks(Sars, 100))],
-                                                                Exec, #{})] end),
+    {A, SA} = secs(fun() -> [X || {X, _} <- traced([{pq_task, gh_phylo, {align, C, Refs, ?REF, K =:= 1}}
+                                                    || {K, C} <- lists:enumerate(gh_phylo:chunks(Sars, 100))], Exec)] end),
     Aligned = gh_phylo:join(A),
     N = 1 + lists:sum([S || #{sequences := S} <- A]),
     TileTasks = [{pq_task, gh_phylo, {distance_block, Aligned, I0, I1, J0, J1}} || {I0, I1, J0, J1} <- gh_phylo:tiles(N, 128)],
-    {TilesTraced, SD} = secs(fun() -> pq_rexec:map_traced(TileTasks, Exec, #{}) end),
+    {TilesTraced, SD} = secs(fun() -> traced(TileTasks, Exec) end),
     Tiles = [X || {X, _} <- TilesTraced],
-    {[#{newick := Nwk}], SN} = secs(fun() -> pq_rexec:map([{pq_task, gh_phylo, {njtiles, Aligned, Tiles}}], Exec, #{}) end),
+    {[{#{newick := Nwk}, _}], SN} = secs(fun() -> traced([{pq_task, gh_phylo, {njtiles, Aligned, Tiles}}], Exec) end),
     BootTasks = [{pq_task, gh_phylo, {bootstrap, Aligned, Seed}} || Seed <- lists:seq(1, ?REPLICATES)],
-    {BootTraced, SB} = secs(fun() -> pq_rexec:map_traced(BootTasks, Exec, #{}) end),
+    {BootTraced, SB} = secs(fun() -> traced(BootTasks, Exec) end),
     Reps = [X || {X, _} <- BootTraced],
-    {[#{newick := Sup}], SS} = secs(fun() -> pq_rexec:map([{pq_task, gh_phylo, {support, Nwk, Reps}}], Exec, #{}) end),
+    {[{#{newick := Sup}, _}], SS} = secs(fun() -> traced([{pq_task, gh_phylo, {support, Nwk, Reps}}], Exec) end),
     Total = SA + SD + SN + SB + SS,
     log(io_lib:format("   tree on ~s: align ~.1f s, ~b tiles ~.1f s, nj ~.1f s, ~b replicates ~.1f s, support ~.1f s",
                       [exec_name(Exec), SA, length(Tiles), SD, SN, ?REPLICATES, SB, SS])),

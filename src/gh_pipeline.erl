@@ -22,6 +22,8 @@
 %% genomes per align task, rows per distance tile
 -define(ALIGN_CHUNK, 100).
 -define(TILE_ROWS, 128).
+%% bootstrap replicates per task
+-define(BOOT_BATCH, 10).
 
 -spec steps(genome | reads | tree) -> [atom()].
 steps(genome) -> [validate, classify, protein, mutations, lineage, knowledge];
@@ -47,7 +49,9 @@ tasks(tree, #{params := #{method := nj}}, #{align := A, distance := Tiles}) ->
 tasks(tree, #{params := #{method := M}}, #{align := A}) ->
     [{pq_task, gh_tree, {ml, gh_phylo:join(A), M}}];
 tasks(bootstrap, #{params := #{method := nj} = P}, #{align := A}) ->
-    [{pq_task, gh_phylo, {bootstrap, gh_phylo:join(A), Seed}} || Seed <- lists:seq(1, maps:get(bootstrap, P, 0))];
+    N = maps:get(bootstrap, P, 0),
+    Aligned = gh_phylo:join(A),
+    [{pq_task, gh_phylo, {bootstraps, Aligned, First, min(?BOOT_BATCH, N - First + 1)}} || First <- lists:seq(1, N, ?BOOT_BATCH)];
 tasks(bootstrap, _Job, _Done) -> [];
 tasks(support, _Job, #{bootstrap := []}) -> [];
 tasks(support, _Job, #{tree := [#{newick := T}], bootstrap := Reps}) ->

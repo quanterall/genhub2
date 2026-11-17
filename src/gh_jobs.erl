@@ -94,7 +94,11 @@ executor(Step) ->
     end.
 
 map_traced(Tasks, federation, Opts) -> gh_fedexec:map_traced(Tasks, Opts);
-map_traced(Tasks, Exec, Opts) -> pq_rexec:map_traced(Tasks, Exec, Opts).
+map_traced(Tasks, Exec, Opts) ->
+    R = pq_rexec:map_traced(Tasks, Exec, Opts),
+    %% outputs of tasks that ran on another of the lab's nodes are in that node's store: fetch them here
+    ok = gh_store:pull_traced(R),
+    R.
 
 to_map(#gh_job{id = Id, kind = K, inputs = I, params = P, state = S, created = C, updated = U, error = E}) ->
     #{id => Id, kind => K, inputs => I, params => P, state => S, created => C, updated => U, error => E}.

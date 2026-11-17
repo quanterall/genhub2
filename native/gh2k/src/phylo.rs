@@ -8,6 +8,8 @@
 //!   boot ALIGNED SEED [OUT]         one bootstrap replicate (Felsenstein 1985, doi:10.1111/j.1558-5646.1985.tb00420.x):
 //!                                   the alignment's columns drawn with replacement by SplitMix64 from SEED, then
 //!                                   distances and neighbour-joining as `nj`
+//!   boots ALIGNED FIRST COUNT OUT   COUNT replicates, seeds FIRST.., one tree a line: the lines of `boot` for those
+//!                                   seeds, in order (a batch for one task)
 //!   support TREE REPLICATES...      TREE with each internal branch labelled by the percentage of replicate trees that
 //!                                   contain its split (each REPLICATES file holds one tree a line)
 
@@ -101,6 +103,19 @@ pub fn boot(path: &str, seed: u64, out: Option<&str>) -> Result<i32, String> {
         Some(o) => std::fs::write(o, tree).map_err(|e| format!("{o}: {e}"))?,
         None => print!("{tree}"),
     }
+    Ok(0)
+}
+
+pub fn boots(path: &str, first: u64, count: u64, out: &str) -> Result<i32, String> {
+    let recs = match nj::aligned(path, "boots")? {
+        Some(r) => r,
+        None => return Ok(2),
+    };
+    let seeds: Vec<u64> = (first..first + count).collect();
+    // the replicates in parallel (each one's distances use the same number of threads: GH2K_THREADS squared at most)
+    let trees = crate::minhash::par_map(&seeds, |&s| replicate(&recs, s));
+    let text: String = trees.iter().map(|t| format!("{t}\n")).collect();
+    std::fs::write(out, text).map_err(|e| format!("{out}: {e}"))?;
     Ok(0)
 }
 
@@ -365,6 +380,23 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn a_batch_is_its_replicates() {
+        let r = recs();
+        let dir = std::env::temp_dir().join(format!("gh2k-boots-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let (a, o) = (dir.join("a.fa"), dir.join("b.nwk"));
+        let fa: String = r
+            .iter()
+            .map(|x| format!(">{}\n{}\n", x.id, String::from_utf8_lossy(&x.seq)))
+            .collect();
+        std::fs::write(&a, fa).unwrap();
+        boots(a.to_str().unwrap(), 3, 4, o.to_str().unwrap()).unwrap();
+        let want: String = (3..7).map(|s| format!("{}\n", replicate(&r, s))).collect();
+        assert_eq!(std::fs::read_to_string(&o).unwrap(), want);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

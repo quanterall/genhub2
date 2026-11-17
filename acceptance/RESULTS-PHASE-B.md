@@ -86,6 +86,26 @@ GenHub2's job pipeline sends a job's weak calls to DIAMOND as one task.
 - **A genome job:** the upload's `validate` step ran on the site only, as placement requires. The genome job's other
   steps were one task each, and they ran on the site this time.
 
+## A correction (17 November 2026)
+
+A bug was found after the run above, and fixed:
+- **What was wrong:** a task run on the worker leaves its output file in the worker's store and returns its hash.
+  The site did not fetch such files, so a later step on the site could not read them.
+- **Why the published run missed it:** that run computed every workload on the site alone before running it on both
+  nodes. The site already held the same files, under the same hashes, so nothing was missing and the checks passed.
+- **How it showed:** when tree jobs began sending bootstrap replicates in batches of 10, their outputs were new files,
+  and the tree job failed.
+- **The fix:**
+  - after each step, the site fetches every stored file a result refers to from the node that ran its task, checked
+    by hash (`gh_store:pull_traced/1`);
+  - the test now runs each workload on two nodes first;
+  - a unit test fetches outputs made only on a peer node.
+- **The rerun:** [`results/phase-b-dgx-spark-2026-11-17T0735Z.json`](results/phase-b-dgx-spark-2026-11-17T0735Z.json),
+  all 20 checks hold.
+  - Every result is the same as above: the tree (`b06e5e9f...`) and the support values (`054bc67e...`).
+  - The speed-ups are 1.80-1.95.
+  - The tree job, with replicates in batches of 10, took 30.0 s.
+
 ## The checks
 
 The 20 checks, all holding:

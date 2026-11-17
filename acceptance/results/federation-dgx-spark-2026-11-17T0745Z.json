@@ -1,0 +1,95 @@
+{
+  "checks": [
+    {
+      "name": "client: the task's output is the expected one",
+      "ok": true,
+      "value": "<<\"30 2\\n\">>"
+    },
+    {
+      "name": "client: the output's hash was checked on download",
+      "ok": true,
+      "value": "<<\"8963a50c9aed3d6a85c89e4c9b449da35d96aed72005e18e74fab19034e67b18\">>"
+    },
+    {
+      "name": "client: the node holds the uploaded input by its hash",
+      "ok": true,
+      "value": "<<\"81de3f7394007a7eeb4de6f0c11704361a9ddd1e22765b9133d4436741c0c8ab\">>"
+    },
+    {
+      "name": "client: the node says where the task ran",
+      "ok": true,
+      "value": "<<\"dgx-b\">>"
+    },
+    {
+      "name": "genhub2 tasks: identical to this node's",
+      "ok": true,
+      "value": "11"
+    },
+    {
+      "name": "genhub2 tasks: the tree from the federation's tiles is phase A's",
+      "ok": true,
+      "value": "<<\"b06e5e9fd95a7a5161ac4cf488f937df7f1e223c5591ad5bc63c39a8623b93cb\">>"
+    },
+    {
+      "name": "genhub2 tasks: ran through the federation",
+      "ok": true,
+      "value": "#{<<\"federation:dgx-b\">> => 11}"
+    }
+  ],
+  "client": {
+    "expected": "30 2\n",
+    "got": "30 2\n",
+    "input": "81de3f7394007a7eeb4de6f0c11704361a9ddd1e22765b9133d4436741c0c8ab",
+    "output": "8963a50c9aed3d6a85c89e4c9b449da35d96aed72005e18e74fab19034e67b18",
+    "ran_on": "dgx-b",
+    "seconds": 0.604,
+    "uploaded_held": true
+  },
+  "date": "2026-11-17T07:46:48Z",
+  "genhub2_tasks": {
+    "aligned": "9b64e97254c26118ac1bd6c7ee1046da11f5f3ff2d5077c28d1b45236fa4a71e",
+    "federation_seconds": 36.867332,
+    "identical": true,
+    "local_seconds": 15.166224,
+    "newick": "b06e5e9fd95a7a5161ac4cf488f937df7f1e223c5591ad5bc63c39a8623b93cb",
+    "ran_on": { "federation:dgx-b": 11 },
+    "tasks": 11
+  },
+  "host": "dgx-spark",
+  "node": "dgx-a",
+  "seconds": 68.905,
+  "service_info": {
+    "accepting": true,
+    "arch": "aarch64-unknown-linux-gnu",
+    "federate": true,
+    "free_slots": 0,
+    "gpu": false,
+    "images": [
+      "genhub2-task@sha256:e10aa606ab107c0c2cc945564ec38701825def5518ab6e2e977894137f104782"
+    ],
+    "max_concurrent": 0,
+    "network_default": false,
+    "node": "dgx-a",
+    "room_gb": 6,
+    "running": 0
+  },
+  "skipped": [],
+  "usage": {
+    "by_state": { "COMPLETE": 17 },
+    "charged": {
+      "bytes_in": 329405339,
+      "bytes_out": 5321967,
+      "cpu_seconds": 22.1,
+      "ram_gb_seconds": 26.7,
+      "seconds": 14.1
+    },
+    "charged_tasks": 17,
+    "kind": "local",
+    "ran_on_peers": { "dgx-b": 17 },
+    "source": {
+      "app": "genhub2",
+      "kind": "local"
+    },
+    "tasks": 17
+  }
+}

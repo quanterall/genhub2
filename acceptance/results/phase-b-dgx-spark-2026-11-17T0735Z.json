@@ -1,0 +1,414 @@
+{
+  "bundles": {
+    "nextclade": "39b70eee8919fba4b3cf261e46124954d58128f59aef1d5260d246c3d276e8ef",
+    "refseq_viral": "29e42c18e59a4409bad717596cc00839fed889a0d2944a65d0caab7bf45bbd32",
+    "refseq_viral_proteins": "b8bef48c1e0dfd209b3628149fda268e890af9a2d3e9a1583b513cb9dc36706e"
+  },
+  "checks": [
+    {
+      "name": "two nodes",
+      "ok": true,
+      "value": "#{'gh_site@genhub2-phase-b-site' => 5,'gh_worker@genhub2-phase-b-worker' => 5}"
+    },
+    {
+      "name": "the worker fetched its references by hash",
+      "ok": true,
+      "value": "1523890428"
+    },
+    {
+      "name": "classify: identical results in all four runs",
+      "ok": true,
+      "value": "32"
+    },
+    {
+      "name": "classify: the worker ran tasks",
+      "ok": true,
+      "value": "17"
+    },
+    {
+      "name": "protein: identical results in all four runs",
+      "ok": true,
+      "value": "10"
+    },
+    {
+      "name": "protein: the worker ran tasks",
+      "ok": true,
+      "value": "5"
+    },
+    {
+      "name": "mutations: identical results in all four runs",
+      "ok": true,
+      "value": "20"
+    },
+    {
+      "name": "mutations: the worker ran tasks",
+      "ok": true,
+      "value": "10"
+    },
+    {
+      "name": "lineage: identical results in all four runs",
+      "ok": true,
+      "value": "20"
+    },
+    {
+      "name": "lineage: the worker ran tasks",
+      "ok": true,
+      "value": "10"
+    },
+    {
+      "name": "tree: identical results in all four runs",
+      "ok": true,
+      "value": "148"
+    },
+    {
+      "name": "tree: the worker ran tasks",
+      "ok": true,
+      "value": "66"
+    },
+    {
+      "name": "tree from tiles = phase A's tree (one task, gh2k nj)",
+      "ok": true,
+      "value": "<<\"b06e5e9fd95a7a5161ac4cf488f937df7f1e223c5591ad5bc63c39a8623b93cb\">>"
+    },
+    {
+      "name": "bootstrap and tree faster on two nodes",
+      "ok": true,
+      "value": "1.953689126286335"
+    },
+    {
+      "name": "tree job done",
+      "ok": true,
+      "value": "done"
+    },
+    {
+      "name": "tree job: the tree of part 1",
+      "ok": true,
+      "value": "<<\"b06e5e9fd95a7a5161ac4cf488f937df7f1e223c5591ad5bc63c39a8623b93cb\">>"
+    },
+    {
+      "name": "tree job: the support of part 1",
+      "ok": true,
+      "value": "<<\"054bc67e8061a2026736c69b24c556c87b1aeb56041f3d51e77f365c7f3da1c4\">>"
+    },
+    {
+      "name": "tree job: distance tiles and replicates ran on both nodes",
+      "ok": true,
+      "value": "#{tree => ['gh_site@genhub2-phase-b-site'],align => ['gh_site@genhub2-phase-b-site','gh_worker@genhub2-phase-b-worker'],bootstrap => ['gh_site@genhub2-phase-b-site','gh_worker@genhub2-phase-b-worker'],distance => ['gh_site@genhub2-phase-b-site','gh_worker@genhub2-phase-b-worker'],support => ['gh_site@genhub2-phase-b-site']}"
+    },
+    {
+      "name": "genome job done",
+      "ok": true,
+      "value": "done"
+    },
+    {
+      "name": "genome job: the upload validated on this node only",
+      "ok": true,
+      "value": "#{validate => ['gh_site@genhub2-phase-b-site'],lineage => ['gh_site@genhub2-phase-b-site'],mutations => ['gh_site@genhub2-phase-b-site'],protein => [],classify => ['gh_site@genhub2-phase-b-site'],knowledge => ['gh_site@genhub2-phase-b-site']}"
+    }
+  ],
+  "coordinator": "gh_site@genhub2-phase-b-site",
+  "date": "2026-11-17T07:45:13Z",
+  "genomes": {
+    "held_out": "184316db3e1e4a74766f3b50d3b2c862fc32279aae39ab7ad0bb4045556c886b",
+    "sars_cov_2": "aa81176c898177b02facc6a300d074327aa47de1d090221e87c9c3be4ea3d23e"
+  },
+  "host": "genhub2-phase-b-site",
+  "jobs": {
+    "genome": {
+      "id": "job-mwke0n1s-br6",
+      "newick": null,
+      "seconds": 1.009587,
+      "state": "done",
+      "step_nodes": {
+        "classify": [
+          "gh_site@genhub2-phase-b-site"
+        ],
+        "knowledge": [
+          "gh_site@genhub2-phase-b-site"
+        ],
+        "lineage": [
+          "gh_site@genhub2-phase-b-site"
+        ],
+        "mutations": [
+          "gh_site@genhub2-phase-b-site"
+        ],
+        "protein": [],
+        "validate": [
+          "gh_site@genhub2-phase-b-site"
+        ]
+      },
+      "support": null
+    },
+    "tree": {
+      "id": "job-mwkdzz9u-bpe",
+      "newick": "b06e5e9fd95a7a5161ac4cf488f937df7f1e223c5591ad5bc63c39a8623b93cb",
+      "seconds": 30.030614,
+      "state": "done",
+      "step_nodes": {
+        "align": [
+          "gh_site@genhub2-phase-b-site",
+          "gh_worker@genhub2-phase-b-worker"
+        ],
+        "bootstrap": [
+          "gh_site@genhub2-phase-b-site",
+          "gh_worker@genhub2-phase-b-worker"
+        ],
+        "distance": [
+          "gh_site@genhub2-phase-b-site",
+          "gh_worker@genhub2-phase-b-worker"
+        ],
+        "support": [
+          "gh_site@genhub2-phase-b-site"
+        ],
+        "tree": [
+          "gh_site@genhub2-phase-b-site"
+        ]
+      },
+      "support": "054bc67e8061a2026736c69b24c556c87b1aeb56041f3d51e77f365c7f3da1c4"
+    }
+  },
+  "phase_a_nj_tree": "b06e5e9fd95a7a5161ac4cf488f937df7f1e223c5591ad5bc63c39a8623b93cb",
+  "pqcf": "2a90a1f",
+  "seconds": 588.872,
+  "slots": {
+    "gh_site@genhub2-phase-b-site": 5,
+    "gh_worker@genhub2-phase-b-worker": 5
+  },
+  "worker": "gh_worker@genhub2-phase-b-worker",
+  "worker_references": {
+    "bytes": 1523890428,
+    "seconds": 18.165749
+  },
+  "workloads": {
+    "classify": {
+      "best_local": 3.225627,
+      "best_nodes": 1.789068,
+      "identical": true,
+      "runs": [
+        {
+          "exec": "nodes",
+          "per_node": {
+            "gh_site@genhub2-phase-b-site": 15,
+            "gh_worker@genhub2-phase-b-worker": 17
+          },
+          "seconds": 1.861778,
+          "tasks": 32
+        },
+        {
+          "exec": "local",
+          "per_node": { "gh_site@genhub2-phase-b-site": 32 },
+          "seconds": 3.225627,
+          "tasks": 32
+        },
+        {
+          "exec": "nodes",
+          "per_node": {
+            "gh_site@genhub2-phase-b-site": 15,
+            "gh_worker@genhub2-phase-b-worker": 17
+          },
+          "seconds": 1.789068,
+          "tasks": 32
+        },
+        {
+          "exec": "local",
+          "per_node": { "gh_site@genhub2-phase-b-site": 32 },
+          "seconds": 3.322194,
+          "tasks": 32
+        }
+      ],
+      "speedup": 1.802965007478754,
+      "tasks": 32,
+      "tasks_on_worker_min": 17
+    },
+    "lineage": {
+      "best_local": 8.459436,
+      "best_nodes": 4.397935,
+      "identical": true,
+      "runs": [
+        {
+          "exec": "nodes",
+          "per_node": {
+            "gh_site@genhub2-phase-b-site": 10,
+            "gh_worker@genhub2-phase-b-worker": 10
+          },
+          "seconds": 4.397935,
+          "tasks": 20
+        },
+        {
+          "exec": "local",
+          "per_node": { "gh_site@genhub2-phase-b-site": 20 },
+          "seconds": 8.459436,
+          "tasks": 20
+        },
+        {
+          "exec": "nodes",
+          "per_node": {
+            "gh_site@genhub2-phase-b-site": 10,
+            "gh_worker@genhub2-phase-b-worker": 10
+          },
+          "seconds": 4.528827,
+          "tasks": 20
+        },
+        {
+          "exec": "local",
+          "per_node": { "gh_site@genhub2-phase-b-site": 20 },
+          "seconds": 8.511677,
+          "tasks": 20
+        }
+      ],
+      "speedup": 1.923501825288459,
+      "tasks": 20,
+      "tasks_on_worker_min": 10
+    },
+    "mutations": {
+      "best_local": 2.269825,
+      "best_nodes": 1.176697,
+      "identical": true,
+      "runs": [
+        {
+          "exec": "nodes",
+          "per_node": {
+            "gh_site@genhub2-phase-b-site": 10,
+            "gh_worker@genhub2-phase-b-worker": 10
+          },
+          "seconds": 1.209808,
+          "tasks": 20
+        },
+        {
+          "exec": "local",
+          "per_node": { "gh_site@genhub2-phase-b-site": 20 },
+          "seconds": 2.3033,
+          "tasks": 20
+        },
+        {
+          "exec": "nodes",
+          "per_node": {
+            "gh_site@genhub2-phase-b-site": 10,
+            "gh_worker@genhub2-phase-b-worker": 10
+          },
+          "seconds": 1.176697,
+          "tasks": 20
+        },
+        {
+          "exec": "local",
+          "per_node": { "gh_site@genhub2-phase-b-site": 20 },
+          "seconds": 2.269825,
+          "tasks": 20
+        }
+      ],
+      "speedup": 1.9289800177955752,
+      "tasks": 20,
+      "tasks_on_worker_min": 10
+    },
+    "protein": {
+      "best_local": 81.741872,
+      "best_nodes": 43.945526,
+      "identical": true,
+      "runs": [
+        {
+          "exec": "nodes",
+          "per_node": {
+            "gh_site@genhub2-phase-b-site": 5,
+            "gh_worker@genhub2-phase-b-worker": 5
+          },
+          "seconds": 43.945526,
+          "tasks": 10
+        },
+        {
+          "exec": "local",
+          "per_node": { "gh_site@genhub2-phase-b-site": 10 },
+          "seconds": 81.741872,
+          "tasks": 10
+        },
+        {
+          "exec": "nodes",
+          "per_node": {
+            "gh_site@genhub2-phase-b-site": 5,
+            "gh_worker@genhub2-phase-b-worker": 5
+          },
+          "seconds": 45.493976,
+          "tasks": 10
+        },
+        {
+          "exec": "local",
+          "per_node": { "gh_site@genhub2-phase-b-site": 10 },
+          "seconds": 81.821771,
+          "tasks": 10
+        }
+      ],
+      "speedup": 1.860072672699378,
+      "tasks": 10,
+      "tasks_on_worker_min": 5
+    },
+    "tree": {
+      "best_local": 60.43754700000001,
+      "best_nodes": 30.935088999999998,
+      "identical": true,
+      "newick": "b06e5e9fd95a7a5161ac4cf488f937df7f1e223c5591ad5bc63c39a8623b93cb",
+      "runs": [
+        {
+          "exec": "nodes",
+          "parts": {
+            "align": 1.456894,
+            "bootstrap": 28.111948,
+            "distance": 1.147011,
+            "nj": 0.417356,
+            "support": 0.115585
+          },
+          "per_node": {
+            "gh_site@genhub2-phase-b-site": 70,
+            "gh_worker@genhub2-phase-b-worker": 66
+          },
+          "seconds": 31.248794,
+          "tasks": 148
+        },
+        {
+          "exec": "local",
+          "parts": {
+            "align": 2.399684,
+            "bootstrap": 55.67493,
+            "distance": 1.858877,
+            "nj": 0.414278,
+            "support": 0.089778
+          },
+          "per_node": { "gh_site@genhub2-phase-b-site": 136 },
+          "seconds": 60.43754700000001,
+          "tasks": 148
+        },
+        {
+          "exec": "nodes",
+          "parts": {
+            "align": 1.361236,
+            "bootstrap": 28.122998,
+            "distance": 0.949459,
+            "nj": 0.412889,
+            "support": 0.088507
+          },
+          "per_node": {
+            "gh_site@genhub2-phase-b-site": 69,
+            "gh_worker@genhub2-phase-b-worker": 67
+          },
+          "seconds": 30.935088999999998,
+          "tasks": 148
+        },
+        {
+          "exec": "local",
+          "parts": {
+            "align": 2.408986,
+            "bootstrap": 55.7111,
+            "distance": 1.851059,
+            "nj": 0.416363,
+            "support": 0.09177
+          },
+          "per_node": { "gh_site@genhub2-phase-b-site": 136 },
+          "seconds": 60.479278,
+          "tasks": 148
+        }
+      ],
+      "speedup": 1.953689126286335,
+      "support": "054bc67e8061a2026736c69b24c556c87b1aeb56041f3d51e77f365c7f3da1c4",
+      "tasks": 148,
+      "tasks_on_worker_min": 66
+    }
+  }
+}

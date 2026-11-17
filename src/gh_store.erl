@@ -8,7 +8,7 @@
 %% (ensure/2); between sites, the FVLLMP data route will do the same (FS 4.5).
 -module(gh_store).
 -export([root/0, path/1, put_file/1, move_file/1, put_binary/1, read/1, read_from/2, ensure/2, has/1, file_hash/1,
-         with_tmp/1]).
+         with_tmp/1, pull/2, pull_traced/1]).
 
 -type hash() :: binary().
 -export_type([hash/0]).
@@ -90,6 +90,31 @@ ensure(Hash, Home) ->
             Hash = put_binary(Bin),
             P
     end.
+
+%% Every stored file a task's result refers to (a binary of 64 lowercase hex digits anywhere in the term) that this
+%% node lacks and Node holds, fetched from Node and checked: a task run on another node leaves its outputs in that
+%% node's store, and later steps here read them by hash.
+-spec pull(term(), node()) -> ok.
+pull(_Result, Node) when Node =:= node() -> ok;
+pull(Result, Node) ->
+    Missing = [H || H <- lists:usort(hashes(Result, [])), not has(H)],
+    _ = [ensure(H, Node) || H <- Missing, erpc:call(Node, ?MODULE, has, [H], 60000)],
+    ok.
+
+%% pull/2 for the results of pq_rexec:map_traced/3, each from the node its provenance names
+-spec pull_traced([{term(), map()}]) -> ok.
+pull_traced(Traced) ->
+    lists:foreach(fun({R, #{node := N}}) when is_atom(N) -> pull(R, N); (_) -> ok end, Traced).
+
+hashes(B, Acc) when is_binary(B), byte_size(B) =:= 64 ->
+    case re:run(B, "^[0-9a-f]{64}$", [{capture, none}]) of
+        match -> [B | Acc];
+        nomatch -> Acc
+    end;
+hashes(L, Acc) when is_list(L) -> lists:foldl(fun hashes/2, Acc, L);
+hashes(T, Acc) when is_tuple(T) -> hashes(tuple_to_list(T), Acc);
+hashes(M, Acc) when is_map(M) -> hashes(maps:values(M), Acc);
+hashes(_, Acc) -> Acc.
 
 -spec file_hash(file:filename()) -> hash().
 file_hash(F) ->
