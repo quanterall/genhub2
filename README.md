@@ -92,7 +92,7 @@ Built:
 - **Tasks through the federation:** GenHub2 sends tasks to the FVLLMP node it runs on, which runs them on itself or
   on a peer: GA4GH TES and content-addressed data (`gh_fed`, `gh_fedexec`, executor setting `federation`).
 - **The first container tasks:** distance tiles and bootstrap replicates, in the arm64 `genhub2-task` image.
-- **GenHub2's tasks on DGX-B:** distance tiles and bootstrap replicates sent from DGX-A ran on DGX-B, with results
+- **GenHub2's tasks on DGX-2:** distance tiles and bootstrap replicates sent from DGX-1 ran on DGX-2, with results
   byte for byte one node's; the tree from the federation's tiles is phase A's. All 7 checks hold
   ([`acceptance/FEDERATION.md`](acceptance/FEDERATION.md)).
 

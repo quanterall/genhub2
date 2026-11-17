@@ -7,6 +7,10 @@ owner's policy (FS 4.5, plan section 5 phase C).
 - **Where results come from:** GenHub2 never calls another node; results come back through its own node, checked
   against their SHA-256.
 
+**Node names:** DGX-1, DGX-2, ... DGX-n. DGX-1 is the node GenHub2 runs on, and DGX-2 its first peer. The
+federation's own node ids, which appear in the results files and in each result's provenance, are `dgx-a` for DGX-1
+and `dgx-b` for DGX-2.
+
 ## What GenHub2 has
 
 - **`gh_fed`:** the client: service-info, usage, data (HEAD before upload, downloads checked) and tasks (submit,
@@ -52,14 +56,14 @@ outside the repository.
 17 November 2026: **all 7 checks hold**
 ([`results/federation-dgx-spark-2026-11-17T0745Z.json`](results/federation-dgx-spark-2026-11-17T0745Z.json)).
 
-- **Part 1:** DGX-A had no free slot, so it sent the test task to DGX-B. Its output came back through DGX-A, checked
+- **Part 1:** DGX-1 had no free slot, so it sent the test task to DGX-2. Its output came back through DGX-1, checked
   against its hash.
-- **Part 2, GenHub2's own tasks:** 4 distance tiles and a batch of 10 bootstrap replicates. All 11 ran on DGX-B,
-  through DGX-A, with results byte for byte this node's. The neighbour-joining tree from the federation's tiles is
+- **Part 2, GenHub2's own tasks:** 4 distance tiles and a batch of 10 bootstrap replicates. All 11 ran on DGX-2,
+  through DGX-1, with results byte for byte this node's. The neighbour-joining tree from the federation's tiles is
   phase A's (`b06e5e9f...`).
 - **Time:** 36.9 s through the federation, one task at a time, against 15.2 s for the same tasks on this node's 10
   cores.
-- **Usage:** DGX-A reported 22.1 charged CPU-seconds and 329 MB in, for all of GenHub2's tasks so far. That is close
+- **Usage:** DGX-1 reported 22.1 charged CPU-seconds and 329 MB in, for all of GenHub2's tasks so far. That is close
   to the 30 MB alignment counted once per task (11 tasks), although FVLLMP says an input crosses to a peer once and is
   then reused. Asked.
 
@@ -79,7 +83,7 @@ FVLLMP; until it exists, an image is handed to the FVLLMP operator as a `docker 
 
 Set by each node's owner:
 
-| | GenHub2 on DGX-A | DGX-A's tasks on DGX-B |
+| | GenHub2 on DGX-1 | DGX-1's tasks on DGX-2 |
 | --- | --- | --- |
 | tasks at once | 1 | 1 |
 | CPUs | 2 | 2 |
