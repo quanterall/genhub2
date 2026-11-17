@@ -33,7 +33,7 @@ owner's policy (FS 4.5, plan section 5 phase C).
 
 ```sh
 sh acceptance/run_federation.sh                               # part 1 only
-sh acceptance/run_federation.sh <registry>/genhub2-task@sha256:...  # and part 2, once the image is allowed
+sh acceptance/run_federation.sh <image as the node names it>        # and part 2, once the image is allowed
 ```
 
 1. **The client** with the test image every application may use (alpine): a file of GenHub2's store uploaded by
@@ -52,7 +52,14 @@ outside the repository.
   ([`results/federation-dgx-spark-2026-11-17T0655Z.json`](results/federation-dgx-spark-2026-11-17T0655Z.json)).
   DGX-A had no free slot, so it sent the task to DGX-B, where it ran in 1.4 s. Its output came back through DGX-A,
   checked against its hash.
-- **Part 2** waits for `genhub2-task` to be published and allowed on DGX-A and DGX-B.
+- **Part 2** waits for `genhub2-task` to be delivered to the nodes and allowed there.
+
+## Images stay private
+
+Task images are never published in a public registry: in general a task depends on a laboratory's work. GenHub2
+hands an image to its own node, the federation distributes it to the peers that run its tasks, and each node's owner
+approves it. This route has been requested from FVLLMP (17 November 2026); until it exists, images are handed to
+the nodes' owners directly.
 
 ## Limits today
 

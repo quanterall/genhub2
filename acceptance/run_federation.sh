@@ -1,7 +1,7 @@
 #!/bin/sh
 # GenHub2 on the FVLLMP federation (gh_federation_check.erl): tasks sent to the FVLLMP node this machine runs, which
 # runs them on itself or on a peer.
-#   sh acceptance/run_federation.sh [IMAGE]     IMAGE: genhub2-task@sha256:... once the nodes' owners allow it;
+#   sh acceptance/run_federation.sh [IMAGE]     IMAGE: genhub2-task as the node names it, once its owner allows it;
 #                                               without it, part 2 (GenHub2's own tasks) is skipped and said so
 # GenHub2's token on the node is read from $GENHUB2_FED_TOKEN (default ~/.config/genhub2/federation/genhub2.token,
 # mode 600, outside the repository). The node is $GENHUB2_FED_NODE (default http://127.0.0.1:18100). Part 2 uses the
