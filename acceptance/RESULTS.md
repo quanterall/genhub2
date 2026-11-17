@@ -121,8 +121,8 @@ neighbour-joining, `4c441ab1...` for FastTree).
 
 [`gh_gateway_check.erl`](gh_gateway_check.erl), run by [`run_gateway.sh`](run_gateway.sh) against EMQX 5.8.9, on a site
 with no earlier jobs.
-- **17 November 2026, with accounts, placement, aggregates and sharing:** **all 34 checks hold**
-  ([`results/gateway-dgx-spark-2026-11-17T2123Z.json`](results/gateway-dgx-spark-2026-11-17T2123Z.json)).
+- **17 November 2026, with accounts, placement, aggregates, sharing and metrics:** **all 35 checks hold**
+  ([`results/gateway-dgx-spark-2026-11-17T2127Z.json`](results/gateway-dgx-spark-2026-11-17T2127Z.json)).
   - The 13 below now run as an analyst who logged in through the API.
   - 8 more cover accounts and the audit log (at the end of this section).
   - 1 covers placement: the site's SARS-CoV-2 tree is built from phase A's 1,000 public genomes, and the genome
@@ -133,6 +133,8 @@ with no earlier jobs.
   - 5 cover the aggregated counts of phase D at the site: the genome job is uploaded with a region and collection
     date ([RESULTS-PHASE-D.md](RESULTS-PHASE-D.md), "At a site").
   - 7 cover sharing (below).
+  - 1 covers the metrics for Prometheus (`/metrics`): refused without the scrape token or with a wrong one, served
+    with it, with counts only (no user, job or genome names).
 - **14 November 2026, before accounts:** all 13
   ([`results/gateway-dgx-spark-2026-11-14T0102Z.json`](results/gateway-dgx-spark-2026-11-14T0102Z.json)).
 

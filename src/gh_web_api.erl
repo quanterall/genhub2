@@ -25,6 +25,7 @@ init(Req, What) ->
 %% the roles allowed to use an endpoint; login needs no session
 -spec allowed(atom()) -> [gh_accounts:role()] | public.
 allowed(login) -> public;
+allowed(metrics) -> public;          % its own bearer token (handle(metrics, ...))
 allowed(W) when W =:= logout; W =:= me -> [admin, analyst, researcher];
 allowed(summary) -> [admin, analyst, researcher];
 allowed(W) when W =:= aggregates; W =:= aggregate_alerts -> [admin, analyst, researcher];
@@ -200,6 +201,19 @@ handle(trees, <<"POST">>, Req) ->
     Id = gh_jobs:submit(tree, [Fasta], Params),
     audit(job_submit, Id, ok, #{kind => tree, from_jobs => Ids, method => Method, bootstrap => Boot}),
     reply(201, #{id => Id, reference => Reference}, Req2);
+handle(metrics, <<"GET">>, Req) ->
+    case application:get_env(genhub2, metrics_token) of
+        {ok, Token} when is_binary(Token), byte_size(Token) >= 32 ->
+            Given = case cowboy_req:header(<<"authorization">>, Req) of
+                        <<"Bearer ", T/binary>> -> T;
+                        _ -> <<>>
+                    end,
+            (byte_size(Given) =:= byte_size(Token) andalso crypto:hash_equals(Given, Token))
+                orelse throw({status, 401, <<"metrics need the scrape token">>}),
+            cowboy_req:reply(200, #{<<"content-type">> => <<"text/plain; version=0.0.4; charset=utf-8">>},
+                             gh_metrics:render(), Req);
+        _ -> throw({status, 404, <<"metrics are off (setting metrics_token)">>})
+    end;
 handle(datasets, <<"GET">>, Req) ->
     Ds = [D || #{state := S} = D <- gh_share:list(), S =:= approved orelse get(gh_role) =/= researcher],
     reply(200, #{datasets => Ds, duo => gh_share:duo()}, Req);

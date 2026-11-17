@@ -34,6 +34,7 @@ main([Out]) ->
     ok = application:load(genhub2),
     ok = application:set_env(genhub2, mqtt, #{host => "127.0.0.1", port => ?MQTT_PORT}),
     ok = application:set_env(genhub2, http, #{ip => {127, 0, 0, 1}, port => 28090}),
+    ok = application:set_env(genhub2, metrics_token, binary:encode_hex(crypto:strong_rand_bytes(24), lowercase)),
     {ok, _} = application:ensure_all_started([genhub2, gun]),
     T0 = erlang:monotonic_time(millisecond),
     %% the site's SARS-CoV-2 tree, from phase A's 1,000 public genomes, so genome jobs place their genomes in it
@@ -65,15 +66,18 @@ main([Out]) ->
     Accounts = accounts(Users),
     Aggregates = aggregates(Users),
     Sharing = sharing(Users, [maps:get(id, Job), maps:get(id, Viamqtt)], maps:get(hash, Upload), Tree),
+    Metrics = metrics(),
     Checks = checks(Page, Job, MqttMsgs, WsMsgs, Viamqtt, Refused)
         ++ more_checks(Job, Viamqtt, Exports, Tree, Summary, Alerts) ++ accounts_checks(Accounts)
-        ++ aggregates_checks(Aggregates) ++ sharing_checks(Sharing, [maps:get(id, Job), maps:get(id, Viamqtt)]),
+        ++ aggregates_checks(Aggregates) ++ sharing_checks(Sharing, [maps:get(id, Job), maps:get(id, Viamqtt)])
+        ++ metrics_checks(Metrics),
     R = #{date => list_to_binary(calendar:system_time_to_rfc3339(erlang:system_time(second), [{offset, "Z"}])),
           host => list_to_binary(net_adm:localhost()), emqx => <<"emqx/emqx:5.8.9">>,
           upload => Upload, job_seconds => maps:get(seconds, Job), job_state => maps:get(state, Job),
           mqtt_topics => count([T || {T, _} <- MqttMsgs]), websocket_topics => count([T || {T, _} <- WsMsgs]),
           job_from_mqtt => Viamqtt, exports => Exports, tree => maps:remove(svg, Tree), summary => Summary,
           alerts => Alerts, refused => Refused, accounts => Accounts, aggregates => Aggregates, sharing => Sharing,
+          metrics => Metrics,
           usher_tree => UsherTree,
           checks => Checks,
           seconds => (erlang:monotonic_time(millisecond) - T0) / 1000},
@@ -419,6 +423,28 @@ aggregates_checks(A) ->
            andalso lists:member(<<"check-other-site">>, maps:get(<<"sites">>, Al)), Al),
      check(<<"aggregates: a researcher reads the aggregates and the alerts">>,
            maps:get(researcher, A) =:= #{aggregates => 200, alerts => 200}, maps:get(researcher, A))].
+
+%%% 11. metrics: only with the scrape token; counts, no names
+
+metrics() ->
+    {ok, Token} = application:get_env(genhub2, metrics_token),
+    Get = fun(Hdrs) ->
+                  {ok, {{_, S, _}, _, B}} = httpc:request(get, {?URL ++ "/metrics", Hdrs}, [], [{body_format, binary}]),
+                  {S, B}
+          end,
+    {NoToken, _} = Get([]),
+    {Wrong, _} = Get([{"authorization", "Bearer " ++ lists:duplicate(48, $0)}]),
+    {Ok, Body} = Get([{"authorization", "Bearer " ++ binary_to_list(Token)}]),
+    Lines = binary:split(Body, <<"\n">>, [global, trim_all]),
+    #{no_token => NoToken, wrong_token => Wrong, status => Ok,
+      jobs_done => [L || L <- Lines, binary:match(L, <<"genhub2_jobs{kind=\"genome\",state=\"done\"}">>) =/= nomatch],
+      names => [N || N <- [<<"check-">>, <<"job-">>, <<"NC_045512.2">>], binary:match(Body, N) =/= nomatch],
+      families => lists:usort([hd(binary:split(L, [<<"{">>, <<" ">>])) || L <- Lines, binary:first(L) =/= $#])}.
+
+metrics_checks(M) ->
+    [check(<<"metrics: refused without the token or with a wrong one (401); served with it, counts only (no names)">>,
+           {maps:get(no_token, M), maps:get(wrong_token, M), maps:get(status, M)} =:= {401, 401, 200}
+           andalso maps:get(jobs_done, M) =/= [] andalso maps:get(names, M) =:= [], M)].
 
 %%% 10. sharing
 

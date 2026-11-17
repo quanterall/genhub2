@@ -138,7 +138,7 @@ Built:
 - **Served through [GA4GH DRS](https://www.ga4gh.org/product/data-repository-service-drs/) 1.4:** each file is an
   object whose id and checksum are its SHA-256; a dataset is a bundle. Nothing outside an approved dataset is served,
   and every access is in the audit log.
-- **The gateway check:** all 34 checks hold, 7 of them for sharing.
+- **The gateway check:** all 34 checks hold, 7 of them for sharing (35 with the metrics below).
 - **With the federation (phase C proper):** GA4GH Passports for researchers of other labs, and Beacon discovery.
 
 Next:
@@ -184,6 +184,9 @@ sh scripts/genhub2-admin.sh data/mnesia add_user NAME admin    # asks for the pa
 
 It prints the admin's one-time secret, once, to add to an authenticator app. The admin then adds the other users on
 the page. Behind TLS, also set `secure_cookies => true` in `http`.
+
+Metrics for Prometheus: set `metrics_token` (a random string of 32 bytes or more), and scrape `/metrics` with
+`Authorization: Bearer <metrics_token>`. Without the setting, `/metrics` is off.
 
 ## Licence
 

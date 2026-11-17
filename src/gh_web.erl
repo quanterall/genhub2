@@ -24,6 +24,8 @@
 %%                                   /api/datasets/:id/withdraw (admin)
 %%   GET  /ga4gh/drs/v1/service-info, /ga4gh/drs/v1/objects/:id[/access/:access_id], /ga4gh/drs/v1/objects/:id/data
 %%                                   GA4GH DRS 1.4: the files of approved datasets (id = SHA-256), datasets as bundles
+%%   GET  /metrics                   the site's metrics for Prometheus (gh_metrics), with Authorization: Bearer
+%%                                   <metrics_token>; off unless the setting metrics_token (32 bytes or more) is set
 %%   (POST /api/jobs also takes "metadata": {"region", "collection_date", "sequences": {name: {...}}})
 %% Every endpoint but login needs a session, and allows only some roles (gh_web_api:allowed/1); changing requests also
 %% need the header x-genhub2: 1. The gateway listens on this machine by default; behind TLS, set secure_cookies.
@@ -45,6 +47,7 @@ start() ->
                          {"/api/summary", gh_web_api, summary},
                          {"/api/files/:hash", gh_web_api, file},
                          {"/api/aggregates", gh_web_api, aggregates},
+                         {"/metrics", gh_web_api, metrics},
                          {"/api/datasets", gh_web_api, datasets},
                          {"/api/datasets/:id", gh_web_api, dataset},
                          {"/api/datasets/:id/withdraw", gh_web_api, dataset_withdraw},

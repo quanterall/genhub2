@@ -99,12 +99,12 @@
   },
   "alerts": [
     {
-      "job": "job-mwl78yw4-n9",
+      "job": "job-mwl7ejqp-4",
       "species": "Betacoronavirus pandemicum",
       "type": "new_species"
     },
     {
-      "job": "job-mwl78yw4-n9",
+      "job": "job-mwl7ejqp-4",
       "pango": "B",
       "type": "new_pango"
     }
@@ -113,7 +113,7 @@
     {
       "name": "page and script served",
       "ok": true,
-      "value": "#{status => 200,type => <<\"text/html\">>,has_title => true,script_bytes => 12933,script_status => 200}"
+      "value": "#{status => 200,type => <<\"text/html\">>,has_title => true,script_bytes => 14815,script_status => 200}"
     },
     {
       "name": "genome job through the API: done",
@@ -128,7 +128,7 @@
     {
       "name": "genome job: placed in the site's SARS-CoV-2 tree, with the lineage where it lands",
       "ok": true,
-      "value": "#{<<\"provenance\">> => [#{<<\"code\">> => <<\"151627114c0160c67396b1be2be20ef5\">>,<<\"describe\">> => #{<<\"reference\">> => <<\"NC_045512.2\">>,<<\"refs\">> => <<\"29e42c18e59a4409bad717596cc00839fed889a0d2944a65d0caab7bf45bbd32\">>,<<\"task\">> => <<\"usher_place\">>,<<\"tool\">> => <<\"usher\">>},<<\"module\">> => <<\"gh_usher\">>,<<\"node\">> => <<\"gh_acceptance@dgx-spark\">>,<<\"pq_version\">> => <<\"1.4.0\">>,<<\"seconds\">> => 0.068652,<<\"started\">> => 1794950611253,<<\"task\">> => <<\"a208ad446d9a7f992831f4bec2ac9cd058ef74da12bf255cce3fee43dd4d0033\">>}],<<\"results\">> => [[#{<<\"clade\">> => <<\"B\">>,<<\"parsimony\">> => 0,<<\"placements\">> => 7,<<\"query\">> => <<\"NC_045512.2\">>}]],<<\"seconds\">> => 0.068731}"
+      "value": "#{<<\"provenance\">> => [#{<<\"code\">> => <<\"151627114c0160c67396b1be2be20ef5\">>,<<\"describe\">> => #{<<\"reference\">> => <<\"NC_045512.2\">>,<<\"refs\">> => <<\"29e42c18e59a4409bad717596cc00839fed889a0d2944a65d0caab7bf45bbd32\">>,<<\"task\">> => <<\"usher_place\">>,<<\"tool\">> => <<\"usher\">>},<<\"module\">> => <<\"gh_usher\">>,<<\"node\">> => <<\"gh_acceptance@dgx-spark\">>,<<\"pq_version\">> => <<\"1.4.0\">>,<<\"seconds\">> => 0.061042,<<\"started\">> => 1794950871571,<<\"task\">> => <<\"a208ad446d9a7f992831f4bec2ac9cd058ef74da12bf255cce3fee43dd4d0033\">>}],<<\"results\">> => [[#{<<\"clade\">> => <<\"B\">>,<<\"parsimony\">> => 0,<<\"placements\">> => 7,<<\"query\">> => <<\"NC_045512.2\">>}]],<<\"seconds\">> => 0.06113}"
     },
     {
       "name": "job listed; uploaded file served back unchanged",
@@ -143,7 +143,7 @@
     {
       "name": "MQTT: the classification message names the species",
       "ok": true,
-      "value": "[#{<<\"job\">> => <<\"job-mwl78yw4-n9\">>,<<\"result\">> => [#{<<\"call\">> => #{<<\"ani\">> => 1.0,<<\"confidence\">> => <<\"high\">>,<<\"family\">> => <<\"Coronaviridae\">>,<<\"genus\">> => <<\"Betacoronavirus\">>,<<\"organism\">> => <<\"Severe acute respiratory syndrome coronavirus 2\">>,<<\"ref\">> => <<\"NC_045512.2\">>,<<\"species\">> => <<\"Betacoronavirus pandemicum\">>,<<\"taxid\">> => 2697049},<<\"query\">> => <<\"NC_045512.2\">>}],<<\"step\">> => <<\"classify\">>},#{<<\"job\">> => <<\"job-mwl78yw4-n9\">>,<<\"result\">> => [],<<\"step\">> => <<\"protein\">>}]"
+      "value": "[#{<<\"job\">> => <<\"job-mwl7ejqp-4\">>,<<\"result\">> => [#{<<\"call\">> => #{<<\"ani\">> => 1.0,<<\"confidence\">> => <<\"high\">>,<<\"family\">> => <<\"Coronaviridae\">>,<<\"genus\">> => <<\"Betacoronavirus\">>,<<\"organism\">> => <<\"Severe acute respiratory syndrome coronavirus 2\">>,<<\"ref\">> => <<\"NC_045512.2\">>,<<\"species\">> => <<\"Betacoronavirus pandemicum\">>,<<\"taxid\">> => 2697049},<<\"query\">> => <<\"NC_045512.2\">>}],<<\"step\">> => <<\"classify\">>},#{<<\"job\">> => <<\"job-mwl7ejqp-4\">>,<<\"result\">> => [],<<\"step\">> => <<\"protein\">>}]"
     },
     {
       "name": "WebSocket: the same topics",
@@ -153,7 +153,7 @@
     {
       "name": "job requested on MQTT: started and done",
       "ok": true,
-      "value": "#{id => <<\"job-mwl790g1-1xe\">>,started => true,state => <<\"done\">>,inputs => [<<\"4dabfd67f2402d1e1d21fbc5a23778076b551a314f8c99607079c24fd908a25d\">>]}"
+      "value": "#{id => <<\"job-mwl7elaj-8z\">>,started => true,state => <<\"done\">>,inputs => [<<\"4dabfd67f2402d1e1d21fbc5a23778076b551a314f8c99607079c24fd908a25d\">>]}"
     },
     {
       "name": "refused: unknown file 400, bad kind 400, over 100 MB 413, unknown job 404, tree of one sequence 400",
@@ -163,22 +163,22 @@
     {
       "name": "exports: CSV names the species, PDF is a PDF, JSON is the job",
       "ok": true,
-      "value": "#{json => #{id => <<\"job-mwl78yw4-n9\">>,status => 200},csv => #{status => 200,type => <<\"text/csv; charset=utf-8\">>,species => true},pdf => #{status => 200,type => <<\"application/pdf\">>,bytes => 2183,magic => <<\"%PDF-1.4\">>}}"
+      "value": "#{json => #{id => <<\"job-mwl7ejqp-4\">>,status => 200},csv => #{status => 200,type => <<\"text/csv; charset=utf-8\">>,species => true},pdf => #{status => 200,type => <<\"application/pdf\">>,bytes => 2182,magic => <<\"%PDF-1.4\">>}}"
     },
     {
       "name": "tree job of both genomes: done, SVG drawn, the reference and both genomes as leaves",
       "ok": true,
-      "value": "#{id => <<\"job-mwl791dm-1z6\">>,state => <<\"done\">>,reference => <<\"NC_045512.2\">>,leaves => [<<\"NC_045512.2\">>,<<\"job-mwl78yw4-n9/NC_045512.2\">>,<<\"job-mwl790g1-1xe/NC_045512.2\">>],newick_status => 200,svg_ok => true,svg_status => 200,svg_type => <<\"image/svg+xml\">>}"
+      "value": "#{id => <<\"job-mwl7em86-24i\">>,state => <<\"done\">>,reference => <<\"NC_045512.2\">>,leaves => [<<\"NC_045512.2\">>,<<\"job-mwl7ejqp-4/NC_045512.2\">>,<<\"job-mwl7elaj-8z/NC_045512.2\">>],newick_status => 200,svg_ok => true,svg_status => 200,svg_type => <<\"image/svg+xml\">>}"
     },
     {
       "name": "monitoring: two SARS-CoV-2 analyses, lineage B first seen in the first job",
       "ok": true,
-      "value": "#{<<\"analyses\">> => 2,<<\"lineages\">> => [#{<<\"count\">> => 2,<<\"first_job\">> => <<\"job-mwl78yw4-n9\">>,<<\"first_seen\">> => <<\"2026-11-17T21:23:30.340Z\">>,<<\"name\">> => <<\"B\">>}],<<\"species\">> => [#{<<\"count\">> => 2,<<\"first_job\">> => <<\"job-mwl78yw4-n9\">>,<<\"first_seen\">> => <<\"2026-11-17T21:23:30.340Z\">>,<<\"name\">> => <<\"Betacoronavirus pandemicum\">>}],<<\"weeks\">> => [#{<<\"count\">> => 2,<<\"lineage\">> => <<\"B\">>,<<\"week\">> => <<\"2026-W47\">>}]}"
+      "value": "#{<<\"analyses\">> => 2,<<\"lineages\">> => [#{<<\"count\">> => 2,<<\"first_job\">> => <<\"job-mwl7ejqp-4\">>,<<\"first_seen\">> => <<\"2026-11-17T21:27:50.641Z\">>,<<\"name\">> => <<\"B\">>}],<<\"species\">> => [#{<<\"count\">> => 2,<<\"first_job\">> => <<\"job-mwl7ejqp-4\">>,<<\"first_seen\">> => <<\"2026-11-17T21:27:50.641Z\">>,<<\"name\">> => <<\"Betacoronavirus pandemicum\">>}],<<\"weeks\">> => [#{<<\"count\">> => 2,<<\"lineage\">> => <<\"B\">>,<<\"week\">> => <<\"2026-W47\">>}]}"
     },
     {
       "name": "alerts: first species and first lineage, for the first job only",
       "ok": true,
-      "value": "[#{<<\"job\">> => <<\"job-mwl78yw4-n9\">>,<<\"species\">> => <<\"Betacoronavirus pandemicum\">>,<<\"type\">> => <<\"new_species\">>},#{<<\"job\">> => <<\"job-mwl78yw4-n9\">>,<<\"pango\">> => <<\"B\">>,<<\"type\">> => <<\"new_pango\">>}]"
+      "value": "[#{<<\"job\">> => <<\"job-mwl7ejqp-4\">>,<<\"species\">> => <<\"Betacoronavirus pandemicum\">>,<<\"type\">> => <<\"new_species\">>},#{<<\"job\">> => <<\"job-mwl7ejqp-4\">>,<<\"pango\">> => <<\"B\">>,<<\"type\">> => <<\"new_pango\">>}]"
     },
     {
       "name": "accounts: without a session the page is served, the API and the WebSocket refuse (401)",
@@ -253,17 +253,17 @@
     {
       "name": "sharing: a researcher lists it and reads it through DRS as a bundle of genomes.fasta and results.json",
       "ok": true,
-      "value": "#{listed => true,bundle_checksum => [#{<<\"checksum\">> => <<\"fdce2c7ee0246cf963d0e896800f424e23b5c00f7b4d3e4debb90ef6cfe1f2ba\">>,<<\"type\">> => <<\"sha-256\">>}],bundle_files => [<<\"genomes.fasta\">>,<<\"results.json\">>]}"
+      "value": "#{listed => true,bundle_checksum => [#{<<\"checksum\">> => <<\"aa2a7c32f9b3b63303a4702d4e7123ed2c8b576229502535aedafc52cf85f9fe\">>,<<\"type\">> => <<\"sha-256\">>}],bundle_files => [<<\"genomes.fasta\">>,<<\"results.json\">>]}"
     },
     {
       "name": "sharing: both files downloaded through DRS, each checked against its SHA-256 id and checksum",
       "ok": true,
-      "value": "{#{status => 200,hash_ok => true,headers => [<<\"ds-mwl7aauo-1\">>,<<\"ds-mwl7aauo-2\">>],names_jobs => []},#{status => 200,hash_ok => true,has_date => false}}"
+      "value": "{#{status => 200,hash_ok => true,headers => [<<\"ds-mwl7fg97-1\">>,<<\"ds-mwl7fg97-2\">>],names_jobs => []},#{status => 200,hash_ok => true,has_date => false}}"
     },
     {
       "name": "sharing: anonymised: genomes renamed after the dataset, no job or sample names, the week and not the date",
       "ok": true,
-      "value": "{#{status => 200,hash_ok => true,headers => [<<\"ds-mwl7aauo-1\">>,<<\"ds-mwl7aauo-2\">>],names_jobs => []},[#{<<\"collection_week\">> => <<\"2026-W46\">>,<<\"lineage\">> => <<\"B\">>,<<\"mutations\">> => [],<<\"name\">> => <<\"ds-mwl7aauo-1\">>,<<\"region\">> => <<\"BG-22\">>,<<\"species\">> => <<\"Betacoronavirus pandemicum\">>},#{<<\"collection_week\">> => null,<<\"lineage\">> => <<\"B\">>,<<\"mutations\">> => [],<<\"name\">> => <<\"ds-mwl7aauo-2\">>,<<\"region\">> => null,<<\"species\">> => <<\"Betacoronavirus pandemicum\">>}],2}"
+      "value": "{#{status => 200,hash_ok => true,headers => [<<\"ds-mwl7fg97-1\">>,<<\"ds-mwl7fg97-2\">>],names_jobs => []},[#{<<\"collection_week\">> => <<\"2026-W46\">>,<<\"lineage\">> => <<\"B\">>,<<\"mutations\">> => [],<<\"name\">> => <<\"ds-mwl7fg97-1\">>,<<\"region\">> => <<\"BG-22\">>,<<\"species\">> => <<\"Betacoronavirus pandemicum\">>},#{<<\"collection_week\">> => null,<<\"lineage\">> => <<\"B\">>,<<\"mutations\">> => [],<<\"name\">> => <<\"ds-mwl7fg97-2\">>,<<\"region\">> => null,<<\"species\">> => <<\"Betacoronavirus pandemicum\">>}],2}"
     },
     {
       "name": "sharing: a file outside approved datasets is not served through DRS (404)",
@@ -279,9 +279,14 @@
       "name": "sharing: the dataset's creation and withdrawal, and every DRS access, in the audit log",
       "ok": true,
       "value": "[<<\"dataset_create\">>,<<\"dataset_withdraw\">>,<<\"drs_download\">>,<<\"drs_object\">>]"
+    },
+    {
+      "name": "metrics: refused without the token or with a wrong one (401); served with it, counts only (no names)",
+      "ok": true,
+      "value": "#{status => 200,names => [],families => [<<\"genhub2_aggregate_imports\">>,<<\"genhub2_audit_records\">>,<<\"genhub2_datasets\">>,<<\"genhub2_erlang_memory_bytes\">>,<<\"genhub2_erlang_processes\">>,<<\"genhub2_jobs\">>,<<\"genhub2_sessions\">>,<<\"genhub2_step_runs_total\">>,<<\"genhub2_step_seconds_total\">>,<<\"genhub2_users\">>],jobs_done => [<<\"genhub2_jobs{kind=\\\"genome\\\",state=\\\"done\\\"} 2\">>],no_token => 401,wrong_token => 401}"
     }
   ],
-  "date": "2026-11-17T21:24:33Z",
+  "date": "2026-11-17T21:28:33Z",
   "emqx": "emqx/emqx:5.8.9",
   "exports": {
     "csv": {
@@ -290,11 +295,11 @@
       "type": "text/csv; charset=utf-8"
     },
     "json": {
-      "id": "job-mwl78yw4-n9",
+      "id": "job-mwl7ejqp-4",
       "status": 200
     },
     "pdf": {
-      "bytes": 2183,
+      "bytes": 2182,
       "magic": "%PDF-1.4",
       "status": 200,
       "type": "application/pdf"
@@ -302,15 +307,36 @@
   },
   "host": "dgx-spark",
   "job_from_mqtt": {
-    "id": "job-mwl790g1-1xe",
+    "id": "job-mwl7elaj-8z",
     "inputs": [
       "4dabfd67f2402d1e1d21fbc5a23778076b551a314f8c99607079c24fd908a25d"
     ],
     "started": true,
     "state": "done"
   },
-  "job_seconds": 1.011,
+  "job_seconds": 1.007,
   "job_state": "done",
+  "metrics": {
+    "families": [
+      "genhub2_aggregate_imports",
+      "genhub2_audit_records",
+      "genhub2_datasets",
+      "genhub2_erlang_memory_bytes",
+      "genhub2_erlang_processes",
+      "genhub2_jobs",
+      "genhub2_sessions",
+      "genhub2_step_runs_total",
+      "genhub2_step_seconds_total",
+      "genhub2_users"
+    ],
+    "jobs_done": [
+      "genhub2_jobs{kind=\"genome\",state=\"done\"} 2"
+    ],
+    "names": [],
+    "no_token": 401,
+    "status": 200,
+    "wrong_token": 401
+  },
   "mqtt_topics": {
     "genhub/alerts": 2,
     "genhub/results/classification": 2,
@@ -326,7 +352,7 @@
     "tree_of_one": 400,
     "unknown_file": 400
   },
-  "seconds": 82.921,
+  "seconds": 73.531,
   "sharing": {
     "after_withdraw": [404,404,404],
     "analyst_make": 403,
@@ -339,7 +365,7 @@
     "bad_duo": 400,
     "bundle_checksum": [
       {
-        "checksum": "fdce2c7ee0246cf963d0e896800f424e23b5c00f7b4d3e4debb90ef6cfe1f2ba",
+        "checksum": "aa2a7c32f9b3b63303a4702d4e7123ed2c8b576229502535aedafc52cf85f9fe",
         "type": "sha-256"
       }
     ],
@@ -350,13 +376,13 @@
     "genomes": {
       "hash_ok": true,
       "headers": [
-        "ds-mwl7aauo-1",
-        "ds-mwl7aauo-2"
+        "ds-mwl7fg97-1",
+        "ds-mwl7fg97-2"
       ],
       "names_jobs": [],
       "status": 200
     },
-    "id": "ds-mwl7aauo",
+    "id": "ds-mwl7fg97",
     "listed": true,
     "made": 201,
     "outside": [404,404],
@@ -368,7 +394,7 @@
           "collection_week": "2026-W46",
           "lineage": "B",
           "mutations": [],
-          "name": "ds-mwl7aauo-1",
+          "name": "ds-mwl7fg97-1",
           "region": "BG-22",
           "species": "Betacoronavirus pandemicum"
         },
@@ -376,7 +402,7 @@
           "collection_week": null,
           "lineage": "B",
           "mutations": [],
-          "name": "ds-mwl7aauo-2",
+          "name": "ds-mwl7fg97-2",
           "region": null,
           "species": "Betacoronavirus pandemicum"
         }
@@ -391,16 +417,16 @@
     "lineages": [
       {
         "count": 2,
-        "first_job": "job-mwl78yw4-n9",
-        "first_seen": "2026-11-17T21:23:30.340Z",
+        "first_job": "job-mwl7ejqp-4",
+        "first_seen": "2026-11-17T21:27:50.641Z",
         "name": "B"
       }
     ],
     "species": [
       {
         "count": 2,
-        "first_job": "job-mwl78yw4-n9",
-        "first_seen": "2026-11-17T21:23:30.340Z",
+        "first_job": "job-mwl7ejqp-4",
+        "first_seen": "2026-11-17T21:27:50.641Z",
         "name": "Betacoronavirus pandemicum"
       }
     ],
@@ -413,11 +439,11 @@
     ]
   },
   "tree": {
-    "id": "job-mwl791dm-1z6",
+    "id": "job-mwl7em86-24i",
     "leaves": [
       "NC_045512.2",
-      "job-mwl78yw4-n9/NC_045512.2",
-      "job-mwl790g1-1xe/NC_045512.2"
+      "job-mwl7ejqp-4/NC_045512.2",
+      "job-mwl7elaj-8z/NC_045512.2"
     ],
     "newick_status": 200,
     "reference": "NC_045512.2",
