@@ -4,6 +4,8 @@
 %%   add_user NAME ROLE    the password is read from standard input (one line), never from the command line; prints
 %%                         the user's TOTP secret, once, for an authenticator app
 %%   audit_verify          whether the audit log's chain is whole
+%%   build_usher_tree FASTA    the site's SARS-CoV-2 tree for placing new genomes (gh_refdb:usher_sars_cov_2/3), from
+%%                         the genomes of FASTA (complete SARS-CoV-2 genomes); needs the site's reference bundles
 %%
 %% scripts/genhub2-admin.sh runs these in GenHub2's image.
 -module(gh_cli).
@@ -47,11 +49,18 @@ run(["add_user", Name, Role]) ->
                     1
             end
     end;
+run(["build_usher_tree", Fasta]) ->
+    #{refs := Refs, nextclade := Next} = gh_config:params(),
+    Mat = gh_refdb:usher_sars_cov_2(gh_store:put_file(Fasta), Refs, Next),
+    ok = gh_audit:log(<<"cli">>, usher_tree_build, Mat, ok, #{fasta => list_to_binary(filename:basename(Fasta))}),
+    io:format("the site's SARS-CoV-2 tree: ~s~n", [Mat]),
+    0;
 run(["audit_verify"]) ->
     case gh_audit:verify() of
         {ok, N} -> io:format("the audit chain of ~b records is whole~n", [N]), 0;
         {broken, S} -> io:format("the audit chain is broken at record ~b~n", [S]), 1
     end;
 run(_) ->
-    io:format(standard_error, "usage: add_user NAME admin|analyst|researcher (password on stdin) | audit_verify~n", []),
+    io:format(standard_error, "usage: add_user NAME admin|analyst|researcher (password on stdin) | audit_verify | "
+              "build_usher_tree FASTA~n", []),
     2.

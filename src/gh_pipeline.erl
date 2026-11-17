@@ -2,8 +2,10 @@
 %% upload ({reads, [R1Hash, R2Hash]}); each step's tasks are built from the job and the earlier steps' results, and
 %% run by PQCF's executor (gh_jobs). Every task's result is a pure function of the task, so a step that was
 %% interrupted is simply run again.
-%%   genome: validate, classify, protein, mutations, lineage, knowledge
-%%   reads:  validate, dehost, kraken, screen, consensus, classify, protein, mutations, lineage, knowledge
+%%   genome: validate, classify, protein, mutations, lineage, place, knowledge
+%%   reads:  validate, dehost, kraken, screen, consensus, classify, protein, mutations, lineage, place, knowledge
+%% place runs when the site has its SARS-CoV-2 tree (params usher_tree): the genomes called nearest to Wuhan-Hu-1 are
+%% placed into it (UShER), each with the lineage where it lands.
 %% kraken runs when the site has a Kraken 2 database (params kraken); consensus trims primers when the job names a
 %% primer scheme (params primers).
 %% protein runs only for the sequences MinHash classified with low confidence or not at all (gh_protein).
@@ -26,8 +28,8 @@
 -define(BOOT_BATCH, 10).
 
 -spec steps(genome | reads | tree) -> [atom()].
-steps(genome) -> [validate, classify, protein, mutations, lineage, knowledge];
-steps(reads) -> [validate, dehost, kraken, screen, consensus, classify, protein, mutations, lineage, knowledge];
+steps(genome) -> [validate, classify, protein, mutations, lineage, place, knowledge];
+steps(reads) -> [validate, dehost, kraken, screen, consensus, classify, protein, mutations, lineage, place, knowledge];
 steps(tree) -> [align, distance, tree, bootstrap, support].
 
 %% where a step's tasks run: home (the coordinating node: the lab's raw data) or spread (the site's executor)
@@ -92,6 +94,11 @@ tasks(lineage, #{params := #{nextclade := Dataset}} = Job, #{classify := [Calls]
         false -> [{pq_task, gh_lineage, {lineage, G, Dataset}}
                   || {Acc, G} <- by_reference(genome(Job, Done), Calls), Acc =:= ?SARS_COV_2_REF]
     end;
+tasks(place, #{params := #{refs := Refs, usher_tree := Mat}} = Job, #{classify := [Calls]} = Done)
+  when Mat =/= undefined ->
+    [{pq_task, gh_usher, {usher_place, G, Mat, Refs, Acc}}
+     || {Acc, G} <- by_reference(genome(Job, Done), Calls), Acc =:= ?SARS_COV_2_REF];
+tasks(place, _Job, _Done) -> [];
 tasks(knowledge, _Job, #{classify := [Calls]}) ->
     lists:usort([{pq_task, gh_knowledge, {knowledge, maps:get(<<"taxid">>, C), maps:get(<<"organism">>, C)}}
                  || #{<<"call">> := C} <- Calls, is_map_key(<<"taxid">>, C)]).

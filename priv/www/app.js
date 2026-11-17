@@ -190,6 +190,10 @@ async function show(id) {
       <td>${c.ani != null ? c.ani.toFixed(3) : "-"}</td><td class="conf-${esc(c.confidence)}">${esc(c.confidence)}</td>
       <td>${esc(c.method)}</td><td>${near}</td></tr>`;
   }).join("");
+  const place = res("place").flat();
+  $("#d-place-wrap").hidden = place.length === 0;
+  $("#d-place tbody").innerHTML = place.map((p) => `<tr><td>${esc(p.query)}</td><td>${esc(p.clade)}</td>
+    <td>${p.parsimony ?? ""}</td><td>${p.placements ?? ""}</td></tr>`).join("");
   const lin = res("lineage").flat();
   $("#d-lineage-wrap").hidden = lin.length === 0;
   $("#d-lineage tbody").innerHTML = lin.map((l) => `<tr><td>${esc(l.query)}</td><td>${esc(l.pango)}</td>

@@ -30,6 +30,8 @@ params() ->
             #{refs => Bundle("refseq_viral"), proteins => Bundle("refseq_viral_proteins"),
               host => case Bundle("hostile") of undefined -> Bundle("host"); H -> H end,
               kraken => Bundle("kraken-k2_viral_20241228"),
+              %% the site's SARS-CoV-2 tree for placing new genomes (gh_refdb:usher_sars_cov_2/3), if built
+              usher_tree => Bundle("usher-sars-cov-2"),
               nextclade => case Bundle("nextclade-datasets-v2") of
                                undefined -> Bundle("nextclade-sars-cov-2-" ++ ?NEXTCLADE_TAG);
                                Multi -> Multi

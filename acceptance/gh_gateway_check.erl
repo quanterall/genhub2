@@ -30,6 +30,10 @@ main([Out]) ->
     ok = application:set_env(genhub2, http, #{ip => {127, 0, 0, 1}, port => 28090}),
     {ok, _} = application:ensure_all_started([genhub2, gun]),
     T0 = erlang:monotonic_time(millisecond),
+    %% the site's SARS-CoV-2 tree, from phase A's 1,000 public genomes, so genome jobs place their genomes in it
+    #{refs := Refs0, nextclade := Next0} = gh_config:params(),
+    #{fasta := Sars} = gh_acceptance:sars_cov_2(),
+    UsherTree = gh_refdb:usher_sars_cov_2(Sars, Refs0, Next0),
     Users = maps:from_list([{R, begin
                                     N = <<"check-", (atom_to_binary(R))/binary>>,
                                     {ok, S} = gh_accounts:create(N, R, <<"a password for the check">>),
@@ -60,7 +64,7 @@ main([Out]) ->
           upload => Upload, job_seconds => maps:get(seconds, Job), job_state => maps:get(state, Job),
           mqtt_topics => count([T || {T, _} <- MqttMsgs]), websocket_topics => count([T || {T, _} <- WsMsgs]),
           job_from_mqtt => Viamqtt, exports => Exports, tree => maps:remove(svg, Tree), summary => Summary,
-          alerts => Alerts, refused => Refused, accounts => Accounts, checks => Checks,
+          alerts => Alerts, refused => Refused, accounts => Accounts, usher_tree => UsherTree, checks => Checks,
           seconds => (erlang:monotonic_time(millisecond) - T0) / 1000},
     ok = filelib:ensure_dir(Out),
     ok = file:write_file(Out, json:format(gh_json:term(R))),
@@ -363,6 +367,11 @@ checks(Page, Job, Mqtt, Ws, ViaMqtt, Refused) ->
                                          andalso maps:get(script_status, Page) =:= 200, Page),
      check(<<"genome job through the API: done">>, maps:get(state, Job) =:= <<"done">>, maps:get(state, Job)),
      check(<<"genome job: SARS-CoV-2 species">>, Species =:= <<"Betacoronavirus pandemicum">>, Species),
+     check(<<"genome job: placed in the site's SARS-CoV-2 tree, with the lineage where it lands">>,
+           case maps:get(<<"place">>, maps:get(<<"steps">>, J), none) of
+               #{<<"results">> := [[#{<<"clade">> := C, <<"parsimony">> := P}]]} -> is_integer(P) andalso C =/= <<>>;
+               _ -> false
+           end, maps:get(<<"place">>, maps:get(<<"steps">>, J), none)),
      check(<<"job listed; uploaded file served back unchanged">>, maps:get(listed, Job) andalso maps:get(file_back, Job),
            maps:with([listed, file_back], Job)),
      check(<<"MQTT: the specification's topics for the job">>, Wanted -- MTopics =:= [], MTopics),

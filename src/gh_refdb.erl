@@ -8,7 +8,7 @@
 %%   nextclade(Tag)      Nextclade's SARS-CoV-2 dataset at a pinned tag
 %%   genomes(Accs, Dir)  (for tests) the GenBank genomes with these accessions: a FASTA file and their taxonomy
 -module(gh_refdb).
--export([refseq_viral/0, viral_proteins/0, host/1, hostile/1, primers/2, kraken/1, nextclade/1,
+-export([usher_sars_cov_2/3, refseq_viral/0, viral_proteins/0, host/1, hostile/1, primers/2, kraken/1, nextclade/1,
          nextclade_datasets/0, genomes/2, named/2, taxonomy_tsv/2]).
 
 %% Nextclade datasets for the viruses Bulgarian labs see most, besides SARS-CoV-2 (its tag pinned in nextclade/1)
@@ -38,6 +38,21 @@ named(Name, Build) ->
             ok = file:write_file(F, H),
             H
     end.
+
+%% The site's mutation-annotated tree of SARS-CoV-2 (gh_usher), for placing new genomes (pipeline step place): a
+%% neighbour-joining tree of the genomes of the FASTA file Genomes against Wuhan-Hu-1, each labelled with its Nextclade
+%% lineage, built once and kept as usher-sars-cov-2. Its hash is the setting usher_tree (gh_config).
+-spec usher_sars_cov_2(gh_store:hash(), gh_store:hash(), gh_store:hash()) -> gh_store:hash().
+usher_sars_cov_2(Genomes, Refs, Nextclade) ->
+    named("usher-sars-cov-2",
+          fun() ->
+                  Run = fun(T) -> pq_task:run(T, node()) end,
+                  #{newick := Nwk, aligned := Al} = Run({pq_task, gh_tree, {tree, Genomes, Refs, <<"NC_045512.2">>, nj}}),
+                  Lineages = Run({pq_task, gh_lineage, {lineage, Genomes, Nextclade}}),
+                  Clades = [{Q, P} || #{query := Q, pango := P} <- Lineages, P =/= <<>>],
+                  #{mat := Mat} = Run({pq_task, gh_usher, {usher_build, Al, Nwk, Clades}}),
+                  Mat
+          end).
 
 -spec refseq_viral() -> gh_store:hash().
 refseq_viral() ->

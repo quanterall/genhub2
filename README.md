@@ -111,11 +111,12 @@ Built:
   downloads, alerts, refusals and administration, each with who, what and when. Each record carries the SHA-256 of the
   one before, so a record changed or removed afterwards shows (`GET /api/audit/verify`).
 - **The page:** a login form, sections by role, and for admins the users and the audit log.
-- **The gateway check:** all 21 checks hold, 8 of them for accounts and the audit log
+- **Placement in the site's tree:** the step `place` of genome and read jobs (UShER), once the site has built its
+  SARS-CoV-2 tree.
+- **The gateway check:** all 22 checks hold, 8 of them for accounts and the audit log, 1 for placement
   ([`acceptance/RESULTS.md`](acceptance/RESULTS.md), section 5).
 
 Next:
-- **UShER placement** of a new SARS-CoV-2 genome, as a step of the genome job;
 - **monitoring from aggregated counts** (phase D, the part inside a lab);
 - **sharing under GA4GH** (phase C, the part inside a lab), then the federation's part of phases C and D.
 
@@ -133,7 +134,7 @@ in [`acceptance/gh_methods_check.erl`](acceptance/gh_methods_check.erl) (results
 | classification | MinHash ([Mash](https://doi.org/10.1186/s13059-016-0997-x)) against RefSeq; for MinHash's weak calls, [DIAMOND](https://doi.org/10.1038/s41592-021-01101-x) blastx against all RefSeq viral proteins | proteins: divergent viruses that nucleotide matching misses |
 | lineages | [Nextclade](https://doi.org/10.21105/joss.03773): SARS-CoV-2, influenza HA, RSV A/B, mpox, Ebola, measles, dengue, hMPV, rubella, mumps, West Nile; `nextclade sort` picks the dataset | lineages beyond SARS-CoV-2 |
 | trees | neighbour-joining (gh2k); [FastTree](https://doi.org/10.1371/journal.pone.0009490); [VeryFastTree](https://doi.org/10.1093/gigascience/giaa055); bootstrap replicates ([Felsenstein 1985](https://doi.org/10.1111/j.1558-5646.1985.tb00420.x)) for neighbour-joining | VeryFastTree: maximum likelihood of 1,000 genomes in 250 s (FastTree 700 s), within the 5-minute target; replicates: support for every branch, one task each |
-| placement | [UShER](https://doi.org/10.1038/s41588-021-00862-7) into a mutation-annotated tree, labelled with lineages | a new genome placed in seconds, without rebuilding the tree |
+| placement | [UShER](https://doi.org/10.1038/s41588-021-00862-7) into a mutation-annotated tree, labelled with lineages; the step `place` of genome and read jobs, once the site has built its SARS-CoV-2 tree (`scripts/genhub2-admin.sh ... build_usher_tree FASTA`) | a new genome placed in seconds, without rebuilding the tree |
 
 ## Build and test
 

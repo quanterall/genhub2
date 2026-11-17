@@ -42,7 +42,10 @@ run({usher_place, Genomes, Mat, Refs, Acc}, #{home := Home}) ->
               G = gh_store:ensure(Genomes, Home),
               Best = gh_mutations:align(RefFa, G, Dir),
               Ids = gh_mutations:ids(G),
-              Samples = [{Q, case maps:get(Q, Best, none) of
+              %% each genome under a name of its own for UShER: a genome named like a sample already in the tree (e.g.
+              %% the reference) would not be placed
+              Tmp = maps:from_list([{Q, <<"gh2-query-", (integer_to_binary(I))/binary>>} || {I, Q} <- lists:enumerate(Ids)]),
+              Samples = [{maps:get(Q, Tmp), case maps:get(Q, Best, none) of
                                  none -> binary:copy(<<"N">>, byte_size(Ref));
                                  {_, Segs} -> gh_cs:aligned(Segs, byte_size(Ref))
                              end} || Q <- Ids],
@@ -53,10 +56,13 @@ run({usher_place, Genomes, Mat, Refs, Acc}, #{home := Home}) ->
                                 integer_to_list(gh_tool:threads()), OutDir]),
               Stats = tsv(filename:join(OutDir, "placement_stats.tsv")),
               Clades = tsv(filename:join(OutDir, "clades.txt")),
-              [#{query => Q,
-                 parsimony => case maps:get(Q, Stats, []) of [P | _] -> binary_to_integer(P); _ -> null end,
-                 placements => case maps:get(Q, Stats, []) of [_, N | _] -> binary_to_integer(N); _ -> null end,
-                 clade => case maps:get(Q, Clades, []) of [C | _] -> C; [] -> <<>> end} || Q <- Ids]
+              [begin
+                   T = maps:get(Q, Tmp),
+                   #{query => Q,
+                     parsimony => case maps:get(T, Stats, []) of [P | _] -> binary_to_integer(P); _ -> null end,
+                     placements => case maps:get(T, Stats, []) of [_, N | _] -> binary_to_integer(N); _ -> null end,
+                     clade => case maps:get(T, Clades, []) of [C | _] -> C; [] -> <<>> end}
+               end || Q <- Ids]
       end).
 
 tsv(F) ->
