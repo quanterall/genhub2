@@ -72,7 +72,8 @@ task(Id) ->
     {200, T} = json(get, "/ga4gh/tes/v1/tasks/" ++ binary_to_list(Id) ++ "?view=FULL", none),
     T.
 
-%% the task once in a terminal state; QUEUED may last while the node looks for room or a peer
+%% the task once in a terminal state; QUEUED may last while the node looks for room or a peer. On timeout the error
+%% carries the task's last state and the node's placement_note (e.g. no_peer_accepts), so a job's error says why.
 -spec wait(binary(), timeout()) -> map().
 wait(Id, Timeout) ->
     Deadline = erlang:monotonic_time(millisecond) + Timeout,
@@ -83,7 +84,8 @@ wait_loop(Id, Deadline, Sleep) ->
     case lists:member(maps:get(<<"state">>, T), ?TERMINAL) of
         true -> T;
         false ->
-            erlang:monotonic_time(millisecond) > Deadline andalso error({task_timeout, Id}),
+            erlang:monotonic_time(millisecond) > Deadline andalso
+                error({task_timeout, Id, maps:get(<<"state">>, T), maps:get(<<"placement_note">>, T, null)}),
             receive after Sleep -> wait_loop(Id, Deadline, min(Sleep * 2, 3000)) end
     end.
 
