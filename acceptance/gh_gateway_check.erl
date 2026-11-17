@@ -8,7 +8,12 @@
 %%   5. the exports: CSV, PDF and JSON of a job; a tree job of both jobs' genomes, as SVG and Newick;
 %%   6. monitoring: the site's counts, and an alert for the first species and lineage, only for the first job;
 %%   7. requests the gateway must refuse: a job for a file not in the store, an upload over 100 MB, a tree of one
-%%      sequence.
+%%      sequence;
+%%   8. accounts and the audit log (FS 3.1, 3.4): a login needs the password and a one-time code; each role reaches
+%%      only its endpoints; without a session, nothing but the page and the login; an admin creates and disables
+%%      users; the audit log holds the logins, uploads, jobs (also MQTT's), alerts and refusals, and its chain is
+%%      whole.
+%% Parts 1-7 run as an analyst who logged in through the API.
 %%
 %% Needs the reference bundles of the phase A acceptance test, and EMQX on 127.0.0.1:21883 (run_gateway.sh); the
 %% gateway listens on 127.0.0.1:28090.
@@ -25,6 +30,13 @@ main([Out]) ->
     ok = application:set_env(genhub2, http, #{ip => {127, 0, 0, 1}, port => 28090}),
     {ok, _} = application:ensure_all_started([genhub2, gun]),
     T0 = erlang:monotonic_time(millisecond),
+    Users = maps:from_list([{R, begin
+                                    N = <<"check-", (atom_to_binary(R))/binary>>,
+                                    {ok, S} = gh_accounts:create(N, R, <<"a password for the check">>),
+                                    {N, S}
+                                end} || R <- gh_accounts:roles()]),
+    {AName, ASecret} = maps:get(analyst, Users),
+    {200, _} = login(AName, ASecret),
     Mqtt = mqtt_listener(),
     Ws = ws_listener(),
     wait_mqtt_bridge(50),
@@ -40,14 +52,15 @@ main([Out]) ->
     Summary = json:decode(Sum),
     Alerts = [M || {<<"genhub/alerts">>, M} <- collected(Mqtt)],
     Refused = refused(maps:get(id, Job)),
+    Accounts = accounts(Users),
     Checks = checks(Page, Job, MqttMsgs, WsMsgs, Viamqtt, Refused)
-        ++ more_checks(Job, Viamqtt, Exports, Tree, Summary, Alerts),
+        ++ more_checks(Job, Viamqtt, Exports, Tree, Summary, Alerts) ++ accounts_checks(Accounts),
     R = #{date => list_to_binary(calendar:system_time_to_rfc3339(erlang:system_time(second), [{offset, "Z"}])),
           host => list_to_binary(net_adm:localhost()), emqx => <<"emqx/emqx:5.8.9">>,
           upload => Upload, job_seconds => maps:get(seconds, Job), job_state => maps:get(state, Job),
           mqtt_topics => count([T || {T, _} <- MqttMsgs]), websocket_topics => count([T || {T, _} <- WsMsgs]),
           job_from_mqtt => Viamqtt, exports => Exports, tree => maps:remove(svg, Tree), summary => Summary,
-          alerts => Alerts, refused => Refused, checks => Checks,
+          alerts => Alerts, refused => Refused, accounts => Accounts, checks => Checks,
           seconds => (erlang:monotonic_time(millisecond) - T0) / 1000},
     ok = filelib:ensure_dir(Out),
     ok = file:write_file(Out, json:format(gh_json:term(R))),
@@ -71,7 +84,7 @@ ws_listener() ->
     spawn_link(fun() ->
         {ok, P} = gun:open("127.0.0.1", 28090),
         {ok, _} = gun:await_up(P, 5000),
-        S = gun:ws_upgrade(P, "/ws"),
+        S = gun:ws_upgrade(P, "/ws", [{<<"cookie">>, cookie()}]),
         receive {gun_upgrade, P, S, [<<"websocket">>], _} -> ok after 5000 -> error(ws_upgrade) end,
         collect([], P)
     end).
@@ -99,13 +112,46 @@ wait_mqtt_bridge(N) ->
 
 %%% HTTP
 
+%% with the current session's cookie (login/2), and on changing requests the gateway's header
 http(Method, Path, Body) ->
+    {S, H, B} = http_h(Method, Path, Body, [{"x-genhub2", "1"}]),
+    {S, proplists:get_value("content-type", H), B}.
+
+http_h(Method, Path, Body, Extra) ->
+    Hdrs = [{"cookie", binary_to_list(cookie())} | Extra],
     Req = case Body of
-              none -> {?URL ++ Path, []};
-              {Type, B} -> {?URL ++ Path, [], Type, B}
+              none -> {?URL ++ Path, Hdrs};
+              {Type, B} -> {?URL ++ Path, Hdrs, Type, B}
           end,
     {ok, {{_, Status, _}, Headers, RespBody}} = httpc:request(Method, Req, [{timeout, 600000}], [{body_format, binary}]),
-    {Status, proplists:get_value("content-type", Headers), RespBody}.
+    {Status, Headers, RespBody}.
+
+cookie() -> persistent_term:get({?MODULE, cookie}, <<>>).
+
+%% logs in through the API with the check's password and a one-time code (given, or the next one of a secret); on
+%% success the session's cookie is the one later requests send. {Status, Role}
+login(Name, Code) when is_binary(Code), byte_size(Code) =:= 6 ->
+    persistent_term:put({?MODULE, cookie}, <<>>),
+    {S, H, B} = http_h(post, "/api/login", {"application/json", json:encode(#{user => Name, password => <<"a password for the check">>,
+                                                                            code => Code})}, [{"x-genhub2", "1"}]),
+    case S of
+        200 ->
+            [C | _] = [hd(string:split(V, ";")) || {"set-cookie", V} <- H],
+            persistent_term:put({?MODULE, cookie}, list_to_binary(C)),
+            {200, maps:get(<<"role">>, json:decode(B))};
+        _ -> {S, none}
+    end;
+login(Name, Secret) -> login(Name, code(Secret)).
+
+%% the code for the next unused time step: each login uses a new step (a code is accepted once); the gateway accepts
+%% at most the next step, so when that is used too, wait for the clock
+code(Secret) ->
+    Now = gh_totp:step(erlang:system_time(second)),
+    Step = max(Now, persistent_term:get({?MODULE, step, Secret}, -1) + 1),
+    case Step > Now + 1 of
+        true -> timer:sleep(5000), code(Secret);
+        false -> persistent_term:put({?MODULE, step, Secret}, Step), gh_totp:code(Secret, Step)
+    end.
 
 page() ->
     {S, Type, Body} = http(get, "/", none),
@@ -217,6 +263,89 @@ refused(Job) ->
     {S4, _, _} = http(get, "/api/jobs/job-none", none),
     {S5, _, _} = http(post, "/api/trees", {"application/json", json:encode(#{jobs => [Job], method => nj})}),
     #{unknown_file => S1, bad_kind => S2, too_large => S3, no_such_job => S4, tree_of_one => S5}.
+
+%%% 8. accounts and the audit log
+
+accounts(Users) ->
+    {AdName, AdSecret} = maps:get(admin, Users),
+    {ReName, ReSecret} = maps:get(researcher, Users),
+    {AnName, AnSecret} = maps:get(analyst, Users),
+    %% without a session: the page, the login; nothing else, the WebSocket neither
+    persistent_term:put({?MODULE, cookie}, <<>>),
+    {NoPage, _, _} = http(get, "/", none),
+    NoSession = [element(1, http(get, P, none)) || P <- ["/api/jobs", "/api/summary", "/api/me", "/api/audit"]],
+    NoWs = ws_status(),
+    %% wrong code, missing header
+    {WrongCode, _} = login(AnName, <<"000000">>),
+    {200, <<"analyst">>} = login(AnName, AnSecret),
+    {NoHeader, _, _} = http_h(post, "/api/jobs", {"application/json", <<"{}">>}, []),
+    AnalystAdmin = [element(1, http(get, P, none)) || P <- ["/api/users", "/api/audit"]],
+    %% a researcher: the counts only
+    {200, <<"researcher">>} = login(ReName, ReSecret),
+    Researcher = #{summary => element(1, http(get, "/api/summary", none)), jobs => element(1, http(get, "/api/jobs", none)),
+                   uploads => element(1, http(post, "/api/uploads", {"application/octet-stream", <<">x\nACGT\n">>})),
+                   ws => ws_status()},
+    {ResLogout, _, _} = http(post, "/api/logout", {"application/json", <<"{}">>}),
+    {AfterLogout, _, _} = http(get, "/api/summary", none),
+    %% an admin: creates a user, who logs in with the secret shown once; disables them, which ends their session
+    {200, <<"admin">>} = login(AdName, AdSecret),
+    {Created, _, CB} = http(post, "/api/users", {"application/json", json:encode(#{user => <<"check-new">>, role => analyst,
+                                                                                  password => <<"a password for the check">>})}),
+    NewSecret = gh_totp:unbase32(maps:get(<<"totp_secret">>, json:decode(CB))),
+    AdminCookie = cookie(),
+    {NewLogin, _} = login(<<"check-new">>, NewSecret),
+    NewCookie = cookie(),
+    {NewMe, _, _} = http(get, "/api/me", none),
+    persistent_term:put({?MODULE, cookie}, AdminCookie),
+    {Disabled, _, _} = http(post, "/api/users/check-new/disable", {"application/json", <<"{}">>}),
+    persistent_term:put({?MODULE, cookie}, NewCookie),
+    {DisabledMe, _, _} = http(get, "/api/me", none),
+    persistent_term:put({?MODULE, cookie}, AdminCookie),
+    {200, _, Ver} = http(get, "/api/audit/verify", none),
+    {200, _, Log} = http(get, "/api/audit?from=1&limit=10000", none),
+    Recs = json:decode(Log),
+    Seen = lists:usort([{maps:get(<<"actor">>, R), maps:get(<<"action">>, R), maps:get(<<"outcome">>, R)} || R <- Recs]),
+    #{page_without_session => NoPage, without_session => NoSession, ws_without_session => NoWs, wrong_code => WrongCode,
+      missing_header => NoHeader, analyst_on_admin => AnalystAdmin, researcher => Researcher, logout => ResLogout,
+      after_logout => AfterLogout, user_created => Created, new_user_login => NewLogin, new_user_me => NewMe,
+      disabled => Disabled, disabled_me => DisabledMe, audit_verify => json:decode(Ver), audit_records => length(Recs),
+      audit_seen => [iolist_to_binary([A, " ", Ac, " ", O]) || {A, Ac, O} <- Seen]}.
+
+%% the WebSocket upgrade's HTTP status with the current cookie (101 when allowed)
+ws_status() ->
+    {ok, P} = gun:open("127.0.0.1", 28090),
+    {ok, _} = gun:await_up(P, 5000),
+    S = gun:ws_upgrade(P, "/ws", [{<<"cookie">>, cookie()}]),
+    Status = receive
+                 {gun_upgrade, P, S, _, _} -> 101;
+                 {gun_response, P, S, _, Code, _} -> Code
+             after 5000 -> timeout
+             end,
+    gun:close(P),
+    Status.
+
+accounts_checks(A) ->
+    Seen = maps:get(audit_seen, A),
+    Has = fun(X) -> lists:member(X, Seen) end,
+    [check(<<"accounts: without a session the page is served, the API and the WebSocket refuse (401)">>,
+           {maps:get(page_without_session, A), maps:get(without_session, A), maps:get(ws_without_session, A)}
+           =:= {200, [401, 401, 401, 401], 401}, A),
+     check(<<"accounts: a wrong code 401; a changing request without the header 403">>,
+           {maps:get(wrong_code, A), maps:get(missing_header, A)} =:= {401, 403}, A),
+     check(<<"accounts: an analyst cannot see users or the audit log (403)">>, maps:get(analyst_on_admin, A) =:= [403, 403], A),
+     check(<<"accounts: a researcher sees the counts only">>,
+           maps:get(researcher, A) =:= #{summary => 200, jobs => 403, uploads => 403, ws => 403}, maps:get(researcher, A)),
+     check(<<"accounts: logout ends the session">>, {maps:get(logout, A), maps:get(after_logout, A)} =:= {200, 401}, A),
+     check(<<"accounts: an admin creates a user, who logs in with the secret shown once; disabling ends their session">>,
+           {maps:get(user_created, A), maps:get(new_user_login, A), maps:get(new_user_me, A), maps:get(disabled, A),
+            maps:get(disabled_me, A)} =:= {201, 200, 200, 200, 401}, A),
+     check(<<"audit: logins, uploads, jobs (also MQTT's), alerts, refusals and administration recorded">>,
+           lists:all(Has, [<<"check-analyst login ok">>, <<"check-analyst login denied">>, <<"check-analyst upload ok">>,
+                           <<"check-analyst job_submit ok">>, <<"mqtt job_submit ok">>, <<"system alert ok">>,
+                           <<"check-analyst export ok">>, <<"check-analyst file_download ok">>,
+                           <<"check-researcher denied_request denied">>, <<"check-admin user_create ok">>,
+                           <<"check-admin user_disable ok">>, <<"check-researcher logout ok">>]), Seen),
+     check(<<"audit: the chain is whole">>, maps:get(<<"whole">>, maps:get(audit_verify, A)) =:= true, maps:get(audit_verify, A))].
 
 %%% checks
 

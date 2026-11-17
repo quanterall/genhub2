@@ -120,8 +120,13 @@ neighbour-joining, `4c441ab1...` for FastTree).
 ## 5. The gateway, MQTT, exports and monitoring (FS 3.1, 4.2-4.4, 5.4)
 
 [`gh_gateway_check.erl`](gh_gateway_check.erl), run by [`run_gateway.sh`](run_gateway.sh) against EMQX 5.8.9, on a site
-with no earlier jobs. Results: [`results/gateway-dgx-spark-2026-11-14T0102Z.json`](results/gateway-dgx-spark-2026-11-14T0102Z.json).
-**All 13 checks hold.**
+with no earlier jobs.
+- **17 November 2026, with accounts:** **all 21 checks hold**
+  ([`results/gateway-dgx-spark-2026-11-17T1143Z.json`](results/gateway-dgx-spark-2026-11-17T1143Z.json)). The 13
+  below now run as an analyst who logged in through the API, and 8 more cover accounts and the audit log (at the end
+  of this section).
+- **14 November 2026, before accounts:** all 13
+  ([`results/gateway-dgx-spark-2026-11-14T0102Z.json`](results/gateway-dgx-spark-2026-11-14T0102Z.json)).
 
 - **The page:** the page and its script are served.
 - **A job through the API:** NC_045512.2 is uploaded and analysed. It comes back as *Betacoronavirus pandemicum*;
@@ -144,8 +149,34 @@ with no earlier jobs. Results: [`results/gateway-dgx-spark-2026-11-14T0102Z.json
   - an unknown job: 404;
   - a tree of one sequence: 400.
 
-The page was also looked at in Chromium, at 1280 px and at a phone's 390 px (no horizontal scrolling); the PDF
-report and the tree drawings were looked at too.
+**Accounts and the audit log** (FS 3.1, 3.4), the 8 checks added on 17 November:
+- **Without a session:** the page is served; the API and the WebSocket answer 401.
+- **Refused logins and requests:** a wrong one-time code, 401; a changing request without the header
+  `x-genhub2: 1`, 403.
+- **Roles:**
+  - an analyst cannot see the users or the audit log (403);
+  - a researcher sees the site's counts, and nothing else: jobs, uploads and the WebSocket answer 403.
+- **Sessions:** logout ends the session.
+- **Administration:** an admin creates a user, who logs in with the one-time secret shown once; disabling the user
+  ends their session.
+- **The audit log** holds every kind of record the check expects:
+  - the logins, also the refused one;
+  - the upload, the job submissions (the one started on MQTT too, as `mqtt`);
+  - the export and the file download;
+  - the alerts (as `system`);
+  - the researcher's refused request;
+  - the user's creation and disabling, the logout.
+
+  Its chain of 40 records is whole.
+
+**The page** was looked at in Chromium:
+- 14 November: at 1280 px and at a phone's 390 px (no horizontal scrolling); the PDF report and the tree drawings too.
+- 17 November, with accounts: the login form, an admin's page and a researcher's page, at 1280 px and 390 px. This
+  found and fixed two things:
+  - the analyses showed under the login form, because the layout overrode `hidden`;
+  - the tree-method list was 7 px wider than a phone's screen.
+
+  Logging out brings the login form back, and the page is exactly 390 px wide on a phone.
 
 ## 6. The added methods, each against what it adds to
 

@@ -55,8 +55,7 @@ Built:
 - **The gateway** (`gh_web`, cowboy): the web page (`priv/www`: upload, analyses, results, related knowledge,
   provenance, live events) and the API: `POST /api/uploads`, `POST /api/jobs`, `GET /api/jobs[/:id]`,
   `GET /api/jobs/:id/:export`, `POST /api/trees`, `GET /api/summary`, `GET /api/files/:hash`, and a WebSocket `/ws`
-  with every event of the site. Phase A listens on this machine only;
-  accounts, roles and MFA come with sharing.
+  with every event of the site. The gateway listens on this machine by default.
 - **MQTT inside the site** (`gh_mqtt`): every event is published to the site's EMQX 5.8.9 broker, QoS 1, on the
   specification's topics:
   - `genhub/sequences/new` and `genhub/sequences/processed`;
@@ -96,9 +95,29 @@ Built:
   byte for byte one node's; the tree from the federation's tiles is phase A's. All 7 checks hold
   ([`acceptance/FEDERATION.md`](acceptance/FEDERATION.md)).
 
+## Status: accounts, roles and the audit log (17 November 2026)
+
+- **Accounts with two factors** (`gh_accounts`, `gh_totp`): a login needs the password and a one-time code from an
+  authenticator app (TOTP, [RFC 6238](https://doi.org/10.17487/RFC6238)).
+  - Passwords are kept only as PBKDF2-SHA256 hashes, 600,000 iterations ([RFC 8018](https://doi.org/10.17487/RFC8018)).
+  - A code is accepted once, and five failed logins lock an account for 15 minutes.
+  - A session is a random token in a cookie (HttpOnly, SameSite=Strict), and the site keeps only its hash. It ends
+    after 30 minutes idle, 12 hours, at logout, or when its user is disabled.
+- **Roles:** `admin` (everything, and the users and the audit log), `analyst` (uploads, analyses, trees, results,
+  monitoring), `researcher` (the site's counts; the datasets shared with them, once sharing exists).
+  - Every API endpoint and the WebSocket check the session's role.
+  - Changing requests also need the header `x-genhub2: 1`, against requests forged by other sites.
+- **The audit log** (`gh_audit`): logins, uploads, analyses (also those started on MQTT), data views, exports and
+  downloads, alerts, refusals and administration, each with who, what and when. Each record carries the SHA-256 of the
+  one before, so a record changed or removed afterwards shows (`GET /api/audit/verify`).
+- **The page:** a login form, sections by role, and for admins the users and the audit log.
+- **The gateway check:** all 21 checks hold, 8 of them for accounts and the audit log
+  ([`acceptance/RESULTS.md`](acceptance/RESULTS.md), section 5).
+
 Next:
-- **more of GenHub2's work as container tasks:** classification and mutations, with their reference bundles;
-- **phase C:** two sites through the federation, with sharing, accounts, roles and MFA.
+- **UShER placement** of a new SARS-CoV-2 genome, as a step of the genome job;
+- **monitoring from aggregated counts** (phase D, the part inside a lab);
+- **sharing under GA4GH** (phase C, the part inside a lab), then the federation's part of phases C and D.
 
 ## Methods
 
@@ -130,6 +149,15 @@ sh acceptance/run_federation.sh       # tasks through the FVLLMP node this machi
 
 To run a site: set `{genhub2, [{http, #{ip => ..., port => ...}}, {mqtt, #{host => "127.0.0.1", port => 1883}}]}` and
 start the `genhub2` application. The page is then at the gateway's address.
+
+Before the first start, make the first admin while the site is stopped:
+
+```sh
+sh scripts/genhub2-admin.sh data/mnesia add_user NAME admin    # asks for the password, not echoed
+```
+
+It prints the admin's one-time secret, once, to add to an authenticator app. The admin then adds the other users on
+the page. Behind TLS, also set `secure_cookies => true` in `http`.
 
 ## Licence
 

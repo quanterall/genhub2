@@ -10,10 +10,23 @@
 <header>
   <h1>GenHub2</h1>
   <span class="sub">virus classification at this lab's node</span>
-  <span id="live" class="pill">connecting</span>
+  <span id="live" class="pill" hidden>connecting</span>
+  <span id="who" class="who" hidden></span>
+  <button id="logout" class="small" hidden>Log out</button>
 </header>
-<main>
-  <section class="card" id="submit">
+<section class="card login" id="login" hidden>
+  <h2>Log in</h2>
+  <form id="login-form">
+    <label>User <input id="l-user" autocomplete="username" required></label>
+    <label>Password <input id="l-pw" type="password" autocomplete="current-password" required></label>
+    <label>Code from your authenticator app <input id="l-code" inputmode="numeric" autocomplete="one-time-code"
+      pattern="[0-9]{6}" maxlength="6" required></label>
+    <button type="submit">Log in</button>
+  </form>
+  <p id="l-msg" role="status"></p>
+</section>
+<main id="app" hidden>
+  <section class="card lab" id="submit">
     <h2>New analysis</h2>
     <div class="tabs">
       <label><input type="radio" name="kind" value="genome" checked> Genome (FASTA)</label>
@@ -30,13 +43,13 @@
     <p id="msg" role="status"></p>
   </section>
 
-  <section class="card" id="jobs-card">
+  <section class="card lab" id="jobs-card">
     <h2>Analyses</h2>
     <div class="scroll"><table id="jobs"><thead><tr><th>Job</th><th>Kind</th><th>State</th><th>Started</th></tr></thead>
       <tbody></tbody></table></div>
   </section>
 
-  <section class="card" id="tree-card">
+  <section class="card lab" id="tree-card">
     <h2>Phylogenetic tree</h2>
     <p class="hint">A tree of the genomes of every finished analysis, against the reference most of them are nearest
       to.</p>
@@ -60,7 +73,7 @@
     <ul id="alerts"><li class="hint">None since this page was opened.</li></ul>
   </section>
 
-  <section class="card wide" id="detail" hidden>
+  <section class="card wide lab" id="detail" hidden>
     <h2 id="d-title"></h2>
     <p id="d-exports" class="exports"></p>
     <div id="d-steps" class="steps"></div>
@@ -87,7 +100,26 @@
     <details><summary>Provenance</summary><pre id="d-prov"></pre></details>
   </section>
 
-  <section class="card wide">
+  <section class="card wide admin" id="admin" hidden>
+    <h2>Administration</h2>
+    <h3>Users</h3>
+    <div class="scroll"><table id="a-users"><thead><tr><th>User</th><th>Role</th><th>State</th><th>Created</th><th></th></tr></thead>
+      <tbody></tbody></table></div>
+    <form id="a-new" class="row">
+      <label>User <input id="a-name" required pattern="[a-z][a-z0-9._-]{1,31}"></label>
+      <label>Role <select id="a-role"><option>analyst</option><option>researcher</option><option>admin</option></select></label>
+      <label>Password <input id="a-pw" type="password" minlength="12" autocomplete="new-password" required></label>
+      <button type="submit">Add user</button>
+    </form>
+    <p id="a-msg" role="status"></p>
+    <div id="a-secret" class="notice" hidden></div>
+    <h3>Audit log</h3>
+    <p id="a-verify" class="hint"></p>
+    <div class="scroll"><table id="a-audit"><thead><tr><th>#</th><th>Time</th><th>Who</th><th>Action</th><th>Object</th>
+      <th>Outcome</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="card wide lab">
     <h2>Events</h2>
     <ol id="events" reversed></ol>
   </section>

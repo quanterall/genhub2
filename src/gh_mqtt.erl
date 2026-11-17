@@ -48,8 +48,12 @@ handle_info({publish, #{topic := <<"genhub/sequences/new">>, payload := P}}, S) 
     case catch json:decode(P) of
         #{<<"kind">> := K, <<"inputs">> := Inputs} when K =:= <<"genome">>; K =:= <<"reads">> ->
             case lists:all(fun gh_store:has/1, Inputs) of
-                true -> _ = gh_jobs:submit(binary_to_existing_atom(K), Inputs, gh_config:params()), ok;
-                false -> logger:warning("gh_mqtt: inputs not in the store: ~p", [Inputs])
+                true ->
+                    Id = gh_jobs:submit(binary_to_existing_atom(K), Inputs, gh_config:params()),
+                    gh_audit:log(<<"mqtt">>, job_submit, Id, ok, #{kind => K, inputs => Inputs});
+                false ->
+                    gh_audit:log(<<"mqtt">>, job_submit, <<>>, failed, #{reason => inputs_not_in_store, inputs => Inputs}),
+                    logger:warning("gh_mqtt: inputs not in the store: ~p", [Inputs])
             end;
         #{<<"job">> := _} -> ok;                                % a job announced by another node of the site
         Other -> logger:warning("gh_mqtt: not a job request: ~p", [Other])

@@ -22,7 +22,11 @@ job_done(Id) ->
     Rows = rows(),
     Earlier = [R || {J, _, R} <- Rows, J =/= Id],
     Mine = [R || {J, _, R} <- Rows, J =:= Id],
-    _ = [gh_events:publish(<<"genhub/alerts">>, #{type => <<"new_", (atom_to_binary(K))/binary>>, K => V, job => Id})
+    _ = [begin
+             Alert = #{type => <<"new_", (atom_to_binary(K))/binary>>, K => V, job => Id},
+             gh_audit:log(<<"system">>, alert, Id, ok, Alert),
+             gh_events:publish(<<"genhub/alerts">>, Alert)
+         end
          || K <- [species, pango],
             V <- lists:usort([maps:get(K, R) || R <- Mine]), V =/= <<>>,
             not lists:member(V, [maps:get(K, R) || R <- Earlier])],

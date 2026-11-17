@@ -4,12 +4,93 @@ const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 let selected = location.hash ? decodeURIComponent(location.hash.slice(1)) : null;
 
-async function api(path, opts) {
-  const r = await fetch(path, opts);
-  const body = await r.json();
+let me = null;   // {user, role} of this session
+
+// every changing request carries the gateway's header (protection against requests from other sites); a 401 means
+// the session ended, so the login form comes back
+async function api(path, opts = {}) {
+  const method = (opts.method || "GET").toUpperCase();
+  const headers = Object.assign({}, opts.headers, method === "GET" ? {} : {"x-genhub2": "1"});
+  const r = await fetch(path, Object.assign({}, opts, {headers, credentials: "same-origin"}));
+  const body = await r.json().catch(() => ({}));
+  if (r.status === 401 && path !== "/api/login") showLogin();
   if (!r.ok) throw new Error(body.error || r.statusText);
   return body;
 }
+
+function showLogin() {
+  me = null;
+  $("#app").hidden = true; $("#login").hidden = false;
+  $("#who").hidden = true; $("#logout").hidden = true; $("#live").hidden = true;
+}
+
+// the page for the session's role: researchers see monitoring; analysts the lab's analyses; admins also users and
+// the audit log
+async function start() {
+  try { me = await api("/api/me"); } catch (e) { showLogin(); return; }
+  $("#login").hidden = true; $("#app").hidden = false;
+  $("#who").textContent = `${me.user} (${me.role})`; $("#who").hidden = false; $("#logout").hidden = false;
+  const lab = me.role === "admin" || me.role === "analyst";
+  document.querySelectorAll(".lab").forEach((el) => { el.hidden = !lab || el.id === "detail"; });
+  $("#admin").hidden = me.role !== "admin";
+  if (lab) { $("#live").hidden = false; await refresh(); connect(); } else { await monitor(); }
+  if (me.role === "admin") await admin();
+}
+
+$("#login-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  $("#l-msg").textContent = "";
+  try {
+    await api("/api/login", {method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({user: $("#l-user").value.trim(), password: $("#l-pw").value, code: $("#l-code").value.trim()})});
+    $("#l-pw").value = ""; $("#l-code").value = "";
+    await start();
+  } catch (e) {
+    $("#l-msg").textContent = e.message;
+  }
+});
+
+$("#logout").addEventListener("click", async () => {
+  try { await api("/api/logout", {method: "POST"}); } finally { location.reload(); }
+});
+
+async function admin() {
+  const users = await api("/api/users");
+  $("#a-users tbody").innerHTML = users.sort((a, b) => a.name.localeCompare(b.name)).map((u) => `<tr>
+    <td>${esc(u.name)}</td><td>${esc(u.role)}</td>
+    <td>${u.disabled ? "disabled" : u.locked ? "locked" : "active"}</td><td>${new Date(u.created).toLocaleDateString()}</td>
+    <td>${u.disabled || u.name === me.user ? "" : `<button class="small" data-disable="${esc(u.name)}">Disable</button>`}</td></tr>`).join("");
+  document.querySelectorAll("[data-disable]").forEach((b) => b.addEventListener("click", async () => {
+    if (!confirm(`Disable ${b.dataset.disable}? Their sessions end now.`)) return;
+    try { await api(`/api/users/${encodeURIComponent(b.dataset.disable)}/disable`, {method: "POST"}); }
+    catch (e) { $("#a-msg").textContent = "Failed: " + e.message; }
+    await admin();
+  }));
+  const v = await api("/api/audit/verify");
+  $("#a-verify").textContent = v.whole ? `The chain of ${v.records} records is whole.`
+    : `The chain is broken at record ${v.broken_at}.`;
+  const log = await api("/api/audit?from=1&limit=10000");
+  $("#a-audit tbody").innerHTML = log.slice(-200).reverse().map((r) => `<tr><td>${r.seq}</td>
+    <td>${new Date(r.time).toLocaleString()}</td><td>${esc(r.actor)}</td><td>${esc(r.action)}</td>
+    <td><code>${esc(r.object)}</code></td><td>${esc(r.outcome)}</td></tr>`).join("");
+}
+
+$("#a-new").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  $("#a-msg").textContent = ""; $("#a-secret").hidden = true;
+  try {
+    const u = await api("/api/users", {method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({user: $("#a-name").value.trim(), role: $("#a-role").value, password: $("#a-pw").value})});
+    $("#a-pw").value = "";
+    // shown this once: the new user adds it to an authenticator app
+    $("#a-secret").innerHTML = `<b>${esc(u.user)}</b>: add this to an authenticator app now; it is not shown again.<br>
+      Secret: <code>${esc(u.totp_secret)}</code><br>Or as a link: <code>${esc(u.totp_uri)}</code>`;
+    $("#a-secret").hidden = false;
+    await admin();
+  } catch (e) {
+    $("#a-msg").textContent = "Failed: " + e.message;
+  }
+});
 
 document.querySelectorAll('input[name="kind"]').forEach((el) => el.addEventListener("change", () => {
   const reads = document.querySelector('input[name="kind"]:checked').value === "reads";
@@ -154,5 +235,4 @@ function connect() {
   };
 }
 
-refresh();
-connect();
+start();
