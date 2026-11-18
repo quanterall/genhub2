@@ -123,7 +123,7 @@ neighbour-joining, `4c441ab1...` for FastTree).
 with no earlier jobs.
 - **18 November 2026, with accounts, placement, aggregates, sharing, metrics, Beacon, alert settings and one's own
   account, and the structure viewer's link:** **all 48 checks hold**
-  ([`results/gateway-dgx-spark-2026-11-18T1224Z.json`](results/gateway-dgx-spark-2026-11-18T1224Z.json); the check of
+  ([`results/gateway-dgx-spark-2026-11-18T2223Z.json`](results/gateway-dgx-spark-2026-11-18T2223Z.json); the check of
   encryption at rest in `warn` mode: this test machine's disk is not encrypted).
   - The 13 below now run as an analyst who logged in through the API.
   - 8 more cover accounts and the audit log (at the end of this section).

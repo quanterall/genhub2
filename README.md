@@ -144,13 +144,15 @@ to help, it got 46 of 132, against 115. **Not adopted** ([`acceptance/RESULTS-PH
 - **Results:** each genome's mutation list, and its amino-acid changes (Nextclade's). A Copy changes button works
   with any viewer.
 - **The TechUPGRADE structure view** (`gh_viewer`), through TechUPGRADE's external integration protocol v1:
-  - a Structure view button on SARS-CoV-2 and RSV-A results hands the genome's changes to the view
+  - a Structure view button on SARS-CoV-2, RSV-A and RSV-B results hands the genome's changes to the view
     `genhub2.structures`;
   - the hand-off is signed with the site's own key: Ed25519 preferred (`scripts/genhub2-admin.sh ... viewer_key`;
     only the public key is sent to TechUPGRADE), HS256 for a test site;
   - it is valid for 10 minutes and unique per link (`jti`), bound to the viewer's entry point (`aud`), and carries no
     sample, job or user names;
   - push mode by default: the payload is sent server to server over TLS, so it never enters an address;
+  - the key's id travels outside the payload as well, so the viewer chooses the key before reading anything it
+    cannot yet trust, then checks that the two ids match;
   - every hand-off is audited.
   - Test vectors for the other side: [`acceptance/viewer-test-vectors.json`](acceptance/viewer-test-vectors.json).
 - **Choosing analyses:** a tree or a shared dataset is made of the ticked analyses; datasets take a description and

@@ -1,5 +1,5 @@
 {
-  "about": "Test vectors for TechUPGRADE's external integration protocol v1 (EXT-55), from GenHub2's side. The keys are published on purpose, for tests only: never accept them on a real installation. The links are long expired: check the signature over the exact text d, then expect 'expired'.",
+  "about": "Test vectors for TechUPGRADE's external integration protocol v1 (EXT-55), from GenHub2's side. The keys are published on purpose, for tests only: never accept them on a real installation. The links are long expired: check the signature over the exact text d, then expect 'expired'. The kid is sent outside the payload as well (the push body's kid, or k= in direct mode); after the signature holds, it must equal the kid inside d.",
   "ed25519": {
     "d": "eyJhbGciOiJFZDI1NTE5IiwiYXVkIjoiaHR0cHM6Ly90d2luLmV4YW1wbGUub3JnL2V4dC9wdXNoIiwiZXhwIjoxNzYzNDYzMDAwMDAwLCJpYXQiOjE3NjM0NjI0MDAwMDAsImlzcyI6InRlc3QuZ2VuaHViMi5leGFtcGxlIiwianRpIjoiMDAxMTIyMzM0NDU1NjY3Nzg4OTlhYWJiY2NkZGVlZmYiLCJraWQiOiJnZW5odWIyLXRlc3QtdmVjdG9ycy1lZDI1NTE5IiwicGFyYW1zIjp7ImNsYWRlIjoiMjFMIiwiZGF0YXNldCI6InNhcnMtY292LTIiLCJsaW5lYWdlIjoiQkEuMiIsIm11dGF0aW9ucyI6WyJTOk41MDFZIiwiUzpENjE0RyIsIlM6SDY5LSJdfSwicmVmIjoici0wMDExMjIzMzQ0NTU2Njc3IiwidiI6MSwidmlldyI6Imdlbmh1YjIuc3RydWN0dXJlcyJ9",
     "kid": "genhub2-test-vectors-ed25519",
