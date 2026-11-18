@@ -26,8 +26,9 @@
 %%      merged counts published once on genhub/alerts, as it appears;
 %%  14. one's own account: sessions listed, the others ended; a password change (refused with a wrong code); an
 %%      admin's reset ends the user's sessions and gives a new secret;
-%%  15. the structure viewer: a signed, short-lived link for the genome with A23403G (part 12), carrying S:D614G and
-%%      no job or sample names; checked as the viewer checks it; not for researchers; audited.
+%%  15. the structure viewer (TechUPGRADE's external integration protocol v1, Ed25519, direct mode): a signed,
+%%      short-lived link for the genome with A23403G (part 12), carrying S:D614G and no job or sample names; checked
+%%      as the viewer checks it, with the public key only; not for researchers; audited.
 %% Parts 1-7 run as an analyst who logged in through the API.
 %%
 %% Needs the reference bundles of the phase A acceptance test, and EMQX on 127.0.0.1:21883 (run_gateway.sh); the
@@ -44,13 +45,14 @@ main([Out]) ->
     ok = application:set_env(genhub2, mqtt, #{host => "127.0.0.1", port => ?MQTT_PORT}),
     ok = application:set_env(genhub2, http, #{ip => {127, 0, 0, 1}, port => 28090}),
     ok = application:set_env(genhub2, metrics_token, binary:encode_hex(crypto:strong_rand_bytes(24), lowercase)),
-    %% a structure viewer with a secret of the check's own (part 15)
-    ViewerSecret = binary:encode_hex(crypto:strong_rand_bytes(24), lowercase),
+    %% a structure viewer with an Ed25519 key of the check's own (part 15; TechUPGRADE's protocol v1, direct mode)
+    {ViewerSecret, ViewerPriv} = gh_viewer:new_key(),             % the public key: what the viewer holds
     ViewerSecretFile = filename:join("/tmp", "gh-check-viewer-" ++ os:getpid()),
-    ok = file:write_file(ViewerSecretFile, ViewerSecret),
-    ok = application:set_env(genhub2, structure_viewer, #{url => "https://viewer.example/genhub2/open",
-                                                          secret_file => ViewerSecretFile,
-                                                          viruses => [<<"Betacoronavirus pandemicum">>]}),
+    ok = file:write_file(ViewerSecretFile, base64:encode(ViewerPriv, #{mode => urlsafe, padding => false})),
+    ok = application:set_env(genhub2, structure_viewer, #{base => "https://twin.example", mode => direct,
+                                                          iss => <<"check-site">>, active => <<"check-2026a">>,
+                                                          keys => #{<<"check-2026a">> => #{alg => 'Ed25519',
+                                                                                          key_file => ViewerSecretFile}}}),
     {ok, _} = application:ensure_all_started([genhub2, gun]),
     T0 = erlang:monotonic_time(millisecond),
     %% the site's SARS-CoV-2 tree, from phase A's 1,000 public genomes, so genome jobs place their genomes in it
@@ -459,7 +461,8 @@ viewer(Users, MJob, Secret) ->
     #{<<"url">> := Url, <<"mutations">> := Muts} = json:decode(B),
     #{query := Qs} = uri_string:parse(Url),
     #{<<"d">> := P, <<"s">> := Sig} = maps:from_list(uri_string:dissect_query(Qs)),
-    Verified = gh_viewer:verify(P, Sig, Secret),
+    Verified = gh_viewer:verify(P, Sig, #{keys => #{<<"check-2026a">> => {'Ed25519', Secret}},
+                                          aud => <<"https://twin.example/ext/open">>}),
     Json = base64:decode(P, #{mode => urlsafe, padding => false}),
     {NoGenome, _, _} = http(get, Path ++ "no-such-genome", none),
     {200, <<"researcher">>} = login(ReName, ReSecret),
@@ -467,7 +470,7 @@ viewer(Users, MJob, Secret) ->
     {200, <<"admin">>} = login(AdName, AdSecret),
     {200, _, AuditB} = http(get, "/api/audit?from=1&limit=10000", none),
     #{config => json:decode(CB), status => S, mutations => Muts,
-      verified => case Verified of {ok, M} -> maps:with([<<"v">>, <<"virus">>, <<"lineage">>, <<"mutations">>], M); E -> E end,
+      verified => case Verified of {ok, M} -> maps:with([<<"v">>, <<"alg">>, <<"view">>, <<"params">>], M); E -> E end,
       names => [N || N <- [MJob, <<"mutant">>], binary:match(Json, N) =/= nomatch],
       no_genome => NoGenome, researcher => Researcher,
       audited => length([x || #{<<"action">> := <<"structure_view">>} <- json:decode(AuditB)])}.
@@ -476,12 +479,13 @@ viewer_checks(V) ->
     [check(<<"viewer: a signed link for the genome with A23403G, carrying S:D614G, checked as the viewer checks it">>,
            maps:get(status, V) =:= 200 andalso lists:member(<<"S:D614G">>, maps:get(mutations, V))
            andalso is_map(maps:get(verified, V))
-           andalso maps:get(<<"mutations">>, maps:get(verified, V)) =:= maps:get(mutations, V)
-           andalso maps:get(<<"virus">>, maps:get(verified, V)) =:= <<"Betacoronavirus pandemicum">>, V),
+           andalso maps:get(<<"mutations">>, maps:get(<<"params">>, maps:get(verified, V))) =:= maps:get(mutations, V)
+           andalso maps:get(<<"dataset">>, maps:get(<<"params">>, maps:get(verified, V))) =:= <<"sars-cov-2">>
+           andalso maps:get(<<"alg">>, maps:get(verified, V)) =:= <<"Ed25519">>, V),
      check(<<"viewer: no job or sample names in the link; an unknown genome 400; not for researchers (403); audited">>,
            maps:get(names, V) =:= [] andalso maps:get(no_genome, V) =:= 400 andalso maps:get(researcher, V) =:= 403
            andalso maps:get(audited, V) =:= 1
-           andalso maps:get(config, V) =:= #{<<"enabled">> => true, <<"viruses">> => [<<"Betacoronavirus pandemicum">>]}, V)].
+           andalso maps:get(<<"enabled">>, maps:get(config, V)) =:= true, V)].
 
 %%% 14. one's own account
 

@@ -1,0 +1,16 @@
+{
+  "about": "Test vectors for TechUPGRADE's external integration protocol v1 (EXT-55), from GenHub2's side. The keys are published on purpose, for tests only: never accept them on a real installation. The links are long expired: check the signature over the exact text d, then expect 'expired'.",
+  "ed25519": {
+    "d": "eyJhbGciOiJFZDI1NTE5IiwiYXVkIjoiaHR0cHM6Ly90d2luLmV4YW1wbGUub3JnL2V4dC9wdXNoIiwiZXhwIjoxNzYzNDYzMDAwMDAwLCJpYXQiOjE3NjM0NjI0MDAwMDAsImlzcyI6InRlc3QuZ2VuaHViMi5leGFtcGxlIiwianRpIjoiMDAxMTIyMzM0NDU1NjY3Nzg4OTlhYWJiY2NkZGVlZmYiLCJraWQiOiJnZW5odWIyLXRlc3QtdmVjdG9ycy1lZDI1NTE5IiwicGFyYW1zIjp7ImNsYWRlIjoiMjFMIiwiZGF0YXNldCI6InNhcnMtY292LTIiLCJsaW5lYWdlIjoiQkEuMiIsIm11dGF0aW9ucyI6WyJTOk41MDFZIiwiUzpENjE0RyIsIlM6SDY5LSJdfSwicmVmIjoici0wMDExMjIzMzQ0NTU2Njc3IiwidiI6MSwidmlldyI6Imdlbmh1YjIuc3RydWN0dXJlcyJ9",
+    "kid": "genhub2-test-vectors-ed25519",
+    "private_key_b64url": "310SFtgGSQHHhC9f_61BQVVGel_V_l-yGDg4yYM5UpY",
+    "public_key_b64url": "47CxJCbXH5Zx3eG97nhG_n_reBBTZugGW--AXTJWP10",
+    "s": "IPd3dT11r4DCxlQ-e4gif7cZB9yEW2WeqKw65Hzwtw8cPMqMYI2hbfnLQYPLRcpVOS7t5wHcaL08N1fs3br1BA"
+  },
+  "hs256": {
+    "d": "eyJhbGciOiJIUzI1NiIsImF1ZCI6Imh0dHBzOi8vdHdpbi5leGFtcGxlLm9yZy9leHQvcHVzaCIsImV4cCI6MTc2MzQ2MzAwMDAwMCwiaWF0IjoxNzYzNDYyNDAwMDAwLCJpc3MiOiJ0ZXN0Lmdlbmh1YjIuZXhhbXBsZSIsImp0aSI6IjAwMTEyMjMzNDQ1NTY2Nzc4ODk5YWFiYmNjZGRlZWZmIiwia2lkIjoiZ2VuaHViMi10ZXN0LXZlY3RvcnMtaHMyNTYiLCJwYXJhbXMiOnsiY2xhZGUiOiIyMUwiLCJkYXRhc2V0Ijoic2Fycy1jb3YtMiIsImxpbmVhZ2UiOiJCQS4yIiwibXV0YXRpb25zIjpbIlM6TjUwMVkiLCJTOkQ2MTRHIiwiUzpINjktIl19LCJyZWYiOiJyLTAwMTEyMjMzNDQ1NTY2NzciLCJ2IjoxLCJ2aWV3IjoiZ2VuaHViMi5zdHJ1Y3R1cmVzIn0",
+    "kid": "genhub2-test-vectors-hs256",
+    "s": "RgxyZVVD-cC5g2gkOBcPjpox9P65nM2TZ1aOn8diRU0",
+    "secret": "genhub2-test-vector-hs256-secret-never-use"
+  }
+}

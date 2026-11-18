@@ -141,10 +141,18 @@ to help, it got 46 of 132, against 115. **Not adopted** ([`acceptance/RESULTS-PH
 - **Uploads:** files, or a sequence typed or pasted with a DNA/RNA choice; optional region and collection date.
 - **Interactive trees:** zoom, move, find a job or genome, click a genome to open its analysis; bootstrap support
   at the branches.
-- **Results:** each genome's mutation list, and its amino-acid changes (Nextclade's). With a structure viewer
-  configured (`structure_viewer`, `gh_viewer`), a Structure view button opens it with a signed link valid for 10
-  minutes. The link carries no sample, job or user names, and is audited. A Copy changes button works with any
-  viewer.
+- **Results:** each genome's mutation list, and its amino-acid changes (Nextclade's). A Copy changes button works
+  with any viewer.
+- **The TechUPGRADE structure view** (`gh_viewer`), through TechUPGRADE's external integration protocol v1:
+  - a Structure view button on SARS-CoV-2 and RSV-A results hands the genome's changes to the view
+    `genhub2.structures`;
+  - the hand-off is signed with the site's own key: Ed25519 preferred (`scripts/genhub2-admin.sh ... viewer_key`;
+    only the public key is sent to TechUPGRADE), HS256 for a test site;
+  - it is valid for 10 minutes and unique per link (`jti`), bound to the viewer's entry point (`aud`), and carries no
+    sample, job or user names;
+  - push mode by default: the payload is sent server to server over TLS, so it never enters an address;
+  - every hand-off is audited.
+  - Test vectors for the other side: [`acceptance/viewer-test-vectors.json`](acceptance/viewer-test-vectors.json).
 - **Choosing analyses:** a tree or a shared dataset is made of the ticked analyses; datasets take a description and
   several consent codes.
 - **Discovery:** Beacon search by mutation (A23403G) or lineage.

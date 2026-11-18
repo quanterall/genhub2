@@ -123,7 +123,7 @@ neighbour-joining, `4c441ab1...` for FastTree).
 with no earlier jobs.
 - **18 November 2026, with accounts, placement, aggregates, sharing, metrics, Beacon, alert settings and one's own
   account, and the structure viewer's link:** **all 48 checks hold**
-  ([`results/gateway-dgx-spark-2026-11-18T0359Z.json`](results/gateway-dgx-spark-2026-11-18T0359Z.json); the check of
+  ([`results/gateway-dgx-spark-2026-11-18T1224Z.json`](results/gateway-dgx-spark-2026-11-18T1224Z.json); the check of
   encryption at rest in `warn` mode: this test machine's disk is not encrypted).
   - The 13 below now run as an analyst who logged in through the API.
   - 8 more cover accounts and the audit log (at the end of this section).
@@ -136,8 +136,9 @@ with no earlier jobs.
     date ([RESULTS-PHASE-D.md](RESULTS-PHASE-D.md), "At a site").
   - 8 cover sharing (below).
   - 5 cover Beacon (below).
-  - 2 cover the structure viewer's link (`gh_viewer`):
+  - 2 cover the structure viewer's link (`gh_viewer`, TechUPGRADE's external integration protocol v1, Ed25519):
     - it is signed and short-lived, for the genome with A23403G, and carries `S:D614G`;
+    - it is verified with the public key and the entry point's address alone, as the viewer verifies it;
     - it is checked as the viewer checks it, and carries no job or sample names;
     - an unknown genome is refused, researchers get no link, and every link is audited.
   - 3 cover one's own account:

@@ -7,6 +7,8 @@
 %%   check_references      downloads NCBI's current RefSeq viral genomes; if they changed, builds the new bundle
 %%                         beside the site's and reports what changed (gh_refdb:check_update/0)
 %%   apply_references      makes the checked bundle the site's, keeping the one before; rebuilds the proteins
+%%   viewer_key KID FILE   a new Ed25519 key for the structure viewer (gh_viewer): the private key into FILE (mode 600;
+%%                         never overwritten), the public key printed, to register with TechUPGRADE under KID
 %%   build_usher_tree FASTA    the site's SARS-CoV-2 tree for placing new genomes (gh_refdb:usher_sars_cov_2/3), from
 %%                         the genomes of FASTA (complete SARS-CoV-2 genomes); needs the site's reference bundles
 %%
@@ -88,6 +90,21 @@ run(["apply_references"]) ->
         {error, nothing_to_apply} ->
             io:format(standard_error, "nothing to apply: run check_references first~n", []), 1
     end;
+run(["viewer_key", Kid, File]) ->
+    case filelib:is_file(File) of
+        true -> io:format(standard_error, "~s exists: not overwritten~n", [File]), 1;
+        false ->
+            {_Pub, Priv} = gh_viewer:new_key(),
+            ok = filelib:ensure_dir(File),
+            ok = file:write_file(File, [], [exclusive]),
+            ok = file:change_mode(File, 8#600),
+            ok = file:write_file(File, base64:encode(Priv, #{mode => urlsafe, padding => false})),
+            Pub = gh_viewer:public_key(File),
+            ok = gh_audit:log(<<"cli">>, viewer_key, list_to_binary(Kid), ok, #{public_key => Pub}),
+            io:format("kid ~s, Ed25519~npublic key (send this to TechUPGRADE; it is not secret): ~s~n"
+                      "private key: ~s (mode 600; keep it outside the repository; never send it)~n", [Kid, Pub, File]),
+            0
+    end;
 run(["audit_verify"]) ->
     case gh_audit:verify() of
         {ok, N} -> io:format("the audit chain of ~b records is whole~n", [N]), 0;
@@ -95,5 +112,5 @@ run(["audit_verify"]) ->
     end;
 run(_) ->
     io:format(standard_error, "usage: add_user NAME admin|analyst|researcher (password on stdin) | audit_verify | "
-              "build_usher_tree FASTA | check_references | apply_references~n", []),
+              "build_usher_tree FASTA | check_references | apply_references | viewer_key KID FILE~n", []),
     2.
