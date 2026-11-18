@@ -18,7 +18,10 @@
 %%      merged name the other site's new lineage; a researcher reads the aggregates;
 %%  10. sharing (phase C, inside the site): an admin approves a dataset of the two genome jobs with DUO consent; a
 %%      researcher reads it through GA4GH DRS, anonymised (genomes renamed, the week instead of the date), checked by
-%%      hash; files outside approved datasets are not served; a withdrawn dataset is gone.
+%%      hash; files outside approved datasets are not served; a withdrawn dataset is gone;
+%%  11. metrics, behind their scrape token;
+%%  12. Beacon v2 over approved datasets: a genome with A23403G (D614G) shared; a researcher finds the mutation and the
+%%      lineage, yes or no only; an analyst gets counts; a withdrawn dataset is not searched; bad queries refused.
 %% Parts 1-7 run as an analyst who logged in through the API.
 %%
 %% Needs the reference bundles of the phase A acceptance test, and EMQX on 127.0.0.1:21883 (run_gateway.sh); the
@@ -67,17 +70,18 @@ main([Out]) ->
     Aggregates = aggregates(Users),
     Sharing = sharing(Users, [maps:get(id, Job), maps:get(id, Viamqtt)], maps:get(hash, Upload), Tree),
     Metrics = metrics(),
+    Beacon = beacon(Users, maps:get(id, Job), maps:get(id, Sharing)),
     Checks = checks(Page, Job, MqttMsgs, WsMsgs, Viamqtt, Refused)
         ++ more_checks(Job, Viamqtt, Exports, Tree, Summary, Alerts) ++ accounts_checks(Accounts)
         ++ aggregates_checks(Aggregates) ++ sharing_checks(Sharing, [maps:get(id, Job), maps:get(id, Viamqtt)])
-        ++ metrics_checks(Metrics),
+        ++ metrics_checks(Metrics) ++ beacon_checks(Beacon, maps:get(id, Sharing)),
     R = #{date => list_to_binary(calendar:system_time_to_rfc3339(erlang:system_time(second), [{offset, "Z"}])),
           host => list_to_binary(net_adm:localhost()), emqx => <<"emqx/emqx:5.8.9">>,
           upload => Upload, job_seconds => maps:get(seconds, Job), job_state => maps:get(state, Job),
           mqtt_topics => count([T || {T, _} <- MqttMsgs]), websocket_topics => count([T || {T, _} <- WsMsgs]),
           job_from_mqtt => Viamqtt, exports => Exports, tree => maps:remove(svg, Tree), summary => Summary,
           alerts => Alerts, refused => Refused, accounts => Accounts, aggregates => Aggregates, sharing => Sharing,
-          metrics => Metrics,
+          metrics => Metrics, beacon => Beacon,
           usher_tree => UsherTree,
           checks => Checks,
           seconds => (erlang:monotonic_time(millisecond) - T0) / 1000},
@@ -423,6 +427,83 @@ aggregates_checks(A) ->
            andalso lists:member(<<"check-other-site">>, maps:get(<<"sites">>, Al)), Al),
      check(<<"aggregates: a researcher reads the aggregates and the alerts">>,
            maps:get(researcher, A) =:= #{aggregates => 200, alerts => 200}, maps:get(researcher, A))].
+
+%%% 12. Beacon
+
+beacon(Users, Job1, Withdrawn) ->
+    {AnName, AnSecret} = maps:get(analyst, Users),
+    {AdName, AdSecret} = maps:get(admin, Users),
+    {ReName, ReSecret} = maps:get(researcher, Users),
+    %% the reference with one substitution, A23403G (spike D614G), analysed as a new genome job
+    {200, <<"analyst">>} = login(AnName, AnSecret),
+    Refs = maps:get(refs, gh_config:params()),
+    Ref = gh_store:with_tmp(fun(Dir) ->
+                                    F = filename:join(Dir, "r.fa"),
+                                    gh_mutations:reference(Refs, <<"NC_045512.2">>, node(), F),
+                                    {ok, B} = file:read_file(F),
+                                    [_ | Ls] = binary:split(B, <<"\n">>, [global]),
+                                    iolist_to_binary(Ls)
+                            end),
+    <<Pre:23402/binary, $A, Post/binary>> = Ref,
+    Mutant = <<">mutant\n", Pre/binary, $G, Post/binary, "\n">>,
+    {201, _, U} = http(post, "/api/uploads", {"application/octet-stream", Mutant}),
+    #{<<"hash">> := H} = json:decode(U),
+    {201, _, J} = http(post, "/api/jobs", {"application/json", json:encode(#{kind => genome, inputs => [H]})}),
+    #{<<"id">> := MJob} = json:decode(J),
+    #{<<"state">> := <<"done">>} = poll(MJob, 600),
+    {200, <<"admin">>} = login(AdName, AdSecret),
+    {201, _, D} = http(post, "/api/datasets", {"application/json", json:encode(#{title => <<"for the Beacon">>, consent => [<<"DUO:0000042">>],
+                                                                                jobs => [Job1, MJob]})}),
+    Ds = maps:get(<<"id">>, json:decode(D)),
+    Q = fun(Qs) ->
+                {S, _, B} = http(get, "/beacon/g_variants?" ++ Qs, none),
+                {S, case S of 200 -> json:decode(B); _ -> B end}
+        end,
+    Summary = fun({200, R}) -> maps:get(<<"responseSummary">>, R);
+                 ({S, _}) -> S
+              end,
+    Sets = fun({200, R}) -> [maps:with([<<"id">>, <<"exists">>, <<"resultsCount">>], X)
+                             || X <- maps:get(<<"resultSets">>, maps:get(<<"response">>, R))] end,
+    D614G = "referenceName=NC_045512.2&start=23402&referenceBases=A&alternateBases=G",
+    {200, <<"researcher">>} = login(ReName, ReSecret),
+    R1 = Q(D614G),
+    R2 = Q("referenceName=NC_045512.2&start=23402&referenceBases=A&alternateBases=T"),
+    R3 = Q("filters=lineage:B"),
+    R4 = Q(D614G ++ "&requestedGranularity=count"),
+    Bad = [element(1, Q(X)) || X <- ["", "referenceName=NC_045512.2&start=x&referenceBases=A&alternateBases=G",
+                                     "referenceName=NC_045512.2&start=1&referenceBases=AT&alternateBases=G", "filters=clade:20A"]],
+    {200, _, DsB} = http(get, "/beacon/datasets", none),
+    {200, _, TB} = http(get, "/beacon/filtering_terms", none),
+    {200, <<"analyst">>} = login(AnName, AnSecret),
+    R5 = Q(D614G ++ "&requestedGranularity=count"),
+    {200, <<"admin">>} = login(AdName, AdSecret),
+    {200, _, AuditB} = http(get, "/api/audit?from=1&limit=10000", none),
+    #{dataset => Ds, withdrawn => Withdrawn, mutant_job => MJob,
+      d614g => {Summary(R1), Sets(R1)}, absent => Summary(R2), lineage_b => {Summary(R3), Sets(R3)},
+      researcher_count => {Summary(R4), Sets(R4)}, analyst_count => {Summary(R5), Sets(R5)}, bad => Bad,
+      datasets => [maps:get(<<"id">>, X) || X <- maps:get(<<"collections">>, maps:get(<<"response">>, json:decode(DsB)))],
+      terms => [maps:get(<<"id">>, X) || X <- maps:get(<<"filteringTerms">>, maps:get(<<"response">>, json:decode(TB)))],
+      audited => length([x || #{<<"action">> := <<"beacon_query">>} <- json:decode(AuditB)])}.
+
+beacon_checks(B, Withdrawn) ->
+    Ds = maps:get(dataset, B),
+    [check(<<"beacon: a researcher finds A23403G in the approved dataset, and not a substitution nobody has">>,
+           maps:get(d614g, B) =:= {#{<<"exists">> => true}, [#{<<"id">> => Ds, <<"exists">> => true}]}
+           andalso maps:get(absent, B) =:= #{<<"exists">> => false}, maps:with([d614g, absent], B)),
+     check(<<"beacon: lineage filter; the withdrawn dataset is not searched">>,
+           element(1, maps:get(lineage_b, B)) =:= #{<<"exists">> => true}
+           andalso [maps:get(<<"id">>, X) || X <- element(2, maps:get(lineage_b, B))] =:= [Ds]
+           andalso not lists:member(Withdrawn, maps:get(datasets, B)), maps:get(lineage_b, B)),
+     check(<<"beacon: a researcher who asks for counts gets yes or no only; an analyst gets the count (1)">>,
+           maps:get(researcher_count, B) =:= {#{<<"exists">> => true}, [#{<<"id">> => Ds, <<"exists">> => true}]}
+           andalso maps:get(analyst_count, B) =:= {#{<<"exists">> => true, <<"numTotalResults">> => 1},
+                                                   [#{<<"id">> => Ds, <<"exists">> => true, <<"resultsCount">> => 1}]},
+           maps:with([researcher_count, analyst_count], B)),
+     check(<<"beacon: no query, a bad start, a bad base, an unknown filter: 400">>, maps:get(bad, B) =:= [400, 400, 400, 400],
+           maps:get(bad, B)),
+     check(<<"beacon: the approved datasets and the lineages as filtering terms listed; every query audited">>,
+           maps:get(datasets, B) =:= [Ds] andalso lists:member(<<"lineage:B">>, maps:get(terms, B))
+           andalso maps:get(audited, B) >= 5, maps:with([datasets, terms, audited], B))].
 
 %%% 11. metrics: only with the scrape token; counts, no names
 

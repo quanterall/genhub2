@@ -32,6 +32,8 @@ allowed(W) when W =:= aggregates; W =:= aggregate_alerts -> [admin, analyst, res
 allowed(W) when W =:= datasets; W =:= dataset; W =:= drs_info; W =:= drs_object; W =:= drs_access; W =:= drs_data ->
     [admin, analyst, researcher];
 allowed(dataset_withdraw) -> [admin];
+allowed(W) when W =:= beacon_info; W =:= beacon_datasets; W =:= beacon_terms; W =:= beacon_variants ->
+    [admin, analyst, researcher];
 allowed(W) when W =:= users; W =:= user_disable; W =:= audit; W =:= audit_verify -> [admin];
 allowed(_) -> [admin, analyst].
 
@@ -221,6 +223,47 @@ handle(metrics, <<"GET">>, Req) ->
                              gh_metrics:render(), Req);
         _ -> throw({status, 404, <<"metrics are off (setting metrics_token)">>})
     end;
+handle(beacon_info, <<"GET">>, Req) ->
+    reply(200, #{meta => #{beaconId => beacon_id(), apiVersion => <<"v2.0.0">>, returnedSchemas => []},
+                 response => gh_beacon:info(gh_monitor:site())}, Req);
+handle(beacon_datasets, <<"GET">>, Req) ->
+    audit(beacon_datasets, <<>>, ok, #{}),
+    reply(200, #{meta => #{beaconId => beacon_id(), apiVersion => <<"v2.0.0">>},
+                 response => #{collections => gh_beacon:datasets()}}, Req);
+handle(beacon_terms, <<"GET">>, Req) ->
+    reply(200, #{meta => #{beaconId => beacon_id(), apiVersion => <<"v2.0.0">>},
+                 response => #{filteringTerms => gh_beacon:filtering_terms()}}, Req);
+handle(beacon_variants, <<"GET">>, Req) ->
+    Qs = maps:from_list(cowboy_req:parse_qs(Req)),
+    Variant = case [maps:get(K, Qs, undefined) || K <- [<<"referenceName">>, <<"start">>, <<"referenceBases">>, <<"alternateBases">>]] of
+                  [undefined, undefined, undefined, undefined] -> none;
+                  [Ref, Start, RB, AB] when is_binary(Ref), is_binary(Start), is_binary(RB), is_binary(AB) ->
+                      Base = fun(B) -> lists:member(B, [<<"A">>, <<"C">>, <<"G">>, <<"T">>]) orelse
+                                           throw({status, 400, <<"referenceBases and alternateBases: one base, A, C, G or T">>}) end,
+                      Base(RB), Base(AB),
+                      S = try binary_to_integer(Start) catch error:badarg -> -1 end,
+                      S >= 0 orelse throw({status, 400, <<"start: a 0-based position">>}),
+                      {Ref, S, RB, AB};
+                  _ -> throw({status, 400, <<"a variant needs referenceName, start, referenceBases and alternateBases">>})
+              end,
+    Lineages = [case F of
+                    <<"lineage:", L/binary>> when L =/= <<>> -> L;
+                    _ -> throw({status, 400, <<"filters: lineage:<name>, comma-separated">>})
+                end || F <- binary:split(maps:get(<<"filters">>, Qs, <<>>), <<",">>, [global, trim_all])],
+    Granularity = case {maps:get(<<"requestedGranularity">>, Qs, <<"boolean">>), get(gh_role)} of
+                      {<<"count">>, R} when R =:= admin; R =:= analyst -> count;
+                      {<<"count">>, researcher} -> boolean;      % counts stay in the lab
+                      {<<"boolean">>, _} -> boolean;
+                      _ -> throw({status, 400, <<"requestedGranularity: boolean or count">>})
+                  end,
+    case gh_beacon:query(#{variant => Variant, lineages => Lineages}, Granularity,
+                         #{beacon_id => beacon_id(), requestedGranularity => maps:get(<<"requestedGranularity">>, Qs, <<"boolean">>)}) of
+        {ok, Resp} ->
+            audit(beacon_query, <<>>, ok, #{variant => Variant, lineages => Lineages, granularity => Granularity,
+                                            exists => maps:get(exists, maps:get(responseSummary, Resp))}),
+            reply(200, Resp, Req);
+        {error, Why} -> throw({status, 400, Why})
+    end;
 handle(datasets, <<"GET">>, Req) ->
     Ds = [D || #{state := S} = D <- gh_share:list(), S =:= approved orelse get(gh_role) =/= researcher],
     reply(200, #{datasets => Ds, duo => gh_share:duo()}, Req);
@@ -344,6 +387,8 @@ cookie_opts() ->
 peer(Req) ->
     {Ip, _} = cowboy_req:peer(Req),
     list_to_binary(inet:ntoa(Ip)).
+
+beacon_id() -> <<"genhub2.", (gh_monitor:site())/binary>>.
 
 %% a dataset; a researcher sees only approved ones
 dataset(Req) ->

@@ -24,6 +24,9 @@
 %%                                   /api/datasets/:id/withdraw (admin)
 %%   GET  /ga4gh/drs/v1/service-info, /ga4gh/drs/v1/objects/:id[/access/:access_id], /ga4gh/drs/v1/objects/:id/data
 %%                                   GA4GH DRS 1.4: the files of approved datasets (id = SHA-256), datasets as bundles
+%%   GET  /beacon[/info], /beacon/datasets, /beacon/filtering_terms, /beacon/g_variants?referenceName=&start=
+%%                                   &referenceBases=&alternateBases=&filters=lineage:X&requestedGranularity=
+%%                                   GA4GH Beacon v2 over the approved shared datasets (gh_beacon)
 %%   GET  /metrics                   the site's metrics for Prometheus (gh_metrics), with Authorization: Bearer
 %%                                   <metrics_token>; off unless the setting metrics_token (32 bytes or more) is set
 %%   (POST /api/jobs also takes "metadata": {"region", "collection_date", "sequences": {name: {...}}})
@@ -48,6 +51,11 @@ start() ->
                          {"/api/files/:hash", gh_web_api, file},
                          {"/api/aggregates", gh_web_api, aggregates},
                          {"/metrics", gh_web_api, metrics},
+                         {"/beacon", gh_web_api, beacon_info},
+                         {"/beacon/info", gh_web_api, beacon_info},
+                         {"/beacon/datasets", gh_web_api, beacon_datasets},
+                         {"/beacon/filtering_terms", gh_web_api, beacon_terms},
+                         {"/beacon/g_variants", gh_web_api, beacon_variants},
                          {"/api/datasets", gh_web_api, datasets},
                          {"/api/datasets/:id", gh_web_api, dataset},
                          {"/api/datasets/:id/withdraw", gh_web_api, dataset_withdraw},

@@ -121,9 +121,9 @@ neighbour-joining, `4c441ab1...` for FastTree).
 
 [`gh_gateway_check.erl`](gh_gateway_check.erl), run by [`run_gateway.sh`](run_gateway.sh) against EMQX 5.8.9, on a site
 with no earlier jobs.
-- **17 November 2026, with accounts, placement, aggregates, sharing and metrics:** **all 35 checks hold**
-  ([`results/gateway-dgx-spark-2026-11-18T0203Z.json`](results/gateway-dgx-spark-2026-11-18T0203Z.json), rerun on 18
-  November with the check of encryption at rest in `warn` mode: this test machine's disk is not encrypted).
+- **18 November 2026, with accounts, placement, aggregates, sharing, metrics and Beacon:** **all 40 checks hold**
+  ([`results/gateway-dgx-spark-2026-11-18T0231Z.json`](results/gateway-dgx-spark-2026-11-18T0231Z.json); the check of
+  encryption at rest in `warn` mode: this test machine's disk is not encrypted).
   - The 13 below now run as an analyst who logged in through the API.
   - 8 more cover accounts and the audit log (at the end of this section).
   - 1 covers placement: the site's SARS-CoV-2 tree is built from phase A's 1,000 public genomes, and the genome
@@ -134,6 +134,7 @@ with no earlier jobs.
   - 5 cover the aggregated counts of phase D at the site: the genome job is uploaded with a region and collection
     date ([RESULTS-PHASE-D.md](RESULTS-PHASE-D.md), "At a site").
   - 7 cover sharing (below).
+  - 5 cover Beacon (below).
   - 1 covers the metrics for Prometheus (`/metrics`): refused without the scrape token or with a wrong one, served
     with it, with counts only (no user, job or genome names).
 - **14 November 2026, before accounts:** all 13
@@ -194,6 +195,19 @@ with no earlier jobs.
 - **Only what is approved:** a file outside approved datasets (the uploaded genome itself) is not served (404).
   Once the dataset is withdrawn, it and its files are gone (404).
 - **Audit:** the dataset's creation and withdrawal, and every DRS object read and download, are in the audit log.
+
+**Beacon** ([GA4GH Beacon v2](https://www.ga4gh.org/product/beacon/)), the 5 checks added on 18 November:
+- **The test data:** a copy of the reference with one substitution, A23403G (spike D614G), analysed and shared with
+  the first genome job as a new dataset.
+- **As a researcher:**
+  - A23403G is found (`start=23402`, 0-based as in Beacon v2), and a substitution no genome has is not;
+  - the filter `lineage:B` finds the dataset;
+  - the dataset withdrawn in the sharing part is never searched;
+  - asked for counts, the researcher still gets yes or no only.
+- **As an analyst:** the count, 1.
+- **Refused (400):** no query, a bad start, a bad base, an unknown filter.
+- **Listings and audit:** the approved datasets (with their DUO consent) and the lineages as filtering terms are
+  listed, and every query is in the audit log.
 
 **The page** was looked at in Chromium:
 - 14 November: at 1280 px and at a phone's 390 px (no horizontal scrolling); the PDF report and the tree drawings too.

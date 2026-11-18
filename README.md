@@ -138,11 +138,17 @@ Built:
 - **Served through [GA4GH DRS](https://www.ga4gh.org/product/data-repository-service-drs/) 1.4:** each file is an
   object whose id and checksum are its SHA-256; a dataset is a bundle. Nothing outside an approved dataset is served,
   and every access is in the audit log.
-- **The gateway check:** all 34 checks hold, 7 of them for sharing (35 with the metrics below).
-- **With the federation (phase C proper):** GA4GH Passports for researchers of other labs, and Beacon discovery.
+- **Discovery through [GA4GH Beacon v2](https://www.ga4gh.org/product/beacon/)** (`gh_beacon`), over the approved
+  datasets only:
+  - by substitution (`/beacon/g_variants?referenceName=NC_045512.2&start=23402&referenceBases=A&alternateBases=G`)
+    and by lineage (`filters=lineage:B`);
+  - researchers get yes or no per dataset, the lab's own roles also counts.
+- **The gateway check:** all 40 checks hold, 7 of them for sharing and 5 for Beacon.
+- **With the federation (phase C proper):** GA4GH Passports for researchers of other labs, and Beacon queries across
+  labs.
 
 Next:
-- **GA4GH Passports and Beacon**, with the federation (phase C, the part inside a lab), then the federation's part of phases C and D.
+- **GA4GH Passports and Beacon across labs**, with the federation (phase C, the part inside a lab), then the federation's part of phases C and D.
 
 ## Methods
 
