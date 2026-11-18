@@ -48,7 +48,9 @@ pre { white-space: pre-wrap; word-break: break-all; font-size: 12px; color: var(
 #events { font-size: 13px; color: var(--muted); max-height: 220px; overflow: auto; padding-left: 28px; margin: 0; }
 code { font-size: 12px; }
 .exports a { margin-right: 14px; font-size: 14px; }
-#d-tree { background: #fff; border-radius: 4px; max-width: none; }
+.tree-view { background: #fff; border-radius: 4px; border: 1px solid var(--line); overflow: hidden; touch-action: none; }
+.tree-view svg { display: block; cursor: grab; }
+.tree-tools { margin: 6px 0; }
 select { max-width: 100%; font: inherit; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; }
 #alerts li { color: var(--warn); }
 a { color: var(--accent); }

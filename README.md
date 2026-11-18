@@ -132,6 +132,8 @@ Built:
 ## Status: the page, against the specification (FS 3.1)
 
 - **Uploads:** files, or a sequence typed or pasted with a DNA/RNA choice; optional region and collection date.
+- **Interactive trees:** zoom, move, find a job or genome, click a genome to open its analysis; bootstrap support
+  at the branches.
 - **One's own account:** open sessions, with the others ended in one click; a password change (password, a
   one-time code and the new password); an admin's reset of a user who lost their phone or password (a new password
   and one-time secret, every session ended, the account unlocked).

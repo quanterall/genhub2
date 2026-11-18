@@ -209,7 +209,8 @@ svg(Newick) ->
     Bar = bar(Depth),
     ["<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"", integer_to_list(W), "\" height=\"", integer_to_list(H),
      "\" viewBox=\"0 0 ", integer_to_list(W), " ", integer_to_list(H), "\" font-family=\"sans-serif\" font-size=\"11\">",
-     "<style>line{stroke:#555;stroke-width:1.2}text{fill:#222}text.s{fill:#777;font-size:9px}</style>",
+     "<style>line{stroke:#555;stroke-width:1.2}text{fill:#222}text.s{fill:#777;font-size:9px}"
+     "text.hit{fill:#c2410c;font-weight:bold}</style>",
      Lines,
      case Note of
          none -> ["<line x1=\"20\" y1=\"", n(H - 20), "\" x2=\"", n(20 + Bar * Scale), "\" y2=\"", n(H - 20), "\"/>",
@@ -231,7 +232,7 @@ draw({node, [], Name, L}, X, Scale, I) ->
     Y = 20 + I * 14,
     X2 = 20 + (X + max(L, 0.0)) * Scale,
     {Y, I + 1, [ln(20 + X * Scale, Y, X2, Y),
-                ["<text x=\"", n(X2 + 4), "\" y=\"", n(Y + 4), "\">", xml(Name), "</text>"]]};
+                ["<text class=\"leaf\" x=\"", n(X2 + 4), "\" y=\"", n(Y + 4), "\">", xml(Name), "</text>"]]};
 draw({node, Kids, Name, L}, X, Scale, I) ->
     X1 = X + max(L, 0.0),
     {Ys, Next, Svgs} = lists:foldl(fun(K, {Ys0, I0, S0}) ->

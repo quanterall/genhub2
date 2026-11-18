@@ -285,7 +285,7 @@ $("#go").addEventListener("click", async () => {
     const {id} = await api("/api/jobs", {method: "POST", headers: {"content-type": "application/json"},
                                          body: JSON.stringify({kind, inputs, metadata: metadata()})});
     $("#msg").textContent = `Started ${id}.`;
-    selected = id;
+    selected = id; history.replaceState(null, "", "#" + id);
     await refresh();
   } catch (e) {
     $("#msg").textContent = "Failed: " + e.message;
@@ -308,7 +308,7 @@ $("#t-go").addEventListener("click", async () => {
     const r = await api("/api/trees", {method: "POST", headers: {"content-type": "application/json"},
                                        body: JSON.stringify({jobs, method: $("#t-method").value, bootstrap: boot()})});
     $("#t-msg").textContent = `Started ${r.id}: ${jobs.length} analyses against ${r.reference}.`;
-    selected = r.id;
+    selected = r.id; history.replaceState(null, "", "#" + r.id);
     await refresh();
   } catch (e) {
     $("#t-msg").textContent = "Failed: " + e.message;
@@ -337,6 +337,57 @@ async function refresh() {
   await monitor();
 }
 
+// the tree drawn inline, so it can be zoomed, moved, searched and its genomes clicked (leaves are named job/genome)
+let treeShown = null, tv = null;
+async function showTree(id, url) {
+  const r = await fetch(url, {credentials: "same-origin"});
+  $("#d-tree").innerHTML = await r.text();
+  treeShown = id;
+  const svg = $("#d-tree svg");
+  const [, , w, h] = svg.getAttribute("viewBox").split(" ").map(Number);
+  tv = {x: 0, y: 0, w, h, W: w, H: h};
+  svg.removeAttribute("width"); svg.removeAttribute("height");
+  svg.style.width = "100%"; svg.style.height = Math.min(h, 640) + "px";
+  const apply = () => svg.setAttribute("viewBox", `${tv.x} ${tv.y} ${tv.w} ${tv.h}`);
+  const zoom = (f, cx = tv.x + tv.w / 2, cy = tv.y + tv.h / 2) => {
+    const w2 = Math.min(tv.W, Math.max(tv.W / 50, tv.w * f)), h2 = tv.h * (w2 / tv.w);
+    tv.x = cx - (cx - tv.x) * (w2 / tv.w); tv.y = cy - (cy - tv.y) * (h2 / tv.h); tv.w = w2; tv.h = h2; apply();
+  };
+  $("#tz-in").onclick = () => zoom(0.7); $("#tz-out").onclick = () => zoom(1 / 0.7);
+  $("#tz-fit").onclick = () => { tv = {...tv, x: 0, y: 0, w: tv.W, h: tv.H}; apply(); };
+  svg.addEventListener("wheel", (ev) => {
+    ev.preventDefault();
+    const p = svg.getBoundingClientRect();
+    zoom(ev.deltaY < 0 ? 0.8 : 1.25, tv.x + (ev.clientX - p.left) / p.width * tv.w, tv.y + (ev.clientY - p.top) / p.height * tv.h);
+  }, {passive: false});
+  let drag = null;
+  svg.addEventListener("pointerdown", (ev) => { if (ev.target.classList.contains("leaf")) return; drag = {x: ev.clientX, y: ev.clientY, vx: tv.x, vy: tv.y}; svg.setPointerCapture(ev.pointerId); });
+  svg.addEventListener("pointermove", (ev) => {
+    if (!drag) return;
+    const p = svg.getBoundingClientRect();
+    tv.x = drag.vx - (ev.clientX - drag.x) / p.width * tv.w; tv.y = drag.vy - (ev.clientY - drag.y) / p.height * tv.h; apply();
+  });
+  svg.addEventListener("pointerup", () => { drag = null; });
+  svg.querySelectorAll("text.leaf").forEach((t) => {
+    const job = t.textContent.split("/")[0];
+    if (job.startsWith("job-")) {
+      t.style.cursor = "pointer";
+      t.addEventListener("click", () => { selected = job; history.replaceState(null, "", "#" + job); treeShown = null; refresh(); });
+    }
+  });
+  $("#tz-find").value = ""; $("#tz-hits").textContent = "";
+}
+
+$("#tz-find").addEventListener("input", () => {
+  const q = $("#tz-find").value.trim().toLowerCase();
+  const leaves = [...document.querySelectorAll("#d-tree text.leaf")];
+  leaves.forEach((t) => t.classList.toggle("hit", !!q && t.textContent.toLowerCase().includes(q)));
+  const hits = leaves.filter((t) => t.classList.contains("hit"));
+  $("#tz-hits").textContent = q ? `${hits.length} of ${leaves.length} genomes` : "";
+  if (hits[0] && tv) { const b = hits[0].getBBox(); tv.x = Math.max(0, b.x - tv.w / 4); tv.y = Math.max(0, b.y - tv.h / 2);
+    $("#d-tree svg").setAttribute("viewBox", `${tv.x} ${tv.y} ${tv.w} ${tv.h}`); }
+});
+
 async function show(id) {
   const j = await api("/api/jobs/" + encodeURIComponent(id));
   const res = (step) => (j.steps[step] ? j.steps[step].results : []);
@@ -348,7 +399,7 @@ async function show(id) {
   $("#d-exports").innerHTML = j.state === "done"
     ? "Export: " + exp.map((e) => `<a href="${base}${e}" target="_blank" rel="noopener">${e}</a>`).join("") : "";
   $("#d-tree-wrap").hidden = !(isTree && j.state === "done");
-  if (isTree && j.state === "done") $("#d-tree").src = base + "tree.svg";
+  if (isTree && j.state === "done" && treeShown !== j.id) await showTree(j.id, base + "tree.svg");
   $("#d-results").hidden = isTree;
   $("#d-steps").innerHTML = j.order.map((s) => `<span class="step ${j.steps[s] ? "done" : ""}">${esc(s)}${
     j.steps[s] ? " " + j.steps[s].seconds.toFixed(2) + " s" : ""}</span>`).join("");

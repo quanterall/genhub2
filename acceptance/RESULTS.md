@@ -231,6 +231,10 @@ with no earlier jobs.
   - **Trends:** the trends table counted it by week and lineage, and the merged alerts listed its lineage as new.
   - **Settings:** an admin saved new alert thresholds; an analyst does not see the form. At 1280 and 390 px, with no
     horizontal scrolling.
+  - **Interactive trees:** a neighbour-joining tree with 20 bootstrap replicates, built on the page from three
+    uploaded genomes (7 leaves with the earlier runs' genomes and the reference, 4 support values). Zoom in and fit
+    change the view. Finding a job highlights its genome (1 of 7). Clicking the genome opens its analysis. A reload
+    keeps the tree, because the address now carries the selected job. At 390 px, no horizontal scrolling.
 
 ## 6. The added methods, each against what it adds to
 

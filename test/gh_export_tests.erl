@@ -9,7 +9,7 @@ newick_test() ->
 svg_test() ->
     S = iolist_to_binary(gh_export:svg(<<"((a:1,b:2):1,c:3,d<x>:4);">>)),
     ?assertMatch(<<"<svg ", _/binary>>, S),
-    ?assertEqual(4, length(binary:matches(S, <<"<text x=">>)) - 1),     % four leaves and the scale bar
+    ?assertEqual(4, length(binary:matches(S, <<"<text class=\"leaf\"">>))),     % four leaves, marked for the page
     ?assertNotEqual(nomatch, binary:match(S, <<"d&lt;x&gt;">>)).
 
 job() ->

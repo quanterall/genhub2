@@ -116,7 +116,17 @@
     <h2 id="d-title"></h2>
     <p id="d-exports" class="exports"></p>
     <div id="d-steps" class="steps"></div>
-    <div id="d-tree-wrap" hidden><h3>Tree</h3><div class="scroll"><img id="d-tree" alt="phylogenetic tree"></div></div>
+    <div id="d-tree-wrap" hidden><h3>Tree</h3>
+      <div class="row tree-tools">
+        <button class="small" id="tz-in" type="button">Zoom in</button>
+        <button class="small" id="tz-out" type="button">Zoom out</button>
+        <button class="small" id="tz-fit" type="button">Fit</button>
+        <label>Find <input id="tz-find" placeholder="a job, a genome, a lineage"></label>
+        <span id="tz-hits" class="hint"></span>
+      </div>
+      <div id="d-tree" class="tree-view" aria-label="phylogenetic tree"></div>
+      <p class="hint">Drag to move, the wheel or the buttons to zoom; click a genome to open its analysis. Numbers at
+        branches are bootstrap support (%).</p></div>
     <div id="d-results">
     <h3>Classification</h3>
     <div class="scroll"><table id="d-class"><thead><tr><th>Sequence</th><th>Species</th><th>Family</th>
