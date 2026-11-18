@@ -132,6 +132,9 @@ Built:
 ## Status: the page, against the specification (FS 3.1)
 
 - **Uploads:** files, or a sequence typed or pasted with a DNA/RNA choice; optional region and collection date.
+- **One's own account:** open sessions, with the others ended in one click; a password change (password, a
+  one-time code and the new password); an admin's reset of a user who lost their phone or password (a new password
+  and one-time secret, every session ended, the account unlocked).
 - **Monitoring:** trends by week, lineage and region from the aggregated counts; the alerts of the merged counts;
   alert thresholds and whether new alerts are published (MQTT and open pages), set by an admin (`/api/settings`,
   `gh_settings`, audited); importing another site's aggregates.

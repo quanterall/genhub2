@@ -23,7 +23,9 @@
 %%  12. Beacon v2 over approved datasets: a genome with A23403G (D614G) shared; a researcher finds the mutation and the
 %%      lineage, yes or no only; an analyst gets counts; a withdrawn dataset is not searched; bad queries refused;
 %%  13. alert thresholds and notifications: only an admin changes them, checked and audited; each new lineage of the
-%%      merged counts published once on genhub/alerts, as it appears.
+%%      merged counts published once on genhub/alerts, as it appears;
+%%  14. one's own account: sessions listed, the others ended; a password change (refused with a wrong code); an
+%%      admin's reset ends the user's sessions and gives a new secret.
 %% Parts 1-7 run as an analyst who logged in through the API.
 %%
 %% Needs the reference bundles of the phase A acceptance test, and EMQX on 127.0.0.1:21883 (run_gateway.sh); the
@@ -75,17 +77,18 @@ main([Out]) ->
     Metrics = metrics(),
     Beacon = beacon(Users, maps:get(id, Job), maps:get(id, Sharing)),
     Settings = settings(Users, Mqtt),
+    Account = account(Users),
     Checks = checks(Page, Job, MqttMsgs, WsMsgs, Viamqtt, Refused)
         ++ more_checks(Job, Viamqtt, Exports, Tree, Summary, Alerts) ++ accounts_checks(Accounts)
         ++ aggregates_checks(Aggregates) ++ sharing_checks(Sharing, [maps:get(id, Job), maps:get(id, Viamqtt)])
-        ++ metrics_checks(Metrics) ++ beacon_checks(Beacon, maps:get(id, Sharing)) ++ settings_checks(Settings),
+        ++ metrics_checks(Metrics) ++ beacon_checks(Beacon, maps:get(id, Sharing)) ++ settings_checks(Settings) ++ account_checks(Account),
     R = #{date => list_to_binary(calendar:system_time_to_rfc3339(erlang:system_time(second), [{offset, "Z"}])),
           host => list_to_binary(net_adm:localhost()), emqx => <<"emqx/emqx:5.8.9">>,
           upload => Upload, job_seconds => maps:get(seconds, Job), job_state => maps:get(state, Job),
           mqtt_topics => count([T || {T, _} <- MqttMsgs]), websocket_topics => count([T || {T, _} <- WsMsgs]),
           job_from_mqtt => Viamqtt, exports => Exports, tree => maps:remove(svg, Tree), summary => Summary,
           alerts => Alerts, refused => Refused, accounts => Accounts, aggregates => Aggregates, sharing => Sharing,
-          metrics => Metrics, beacon => Beacon, settings => Settings,
+          metrics => Metrics, beacon => Beacon, settings => Settings, account => Account,
           usher_tree => UsherTree,
           checks => Checks,
           seconds => (erlang:monotonic_time(millisecond) - T0) / 1000},
@@ -431,6 +434,55 @@ aggregates_checks(A) ->
            andalso lists:member(<<"check-other-site">>, maps:get(<<"sites">>, Al)), Al),
      check(<<"aggregates: a researcher reads the aggregates and the alerts">>,
            maps:get(researcher, A) =:= #{aggregates => 200, alerts => 200}, maps:get(researcher, A))].
+
+%%% 14. one's own account
+
+account(Users) ->
+    {AdName, AdSecret} = maps:get(admin, Users),
+    Post = fun(Path, Body) -> element(1, http(post, Path, {"application/json", json:encode(Body)})) end,
+    {200, <<"admin">>} = login(AdName, AdSecret),
+    {201, _, CB} = http(post, "/api/users", {"application/json", json:encode(#{user => <<"check-profile">>, role => analyst,
+                                                                             password => <<"a password for the check">>})}),
+    Secret = gh_totp:unbase32(maps:get(<<"totp_secret">>, json:decode(CB))),
+    AdminCookie = cookie(),
+    {200, <<"analyst">>} = login(<<"check-profile">>, Secret),
+    First = cookie(),
+    {200, <<"analyst">>} = login(<<"check-profile">>, Secret),
+    Second = cookie(),
+    {200, _, SB} = http(get, "/api/me/sessions", none),
+    Sessions = [maps:get(<<"current">>, X) || X <- json:decode(SB)],
+    {EndOthers, _, _} = http(post, "/api/me/sessions/end-others", {"application/json", <<"{}">>}),
+    persistent_term:put({?MODULE, cookie}, First),
+    {FirstAfter, _, _} = http(get, "/api/me", none),
+    persistent_term:put({?MODULE, cookie}, Second),
+    WrongCode = Post("/api/me/password", #{password => <<"a password for the check">>, code => <<"000000">>,
+                                           new_password => <<"another password for the check">>}),
+    Changed = Post("/api/me/password", #{password => <<"a password for the check">>, code => code(Secret),
+                                         new_password => <<"another password for the check">>}),
+    {StillIn, _, _} = http(get, "/api/me", none),
+    persistent_term:put({?MODULE, cookie}, AdminCookie),
+    {Reset, _, RB} = http(post, "/api/users/check-profile/reset", {"application/json",
+                                                                   json:encode(#{password => <<"a reset password for the check">>})}),
+    NewSecret = gh_totp:unbase32(maps:get(<<"totp_secret">>, json:decode(RB))),
+    {200, _, AuditB} = http(get, "/api/audit?from=1&limit=10000", none),
+    Audited = lists:usort([maps:get(<<"action">>, X) || #{<<"action">> := A} = X <- json:decode(AuditB),
+                                                     lists:member(A, [<<"password_change">>, <<"sessions_end_others">>, <<"user_reset">>])]),
+    persistent_term:put({?MODULE, cookie}, Second),
+    {AfterReset, _, _} = http(get, "/api/me", none),
+    {S, _, _} = http_h(post, "/api/login", {"application/json", json:encode(#{user => <<"check-profile">>,
+                                                                             password => <<"a reset password for the check">>,
+                                                                             code => code(NewSecret)})}, [{"x-genhub2", "1"}]),
+    #{sessions => lists:sort(Sessions), end_others => EndOthers, first_after => FirstAfter, wrong_code => WrongCode,
+      changed => Changed, still_in => StillIn, reset => Reset, after_reset => AfterReset, new_login => S, audited => Audited}.
+
+account_checks(A) ->
+    [check(<<"account: two sessions listed, this one marked; the other ended (401 after)">>,
+           {maps:get(sessions, A), maps:get(end_others, A), maps:get(first_after, A)} =:= {[false, true], 200, 401}, A),
+     check(<<"account: a password change refused with a wrong code (401), done with the right one; this session stays">>,
+           {maps:get(wrong_code, A), maps:get(changed, A), maps:get(still_in, A)} =:= {401, 200, 200}, A),
+     check(<<"account: an admin's reset ends the user's session; the user logs in with the new password and secret; audited">>,
+           {maps:get(reset, A), maps:get(after_reset, A), maps:get(new_login, A)} =:= {200, 401, 200}
+           andalso maps:get(audited, A) =:= [<<"password_change">>, <<"sessions_end_others">>, <<"user_reset">>], A)].
 
 %%% 13. alert thresholds and notifications
 

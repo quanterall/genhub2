@@ -24,7 +24,9 @@ accounts_test_() ->
               {"five failures lock the account", {timeout, 120, fun lockout/0}},
               {"sessions end at logout and when the user is disabled", {timeout, 60, fun sessions/0}},
               {"names, roles and passwords are checked", {timeout, 60, fun create_checks/0}},
-              {"the audit chain shows a changed or removed record", fun audit_chain/0}]
+              {"the audit chain shows a changed or removed record", fun audit_chain/0},
+              {"a user changes their password; their other sessions end", {timeout, 120, fun change_password/0}},
+              {"an admin resets a user: new secret, unlocked, sessions ended", {timeout, 120, fun reset/0}}]
      end}.
 
 setup() ->
@@ -88,6 +90,38 @@ create_checks() ->
     ?assertEqual({error, bad_role}, gh_accounts:create(<<"eve">>, root, <<"long enough password">>)),
     {ok, _} = gh_accounts:create(<<"eve">>, analyst, <<"long enough password">>),
     ?assertEqual({error, exists}, gh_accounts:create(<<"eve">>, admin, <<"long enough password">>)).
+
+change_password() ->
+    {ok, S} = gh_accounts:create(<<"fay">>, analyst, <<"the first password">>),
+    {ok, T1, _} = gh_accounts:login(<<"fay">>, <<"the first password">>, now_code(S)),
+    {ok, T2, _} = gh_accounts:login(<<"fay">>, <<"the first password">>, next_code(S)),
+    [#{current := true}, #{current := false}] =
+        lists:sort(fun(A, B) -> maps:get(current, A) >= maps:get(current, B) end, gh_accounts:sessions(<<"fay">>, T2)),
+    %% the code of a step already used, or the wrong password: refused
+    ?assertEqual({error, denied}, gh_accounts:change_password(<<"fay">>, <<"the first password">>, next_code(S),
+                                                             {<<"the second password">>, T2})),
+    ?assertEqual({error, password_too_short}, gh_accounts:change_password(<<"fay">>, <<"the first password">>, <<"000000">>,
+                                                                         {<<"short">>, T2})),
+    %% each code below is of a step later than every one used before (a code is accepted once)
+    timer:sleep(31000),
+    ok = gh_accounts:change_password(<<"fay">>, <<"the first password">>, next_code(S), {<<"the second password">>, T2}),
+    ?assertEqual(error, gh_accounts:session(T1)),
+    ?assertMatch({ok, <<"fay">>, analyst}, gh_accounts:session(T2)),
+    timer:sleep(31000),
+    ?assertEqual({error, denied}, gh_accounts:login(<<"fay">>, <<"the first password">>, next_code(S))),
+    {ok, _, analyst} = gh_accounts:login(<<"fay">>, <<"the second password">>, next_code(S)).
+
+reset() ->
+    {ok, S} = gh_accounts:create(<<"gus">>, researcher, <<"gus's password">>),
+    {ok, T, _} = gh_accounts:login(<<"gus">>, <<"gus's password">>, now_code(S)),
+    [gh_accounts:login(<<"gus">>, <<"wrong password ", (integer_to_binary(I))/binary>>, <<"000000">>) || I <- lists:seq(1, 5)],
+    {error, locked} = gh_accounts:login(<<"gus">>, <<"gus's password">>, next_code(S)),
+    {ok, S2} = gh_accounts:reset(<<"gus">>, <<"a new password for gus">>),
+    ?assertNotEqual(S, S2),
+    ?assertEqual(error, gh_accounts:session(T)),
+    ?assertEqual({error, denied}, gh_accounts:login(<<"gus">>, <<"a new password for gus">>, now_code(S))),
+    {ok, _, researcher} = gh_accounts:login(<<"gus">>, <<"a new password for gus">>, now_code(S2)),
+    ?assertEqual({error, no_such_user}, gh_accounts:reset(<<"nobody">>, <<"a new password here">>)).
 
 audit_chain() ->
     {ok, N0} = gh_audit:verify(),

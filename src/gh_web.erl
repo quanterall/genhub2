@@ -15,6 +15,9 @@
 %%   POST /api/logout, GET /api/me   the session's end; its user and role
 %%   GET  /api/users, POST /api/users      the users; a new user {"user", "role", "password"}: its TOTP secret, once
 %%   POST /api/users/:name/disable   a user disabled, their sessions ended
+%%   POST /api/users/:name/reset     (admin) {"password"}: a new password and one-time secret, sessions ended
+%%   POST /api/me/password           {"password", "code", "new_password"}: one's own; other sessions ended
+%%   GET  /api/me/sessions, POST /api/me/sessions/end-others    one's open sessions; end all but this one
 %%   GET  /api/audit?from=N&limit=M, GET /api/audit/verify    the audit log (gh_audit); whether its chain is whole
 %%   GET  /api/aggregates            this site's aggregated counts (gh_agg, format genhub2-aggregates/1)
 %%   POST /api/aggregates            another site's aggregates, imported (admin)
@@ -69,6 +72,10 @@ start() ->
                          {"/api/login", gh_web_api, login},
                          {"/api/logout", gh_web_api, logout},
                          {"/api/me", gh_web_api, me},
+                         {"/api/me/password", gh_web_api, me_password},
+                         {"/api/me/sessions", gh_web_api, me_sessions},
+                         {"/api/me/sessions/end-others", gh_web_api, me_end_sessions},
+                         {"/api/users/:name/reset", gh_web_api, user_reset},
                          {"/api/users", gh_web_api, users},
                          {"/api/users/:name/disable", gh_web_api, user_disable},
                          {"/api/audit", gh_web_api, audit},

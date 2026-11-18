@@ -121,8 +121,8 @@ neighbour-joining, `4c441ab1...` for FastTree).
 
 [`gh_gateway_check.erl`](gh_gateway_check.erl), run by [`run_gateway.sh`](run_gateway.sh) against EMQX 5.8.9, on a site
 with no earlier jobs.
-- **18 November 2026, with accounts, placement, aggregates, sharing, metrics, Beacon and alert settings:** **all 42
-  checks hold** ([`results/gateway-dgx-spark-2026-11-18T0244Z.json`](results/gateway-dgx-spark-2026-11-18T0244Z.json); the check of
+- **18 November 2026, with accounts, placement, aggregates, sharing, metrics, Beacon, alert settings and one's own
+  account:** **all 45 checks hold** ([`results/gateway-dgx-spark-2026-11-18T0253Z.json`](results/gateway-dgx-spark-2026-11-18T0253Z.json); the check of
   encryption at rest in `warn` mode: this test machine's disk is not encrypted).
   - The 13 below now run as an analyst who logged in through the API.
   - 8 more cover accounts and the audit log (at the end of this section).
@@ -135,6 +135,11 @@ with no earlier jobs.
     date ([RESULTS-PHASE-D.md](RESULTS-PHASE-D.md), "At a site").
   - 7 cover sharing (below).
   - 5 cover Beacon (below).
+  - 3 cover one's own account:
+    - one's sessions are listed, and the others ended;
+    - a password change is refused with a wrong code and done with the right one;
+    - an admin's reset ends the user's sessions and gives a new password and one-time secret;
+    - all of it is audited.
   - 2 cover alert thresholds and notifications: only an admin changes them, values are checked, and changes are
     audited. Each new lineage of the merged counts is published once on `genhub/alerts`, as it appears: B when the
     genome job with metadata is first counted, then Z.9 with the other site's import.

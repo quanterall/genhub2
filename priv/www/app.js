@@ -39,7 +39,33 @@ async function start() {
   await datasets();
   $("#trends").hidden = false; $("#t-admin").hidden = me.role !== "admin";
   await trends();
+  $("#account").hidden = false;
+  await account();
 }
+
+async function account() {
+  const ss = await api("/api/me/sessions");
+  $("#me-sessions").innerHTML = ss.map((x) => `<li>since ${new Date(x.started).toLocaleString()}, last used
+    ${new Date(x.last_used).toLocaleString()}${x.current ? " <b>(this one)</b>" : ""}</li>`).join("");
+  $("#me-end").hidden = ss.length < 2;
+}
+
+$("#me-end").addEventListener("click", async () => {
+  try { await api("/api/me/sessions/end-others", {method: "POST"}); $("#me-msg").textContent = "Your other sessions are ended."; }
+  catch (e) { $("#me-msg").textContent = "Failed: " + e.message; }
+  await account();
+});
+
+$("#me-pw").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  try {
+    await api("/api/me/password", {method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({password: $("#me-old").value, code: $("#me-code").value.trim(), new_password: $("#me-new").value})});
+    $("#me-msg").textContent = "Password changed; your other sessions are ended.";
+  } catch (e) { $("#me-msg").textContent = "Failed: " + e.message; }
+  $("#me-old").value = ""; $("#me-code").value = ""; $("#me-new").value = "";
+  await account();
+});
 
 let agg = null;   // this site's aggregates, for the region filter
 
@@ -160,7 +186,21 @@ async function admin() {
   $("#a-users tbody").innerHTML = users.sort((a, b) => a.name.localeCompare(b.name)).map((u) => `<tr>
     <td>${esc(u.name)}</td><td>${esc(u.role)}</td>
     <td>${u.disabled ? "disabled" : u.locked ? "locked" : "active"}</td><td>${new Date(u.created).toLocaleDateString()}</td>
-    <td>${u.disabled || u.name === me.user ? "" : `<button class="small" data-disable="${esc(u.name)}">Disable</button>`}</td></tr>`).join("");
+    <td>${u.disabled || u.name === me.user ? "" : `<button class="small" data-disable="${esc(u.name)}">Disable</button>
+      <button class="small" data-reset="${esc(u.name)}">Reset</button>`}</td></tr>`).join("");
+  document.querySelectorAll("[data-reset]").forEach((b) => b.addEventListener("click", async () => {
+    const pw = prompt(`New password for ${b.dataset.reset} (12 characters or more). Their sessions end, and they get a new one-time secret.`);
+    if (!pw) return;
+    try {
+      const u = await api(`/api/users/${encodeURIComponent(b.dataset.reset)}/reset`, {method: "POST",
+        headers: {"content-type": "application/json"}, body: JSON.stringify({password: pw})});
+      $("#a-secret").innerHTML = `<b>${esc(u.user)}</b> reset: give them their new password, and this secret for an
+        authenticator app now; it is not shown again.<br>Secret: <code>${esc(u.totp_secret)}</code><br>Or as a link:
+        <code>${esc(u.totp_uri)}</code>`;
+      $("#a-secret").hidden = false;
+    } catch (e) { $("#a-msg").textContent = "Failed: " + e.message; }
+    await admin();
+  }));
   document.querySelectorAll("[data-disable]").forEach((b) => b.addEventListener("click", async () => {
     if (!confirm(`Disable ${b.dataset.disable}? Their sessions end now.`)) return;
     try { await api(`/api/users/${encodeURIComponent(b.dataset.disable)}/disable`, {method: "POST"}); }

@@ -14,7 +14,8 @@
 %%
 %% Tables (this site only): gh_user (disc copies), gh_session (memory: a restart ends every session).
 -module(gh_accounts).
--export([tables/0, create/3, users/0, disable/1, login/3, session/1, logout/1, roles/0, count/0]).
+-export([tables/0, create/3, users/0, disable/1, login/3, session/1, logout/1, roles/0, count/0,
+         change_password/4, reset/2, sessions/2, end_other_sessions/2]).
 
 -record(gh_user, {name, role, salt, hash, totp, last_step = -1, failures = 0, locked_until = 0, disabled = false,
                   created}).
@@ -117,15 +118,7 @@ login(Name, Password, Code) ->
                                      end),
                     {ok, Token, U#gh_user.role};
                 _ ->
-                    {atomic, _} = mnesia:transaction(
-                                    fun() ->
-                                            [U2] = mnesia:read(gh_user, Name, write),
-                                            F = U2#gh_user.failures + 1,
-                                            mnesia:write(case F >= ?MAX_FAILURES of
-                                                             true -> U2#gh_user{failures = 0, locked_until = Now + ?LOCK_MS};
-                                                             false -> U2#gh_user{failures = F}
-                                                         end)
-                                    end),
+                    ok = fail(Name, Now),
                     {error, denied}
             end
     end.
@@ -143,6 +136,97 @@ session(Token) when is_binary(Token), byte_size(Token) =:= 64 ->
         [] -> error
     end;
 session(_) -> error.
+
+%% A user's own password change: the current password and a one-time code, then the new password; the user's other
+%% sessions end (CurrentToken's stays). ok | {error, denied | locked | password_too_short}
+-spec change_password(binary(), binary(), binary(), {binary(), binary()}) -> ok | {error, atom()}.
+change_password(Name, Old, Code, {New, CurrentToken}) ->
+    if
+        byte_size(New) < ?MIN_PASSWORD -> {error, password_too_short};
+        true ->
+            %% checked as a login is (failures count, a code is used once), without a new session
+            case verify(Name, Old, Code) of
+                ok ->
+                    Salt = crypto:strong_rand_bytes(16),
+                    {atomic, ok} = mnesia:transaction(fun() ->
+                                                              [U] = mnesia:read(gh_user, Name, write),
+                                                              mnesia:write(U#gh_user{salt = Salt, hash = pbkdf2(New, Salt)})
+                                                      end),
+                    end_other_sessions(Name, CurrentToken);
+                E -> E
+            end
+    end.
+
+%% An admin's reset of a user who lost their phone or password: a new password and a new one-time secret; the
+%% account unlocked; every session of the user ended. {ok, Secret} | {error, no_such_user | password_too_short}
+-spec reset(binary(), binary()) -> {ok, binary()} | {error, atom()}.
+reset(_Name, New) when byte_size(New) < ?MIN_PASSWORD -> {error, password_too_short};
+reset(Name, New) ->
+    Salt = crypto:strong_rand_bytes(16),
+    Secret = gh_totp:new_secret(),
+    {atomic, R} = mnesia:transaction(
+                    fun() ->
+                            case mnesia:read(gh_user, Name, write) of
+                                [U] ->
+                                    mnesia:write(U#gh_user{salt = Salt, hash = pbkdf2(New, Salt), totp = Secret, last_step = -1,
+                                                           failures = 0, locked_until = 0}),
+                                    [mnesia:delete_object(S) || S <- mnesia:match_object(#gh_session{user = Name, _ = '_'})],
+                                    {ok, Secret};
+                                [] -> {error, no_such_user}
+                            end
+                    end),
+    R.
+
+%% a user's open sessions: #{started, last_used, current}, newest first; nothing that identifies the token
+-spec sessions(binary(), binary()) -> [map()].
+sessions(Name, CurrentToken) ->
+    Cur = th(CurrentToken),
+    [#{started => C, last_used => Se, current => H =:= Cur}
+     || #gh_session{token_hash = H, created = C, seen = Se}
+            <- lists:reverse(lists:keysort(#gh_session.created, mnesia:dirty_match_object(#gh_session{user = Name, _ = '_'})))].
+
+%% ends every session of the user but the current one; ok
+-spec end_other_sessions(binary(), binary()) -> ok.
+end_other_sessions(Name, CurrentToken) ->
+    Cur = th(CurrentToken),
+    {atomic, ok} = mnesia:transaction(fun() ->
+                                              [mnesia:delete_object(S) || #gh_session{token_hash = H} = S
+                                                                              <- mnesia:match_object(#gh_session{user = Name, _ = '_'}),
+                                                                          H =/= Cur],
+                                              ok
+                                      end),
+    ok.
+
+%% the password and code of an enabled, unlocked user, counted as a login attempt; ok | {error, denied | locked}
+verify(Name, Password, Code) ->
+    Now = erlang:system_time(millisecond),
+    case mnesia:dirty_read(gh_user, Name) of
+        [#gh_user{disabled = false, locked_until = L}] when L > Now -> {error, locked};
+        [#gh_user{disabled = false} = U] ->
+            PwOk = crypto:hash_equals(pbkdf2(Password, U#gh_user.salt), U#gh_user.hash),
+            case PwOk andalso gh_totp:check(U#gh_user.totp, Code, U#gh_user.last_step) of
+                {ok, Step} ->
+                    {atomic, ok} = mnesia:transaction(fun() ->
+                                                              [U2] = mnesia:read(gh_user, Name, write),
+                                                              mnesia:write(U2#gh_user{last_step = Step, failures = 0})
+                                                      end),
+                    ok;
+                _ -> fail(Name, Now), {error, denied}
+            end;
+        _ -> {error, denied}
+    end.
+
+fail(Name, Now) ->
+    {atomic, _} = mnesia:transaction(
+                    fun() ->
+                            [U2] = mnesia:read(gh_user, Name, write),
+                            F = U2#gh_user.failures + 1,
+                            mnesia:write(case F >= ?MAX_FAILURES of
+                                             true -> U2#gh_user{failures = 0, locked_until = Now + ?LOCK_MS};
+                                             false -> U2#gh_user{failures = F}
+                                         end)
+                    end),
+    ok.
 
 -spec logout(binary()) -> ok.
 logout(Token) when is_binary(Token) -> mnesia:dirty_delete(gh_session, th(Token));

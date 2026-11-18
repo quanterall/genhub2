@@ -156,6 +156,22 @@
     <p id="ds-msg" role="status"></p>
   </section>
 
+  <section class="card" id="account" hidden>
+    <h2>My account</h2>
+    <h3>Sessions</h3>
+    <ul id="me-sessions"></ul>
+    <button id="me-end" class="small">End my other sessions</button>
+    <h3>Change my password</h3>
+    <form id="me-pw">
+      <label>Current password <input id="me-old" type="password" autocomplete="current-password" required></label>
+      <label>Code from your authenticator app <input id="me-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
+        autocomplete="one-time-code" required></label>
+      <label>New password <input id="me-new" type="password" minlength="12" autocomplete="new-password" required></label>
+      <button type="submit">Change password</button>
+    </form>
+    <p id="me-msg" role="status"></p>
+  </section>
+
   <section class="card wide admin" id="admin" hidden>
     <h2>Administration</h2>
     <p id="a-storage" class="notice"></p>

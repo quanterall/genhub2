@@ -26,7 +26,9 @@ init(Req, What) ->
 -spec allowed(atom()) -> [gh_accounts:role()] | public.
 allowed(login) -> public;
 allowed(metrics) -> public;          % its own bearer token (handle(metrics, ...))
-allowed(W) when W =:= logout; W =:= me -> [admin, analyst, researcher];
+allowed(W) when W =:= logout; W =:= me; W =:= me_password; W =:= me_sessions; W =:= me_end_sessions ->
+    [admin, analyst, researcher];
+allowed(user_reset) -> [admin];
 allowed(summary) -> [admin, analyst, researcher];
 allowed(W) when W =:= aggregates; W =:= aggregate_alerts -> [admin, analyst, researcher];
 allowed(W) when W =:= datasets; W =:= dataset; W =:= drs_info; W =:= drs_object; W =:= drs_access; W =:= drs_data ->
@@ -64,6 +66,8 @@ authorize(What, Method, Req) ->
 
 actor() -> get(gh_actor).
 
+token(Req) -> proplists:get_value(?COOKIE, cowboy_req:parse_cookies(Req)).
+
 audit(Action, Object, Outcome, Detail) -> gh_audit:log(actor(), Action, Object, Outcome, Detail).
 
 path(Req) -> cowboy_req:path(Req).
@@ -100,6 +104,44 @@ handle(me, <<"GET">>, Req) ->
                   _ -> null
               end,
     reply(200, #{user => actor(), role => get(gh_role), storage => Storage}, Req);
+handle(me_password, <<"POST">>, Req) ->
+    {ok, Body, Req2} = cowboy_req:read_body(Req, #{length => 10000}),
+    {Old, Code, New} = case catch json:decode(Body) of
+                           #{<<"password">> := O, <<"code">> := C, <<"new_password">> := N}
+                             when is_binary(O), is_binary(C), is_binary(N) -> {O, C, N};
+                           _ -> throw({status, 400, <<"expected {\"password\", \"code\", \"new_password\"}">>})
+                       end,
+    case gh_accounts:change_password(actor(), Old, Code, {New, token(Req)}) of
+        ok -> audit(password_change, actor(), ok, #{}), reply(200, #{}, Req2);
+        {error, password_too_short} -> throw({status, 400, <<"the new password needs 12 characters or more">>});
+        {error, Why} ->
+            audit(password_change, actor(), denied, #{reason => Why}),
+            throw({status, 401, case Why of
+                                    locked -> <<"account locked for 15 minutes after 5 failed attempts">>;
+                                    _ -> <<"wrong password or code">>
+                                end})
+    end;
+handle(me_sessions, <<"GET">>, Req) ->
+    reply(200, gh_accounts:sessions(actor(), token(Req)), Req);
+handle(me_end_sessions, <<"POST">>, Req) ->
+    ok = gh_accounts:end_other_sessions(actor(), token(Req)),
+    audit(sessions_end_others, actor(), ok, #{}),
+    reply(200, gh_accounts:sessions(actor(), token(Req)), Req);
+handle(user_reset, <<"POST">>, Req) ->
+    Name = cowboy_req:binding(name, Req),
+    {ok, Body, Req2} = cowboy_req:read_body(Req, #{length => 10000}),
+    Pw = case catch json:decode(Body) of
+             #{<<"password">> := P} when is_binary(P) -> P;
+             _ -> throw({status, 400, <<"expected {\"password\"}: the user's new password">>})
+         end,
+    case gh_accounts:reset(Name, Pw) of
+        {ok, Secret} ->
+            audit(user_reset, Name, ok, #{}),
+            reply(200, #{user => Name, totp_secret => gh_totp:base32(Secret),
+                         totp_uri => gh_totp:uri(<<"GenHub2">>, Name, Secret)}, Req2);
+        {error, no_such_user} -> throw({status, 404, <<"no such user">>});
+        {error, password_too_short} -> throw({status, 400, <<"the new password needs 12 characters or more">>})
+    end;
 handle(users, <<"GET">>, Req) ->
     reply(200, gh_accounts:users(), Req);
 handle(users, <<"POST">>, Req) ->
