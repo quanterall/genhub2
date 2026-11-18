@@ -8,17 +8,37 @@
 %% kept (gh_agg_import), and the alerts are computed from all of them merged.
 -module(gh_monitor).
 -export([summary/0, job_done/1, tables/0, site/0, aggregate/0, import/1, imported/0, merged_alerts/1,
-         rows_for_aggregates/0]).
+         rows_for_aggregates/0, announce_merged/0]).
 
 -record(gh_agg_import, {site, aggregate, imported}).
+%% the merged alerts already announced, so each is announced once
+-record(gh_agg_announced, {alert, at}).
 
 -spec tables() -> ok.
 tables() ->
-    case mnesia:create_table(gh_agg_import, [{attributes, record_info(fields, gh_agg_import)}, {disc_copies, [node()]}]) of
-        {atomic, ok} -> ok;
-        {aborted, {already_exists, gh_agg_import}} -> ok
-    end,
-    ok = mnesia:wait_for_tables([gh_agg_import], 60000).
+    [case mnesia:create_table(T, [{attributes, A}, {disc_copies, [node()]}]) of
+         {atomic, ok} -> ok;
+         {aborted, {already_exists, T}} -> ok
+     end || {T, A} <- [{gh_agg_import, record_info(fields, gh_agg_import)},
+                       {gh_agg_announced, record_info(fields, gh_agg_announced)}]],
+    ok = mnesia:wait_for_tables([gh_agg_import, gh_agg_announced], 60000).
+
+%% The merged alerts not announced before: each audited, and published on genhub/alerts when the setting notify says
+%% so. Called after a job is done and after an import. The new alerts.
+-spec announce_merged() -> [map()].
+announce_merged() ->
+    #{alerts := Alerts} = merged_alerts(gh_settings:get(alert_thresholds)),
+    New = [A || A <- Alerts, mnesia:dirty_read(gh_agg_announced, key(A)) =:= []],
+    Mqtt = maps:get(mqtt, gh_settings:get(notify)),
+    [begin
+         ok = mnesia:dirty_write(#gh_agg_announced{alert = key(A), at = erlang:system_time(millisecond)}),
+         gh_audit:log(<<"system">>, alert, <<>>, ok, A#{source => merged}),
+         Mqtt andalso gh_events:publish(<<"genhub/alerts">>, A#{source => merged})
+     end || A <- New],
+    New.
+
+key(#{type := new_lineage, week := W, lineage := L}) -> {new_lineage, W, L};
+key(#{type := rising_mutation, week := W, mutation := M}) -> {rising_mutation, W, M}.
 
 %% this site's name in aggregates: the setting site, or the host's name
 -spec site() -> binary().
@@ -103,6 +123,7 @@ job_done(Id) ->
          || K <- [species, pango],
             V <- lists:usort([maps:get(K, R) || R <- Mine]), V =/= <<>>,
             not lists:member(V, [maps:get(K, R) || R <- Earlier])],
+    _ = announce_merged(),
     ok.
 
 %% {Job, Created, Row} of every sequence of every finished analysis (gh_export:rows/1), oldest first

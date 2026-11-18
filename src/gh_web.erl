@@ -19,6 +19,7 @@
 %%   GET  /api/aggregates            this site's aggregated counts (gh_agg, format genhub2-aggregates/1)
 %%   POST /api/aggregates            another site's aggregates, imported (admin)
 %%   GET  /api/aggregates/alerts     the alerts of this site's and the imported aggregates, merged
+%%   GET  /api/settings, PUT /api/settings (admin)   alert thresholds and notification settings (gh_settings)
 %%   GET  /api/datasets, POST /api/datasets (admin)   shared datasets (gh_share): {"title", "description",
 %%                                   "consent": [DUO codes], "jobs": [id, ...]}; GET /api/datasets/:id; POST
 %%                                   /api/datasets/:id/withdraw (admin)
@@ -50,6 +51,7 @@ start() ->
                          {"/api/summary", gh_web_api, summary},
                          {"/api/files/:hash", gh_web_api, file},
                          {"/api/aggregates", gh_web_api, aggregates},
+                         {"/api/settings", gh_web_api, settings},
                          {"/metrics", gh_web_api, metrics},
                          {"/beacon", gh_web_api, beacon_info},
                          {"/beacon/info", gh_web_api, beacon_info},

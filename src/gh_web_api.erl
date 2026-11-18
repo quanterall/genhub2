@@ -32,6 +32,7 @@ allowed(W) when W =:= aggregates; W =:= aggregate_alerts -> [admin, analyst, res
 allowed(W) when W =:= datasets; W =:= dataset; W =:= drs_info; W =:= drs_object; W =:= drs_access; W =:= drs_data ->
     [admin, analyst, researcher];
 allowed(dataset_withdraw) -> [admin];
+allowed(settings) -> [admin, analyst, researcher];
 allowed(W) when W =:= beacon_info; W =:= beacon_datasets; W =:= beacon_terms; W =:= beacon_variants ->
     [admin, analyst, researcher];
 allowed(W) when W =:= users; W =:= user_disable; W =:= audit; W =:= audit_verify -> [admin];
@@ -333,14 +334,38 @@ handle(aggregates, <<"POST">>, Req) ->
             case gh_monitor:import(A) of
                 ok ->
                     audit(aggregates_import, maps:get(site, A), ok, #{generated => maps:get(generated, A)}),
+                    _ = gh_monitor:announce_merged(),
                     reply(201, #{site => maps:get(site, A)}, Req2);
                 {error, own_site} -> throw({status, 400, <<"these are this site's own aggregates">>})
             end;
         {error, _} -> throw({status, 400, <<"not an aggregate (format genhub2-aggregates/1)">>})
     end;
+handle(settings, <<"GET">>, Req) ->
+    reply(200, #{alert_thresholds => gh_settings:get(alert_thresholds), notify => gh_settings:get(notify)}, Req);
+handle(settings, <<"PUT">>, Req) ->
+    get(gh_role) =:= admin orelse throw({status, 403, <<"only an admin changes the site's settings">>}),
+    {ok, Body, Req2} = cowboy_req:read_body(Req, #{length => 10000}),
+    New = case catch json:decode(Body) of M when is_map(M) -> M; _ -> throw({status, 400, <<"a JSON object">>}) end,
+    Changes = [{K, V} || {KB, V} <- maps:to_list(New),
+                         K <- [case KB of
+                                   <<"alert_thresholds">> -> alert_thresholds;
+                                   <<"notify">> -> notify;
+                                   _ -> throw({status, 400, <<"settings: alert_thresholds, notify">>})
+                               end]],
+    %% all checked first, so a request changes everything it asks for or nothing
+    [case gh_settings:check(K, V) of
+         {ok, _} -> ok;
+         {error, Why} -> throw({status, 400, Why})
+     end || {K, V} <- Changes],
+    [begin
+         Before = gh_settings:get(K),
+         ok = gh_settings:put(K, V),
+         audit(settings_change, atom_to_binary(K), ok, #{before => Before, 'after' => gh_settings:get(K)})
+     end || {K, V} <- Changes],
+    _ = gh_monitor:announce_merged(),
+    reply(200, #{alert_thresholds => gh_settings:get(alert_thresholds), notify => gh_settings:get(notify)}, Req2);
 handle(aggregate_alerts, <<"GET">>, Req) ->
-    Opts = maps:from_list([{K, V} || {K, V} <- maps:to_list(application:get_env(genhub2, alert_thresholds, #{}))]),
-    R = gh_monitor:merged_alerts(Opts),
+    R = gh_monitor:merged_alerts(gh_settings:get(alert_thresholds)),
     audit(aggregate_alerts_view, <<>>, ok, #{alerts => length(maps:get(alerts, R))}),
     reply(200, R, Req);
 handle(summary, <<"GET">>, Req) ->

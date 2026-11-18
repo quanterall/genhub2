@@ -62,3 +62,7 @@ input { font: inherit; background: var(--card); color: var(--ink); border: 1px s
 .row label { margin: 0; min-width: 0; max-width: 100%; }
 #ds-consent { width: 100%; }
 #a-secret code { word-break: break-all; }
+textarea { width: 100%; font: 13px/1.4 ui-monospace, monospace; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 6px; }
+#manual-in label { display: block; margin: 6px 0; }
+details.meta { margin-top: 10px; font-size: 14px; }
+details.meta label { display: block; margin: 6px 0; }

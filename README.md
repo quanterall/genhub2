@@ -129,6 +129,13 @@ Built:
   ([`acceptance/RESULTS-PHASE-D.md`](acceptance/RESULTS-PHASE-D.md)). Between labs, the counts will travel through the
   federation.
 
+## Status: the page, against the specification (FS 3.1)
+
+- **Uploads:** files, or a sequence typed or pasted with a DNA/RNA choice; optional region and collection date.
+- **Monitoring:** trends by week, lineage and region from the aggregated counts; the alerts of the merged counts;
+  alert thresholds and whether new alerts are published (MQTT and open pages), set by an admin (`/api/settings`,
+  `gh_settings`, audited); importing another site's aggregates.
+
 ## Status: sharing under GA4GH (phase C, inside the lab)
 
 - **Datasets the lab approves** (`gh_share`): an admin shares finished analyses with consent coded in the

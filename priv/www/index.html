@@ -31,12 +31,26 @@
     <div class="tabs">
       <label><input type="radio" name="kind" value="genome" checked> Genome (FASTA)</label>
       <label><input type="radio" name="kind" value="reads"> Read pairs (FASTQ)</label>
+      <label><input type="radio" name="kind" value="manual"> Type or paste a sequence</label>
     </div>
     <div id="genome-in"><input type="file" id="g1" aria-label="genome file"></div>
     <div id="reads-in" hidden>
       <label>R1 <input type="file" id="r1"></label>
       <label>R2 <input type="file" id="r2"></label>
     </div>
+    <div id="manual-in" hidden>
+      <div class="tabs">
+        <label><input type="radio" name="moltype" value="dna" checked> DNA</label>
+        <label><input type="radio" name="moltype" value="rna"> RNA (U is read as T)</label>
+      </div>
+      <label>Name <input id="m-name" value="sequence-1" pattern="[A-Za-z0-9._-]{1,64}"></label>
+      <label>Sequence <textarea id="m-seq" rows="5" spellcheck="false"
+        placeholder="ACGT... (or a FASTA record); IUPAC codes allowed"></textarea></label>
+    </div>
+    <details class="meta"><summary>Sample metadata (for monitoring; optional)</summary>
+      <label>Region (ISO 3166-2) <input id="u-region" placeholder="BG-22" pattern="[A-Z]{2}(-[A-Z0-9]{1,3})?"></label>
+      <label>Collection date <input id="u-date" type="date"></label>
+    </details>
     <button id="go">Upload and analyse</button>
     <p class="hint">Files up to 100 MB, gzipped or not. Read pairs are cleaned of human reads here, before
       anything else sees them.</p>
@@ -71,6 +85,31 @@
       <tbody></tbody></table></div>
     <h3>Alerts</h3>
     <ul id="alerts"><li class="hint">None since this page was opened.</li></ul>
+  </section>
+
+  <section class="card wide" id="trends" hidden>
+    <h2>Trends and alerts from aggregated counts</h2>
+    <p class="hint">Counts per ISO week of collection, by lineage, from this site's analyses that carry a region and a
+      collection date; alerts from this site's counts merged with other sites' (no sequences are exchanged).</p>
+    <label>Region <select id="t-region"><option value="">all</option></select></label>
+    <div class="scroll"><table id="t-table"><thead></thead><tbody></tbody></table></div>
+    <p id="t-uncounted" class="hint"></p>
+    <h3>Alerts of the merged counts</h3>
+    <p id="t-sites" class="hint"></p>
+    <ul id="t-alerts"></ul>
+    <div id="t-admin" hidden>
+      <h3>Alert thresholds and notifications</h3>
+      <form id="t-settings" class="row">
+        <label>Share at least <input id="s-share" type="number" min="0.01" max="1" step="0.01"></label>
+        <label>Times the baseline <input id="s-ratio" type="number" min="1" step="0.1"></label>
+        <label>Sequences at least <input id="s-n" type="number" min="1" step="1"></label>
+        <label>Baseline weeks <input id="s-weeks" type="number" min="1" max="52" step="1"></label>
+        <label><input id="s-mqtt" type="checkbox"> Publish new alerts on MQTT and to open pages</label>
+        <button type="submit">Save</button>
+      </form>
+      <label>Import another site's aggregates (JSON) <input id="t-import" type="file" accept="application/json,.json"></label>
+      <p id="t-msg" role="status"></p>
+    </div>
   </section>
 
   <section class="card wide lab" id="detail" hidden>

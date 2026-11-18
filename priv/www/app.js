@@ -37,7 +37,72 @@ async function start() {
   if (me.role === "admin") await admin();
   $("#datasets").hidden = false; $("#ds-new").hidden = me.role !== "admin";
   await datasets();
+  $("#trends").hidden = false; $("#t-admin").hidden = me.role !== "admin";
+  await trends();
 }
+
+let agg = null;   // this site's aggregates, for the region filter
+
+async function trends() {
+  agg = await api("/api/aggregates");
+  const regions = [...new Set(agg.totals.map((t) => t.region))].sort();
+  const keep = $("#t-region").value;
+  $("#t-region").innerHTML = `<option value="">all</option>` + regions.map((r) => `<option>${esc(r)}</option>`).join("");
+  $("#t-region").value = regions.includes(keep) ? keep : "";
+  drawTrends();
+  $("#t-uncounted").textContent = agg.not_counted ? `${agg.not_counted} sequences without a region or collection date are not counted.` : "";
+  const a = await api("/api/aggregates/alerts");
+  $("#t-sites").textContent = `Sites in the merge: ${a.sites.join(", ")}; latest week ${a.latest_week ?? "none"}.`;
+  $("#t-alerts").innerHTML = a.alerts.length ? a.alerts.map((x) => `<li>${x.type === "new_lineage"
+      ? `new lineage <b>${esc(x.lineage)}</b> in ${esc(x.week)}: ${x.n} sequences (${esc(x.regions.join(", "))})`
+      : `<b>${esc(x.mutation)}</b> rising in ${esc(x.week)}: ${Math.round(x.share * 100)}% of sequences, baseline ${Math.round(x.baseline * 100)}% (${x.n})`}</li>`).join("")
+    : `<li class="hint">None.</li>`;
+  if (me.role === "admin") {
+    const st = await api("/api/settings");
+    $("#s-share").value = st.alert_thresholds.min_share; $("#s-ratio").value = st.alert_thresholds.ratio;
+    $("#s-n").value = st.alert_thresholds.min_n; $("#s-weeks").value = st.alert_thresholds.baseline_weeks;
+    $("#s-mqtt").checked = st.notify.mqtt;
+  }
+}
+
+// weeks as rows, the most counted lineages as columns, for the chosen region
+function drawTrends() {
+  const r = $("#t-region").value;
+  const rows = agg.lineages.filter((x) => !r || x.region === r);
+  const byLin = {};
+  rows.forEach((x) => { byLin[x.lineage] = (byLin[x.lineage] || 0) + x.n; });
+  const lins = Object.keys(byLin).sort((a, b) => byLin[b] - byLin[a] || a.localeCompare(b)).slice(0, 8);
+  const weeks = [...new Set(rows.map((x) => x.week))].sort();
+  const n = (w, l) => rows.filter((x) => x.week === w && x.lineage === l).reduce((s, x) => s + x.n, 0);
+  const total = (w) => agg.totals.filter((t) => t.week === w && (!r || t.region === r)).reduce((s, t) => s + t.n, 0);
+  $("#t-table thead").innerHTML = `<tr><th>Week</th>${lins.map((l) => `<th>${esc(l)}</th>`).join("")}<th>All sequences</th></tr>`;
+  $("#t-table tbody").innerHTML = weeks.length ? weeks.map((w) => `<tr><td>${esc(w)}</td>${lins.map((l) => `<td>${n(w, l) || ""}</td>`).join("")}
+    <td>${total(w)}</td></tr>`).join("") : `<tr><td class="hint">No counted sequences yet.</td></tr>`;
+}
+$("#t-region").addEventListener("change", drawTrends);
+
+$("#t-settings").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  try {
+    await api("/api/settings", {method: "PUT", headers: {"content-type": "application/json"}, body: JSON.stringify({
+      alert_thresholds: {min_share: parseFloat($("#s-share").value), ratio: parseFloat($("#s-ratio").value),
+                         min_n: parseInt($("#s-n").value, 10), baseline_weeks: parseInt($("#s-weeks").value, 10)},
+      notify: {mqtt: $("#s-mqtt").checked}})});
+    $("#t-msg").textContent = "Saved.";
+    await trends();
+  } catch (e) { $("#t-msg").textContent = "Failed: " + e.message; }
+});
+
+$("#t-import").addEventListener("change", async () => {
+  const f = $("#t-import").files[0];
+  if (!f) return;
+  try {
+    const r = await api("/api/aggregates", {method: "POST", headers: {"content-type": "application/json"}, body: await f.text()});
+    $("#t-msg").textContent = `Imported the aggregates of ${r.site}.`;
+    await trends();
+  } catch (e) { $("#t-msg").textContent = "Failed: " + e.message; }
+  $("#t-import").value = "";
+});
 
 async function datasets() {
   const {datasets: ds, duo} = await api("/api/datasets");
@@ -129,24 +194,56 @@ $("#a-new").addEventListener("submit", async (ev) => {
 });
 
 document.querySelectorAll('input[name="kind"]').forEach((el) => el.addEventListener("change", () => {
-  const reads = document.querySelector('input[name="kind"]:checked').value === "reads";
-  $("#reads-in").hidden = !reads;
-  $("#genome-in").hidden = reads;
+  const k = document.querySelector('input[name="kind"]:checked').value;
+  $("#reads-in").hidden = k !== "reads";
+  $("#genome-in").hidden = k !== "genome";
+  $("#manual-in").hidden = k !== "manual";
 }));
 
+// a typed or pasted sequence as a FASTA file: a FASTA record as is, otherwise the letters under the given name. The
+// gateway's validation (gh_validate) checks the letters and turns RNA's U into T.
+function manualFasta() {
+  const text = $("#m-seq").value.trim();
+  if (!text) return null;
+  if (text.startsWith(">")) return new Blob([text + "\n"], {type: "text/plain"});
+  const name = $("#m-name").value.trim() || "sequence-1";
+  const seq = text.replace(/\s+/g, "").toUpperCase();
+  const rna = document.querySelector('input[name="moltype"]:checked').value === "rna";
+  if (!rna && seq.includes("U")) throw new Error("U in a DNA sequence: choose RNA, or check the sequence");
+  if (rna && seq.includes("T")) throw new Error("T in an RNA sequence: choose DNA, or check the sequence");
+  return new Blob([`>${name}\n${seq}\n`], {type: "text/plain"});
+}
+
+// the sample metadata typed in, if any
+function metadata() {
+  const m = {};
+  if ($("#u-region").value.trim()) m.region = $("#u-region").value.trim().toUpperCase();
+  if ($("#u-date").value) m.collection_date = $("#u-date").value;
+  return m;
+}
+
 $("#go").addEventListener("click", async () => {
-  const kind = document.querySelector('input[name="kind"]:checked').value;
-  const files = kind === "genome" ? [$("#g1").files[0]] : [$("#r1").files[0], $("#r2").files[0]];
-  if (files.some((f) => !f)) { $("#msg").textContent = "Choose the file" + (kind === "reads" ? "s" : "") + " first."; return; }
+  const choice = document.querySelector('input[name="kind"]:checked').value;
+  const kind = choice === "reads" ? "reads" : "genome";
+  let files;
+  try {
+    files = choice === "genome" ? [$("#g1").files[0]] : choice === "reads" ? [$("#r1").files[0], $("#r2").files[0]]
+      : [manualFasta()];
+  } catch (e) { $("#msg").textContent = e.message; return; }
+  if (files.some((f) => !f)) {
+    $("#msg").textContent = choice === "manual" ? "Type or paste a sequence first."
+      : "Choose the file" + (choice === "reads" ? "s" : "") + " first.";
+    return;
+  }
   $("#go").disabled = true;
   try {
     const inputs = [];
     for (const f of files) {
-      $("#msg").textContent = `Uploading ${f.name}...`;
+      $("#msg").textContent = `Uploading ${f.name || "the sequence"}...`;
       inputs.push((await api("/api/uploads", {method: "POST", body: f})).hash);
     }
     const {id} = await api("/api/jobs", {method: "POST", headers: {"content-type": "application/json"},
-                                         body: JSON.stringify({kind, inputs})});
+                                         body: JSON.stringify({kind, inputs, metadata: metadata()})});
     $("#msg").textContent = `Started ${id}.`;
     selected = id;
     await refresh();
@@ -265,7 +362,8 @@ function connect() {
     li.textContent = `${new Date().toLocaleTimeString()} ${topic} ${JSON.stringify(message).slice(0, 200)}`;
     $("#events").prepend(li);
     if (topic === "genhub/tasks/status") refresh();
-    if (topic === "genhub/alerts") {
+    if (topic === "genhub/alerts" && message.source === "merged") trends();
+    else if (topic === "genhub/alerts") {
       if ($("#alerts .hint")) $("#alerts").innerHTML = "";
       const a = document.createElement("li");
       a.textContent = `${new Date().toLocaleString()}: first ${message.type === "new_pango" ? "lineage" : "species"} ` +

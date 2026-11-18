@@ -121,8 +121,8 @@ neighbour-joining, `4c441ab1...` for FastTree).
 
 [`gh_gateway_check.erl`](gh_gateway_check.erl), run by [`run_gateway.sh`](run_gateway.sh) against EMQX 5.8.9, on a site
 with no earlier jobs.
-- **18 November 2026, with accounts, placement, aggregates, sharing, metrics and Beacon:** **all 40 checks hold**
-  ([`results/gateway-dgx-spark-2026-11-18T0231Z.json`](results/gateway-dgx-spark-2026-11-18T0231Z.json); the check of
+- **18 November 2026, with accounts, placement, aggregates, sharing, metrics, Beacon and alert settings:** **all 42
+  checks hold** ([`results/gateway-dgx-spark-2026-11-18T0244Z.json`](results/gateway-dgx-spark-2026-11-18T0244Z.json); the check of
   encryption at rest in `warn` mode: this test machine's disk is not encrypted).
   - The 13 below now run as an analyst who logged in through the API.
   - 8 more cover accounts and the audit log (at the end of this section).
@@ -135,6 +135,9 @@ with no earlier jobs.
     date ([RESULTS-PHASE-D.md](RESULTS-PHASE-D.md), "At a site").
   - 7 cover sharing (below).
   - 5 cover Beacon (below).
+  - 2 cover alert thresholds and notifications: only an admin changes them, values are checked, and changes are
+    audited. Each new lineage of the merged counts is published once on `genhub/alerts`, as it appears: B when the
+    genome job with metadata is first counted, then Z.9 with the other site's import.
   - 1 covers the metrics for Prometheus (`/metrics`): refused without the scrape token or with a wrong one, served
     with it, with counts only (no user, job or genome names).
 - **14 November 2026, before accounts:** all 13
@@ -217,6 +220,12 @@ with no earlier jobs.
   - the tree-method list was 7 px wider than a phone's screen.
 
   Logging out brings the login form back, and the page is exactly 390 px wide on a phone.
+- 18 November, the spec's remaining page functions (FS 3.1):
+  - **Manual entry:** a sequence typed as RNA (3,000 bases of Wuhan-Hu-1, with U) was validated as RNA, classified
+    as SARS-CoV-2, and stored with its region and collection date. A "DNA" sequence with a U is refused in the page.
+  - **Trends:** the trends table counted it by week and lineage, and the merged alerts listed its lineage as new.
+  - **Settings:** an admin saved new alert thresholds; an analyst does not see the form. At 1280 and 390 px, with no
+    horizontal scrolling.
 
 ## 6. The added methods, each against what it adds to
 

@@ -21,7 +21,9 @@
 %%      hash; files outside approved datasets are not served; a withdrawn dataset is gone;
 %%  11. metrics, behind their scrape token;
 %%  12. Beacon v2 over approved datasets: a genome with A23403G (D614G) shared; a researcher finds the mutation and the
-%%      lineage, yes or no only; an analyst gets counts; a withdrawn dataset is not searched; bad queries refused.
+%%      lineage, yes or no only; an analyst gets counts; a withdrawn dataset is not searched; bad queries refused;
+%%  13. alert thresholds and notifications: only an admin changes them, checked and audited; each new lineage of the
+%%      merged counts published once on genhub/alerts, as it appears.
 %% Parts 1-7 run as an analyst who logged in through the API.
 %%
 %% Needs the reference bundles of the phase A acceptance test, and EMQX on 127.0.0.1:21883 (run_gateway.sh); the
@@ -64,24 +66,26 @@ main([Out]) ->
     Tree = tree([maps:get(id, Job), maps:get(id, Viamqtt)]),
     {200, _, Sum} = http(get, "/api/summary", none),
     Summary = json:decode(Sum),
-    Alerts = [M || {<<"genhub/alerts">>, M} <- collected(Mqtt)],
+    %% the site's own first-seen alerts (the merged counts' alerts carry source merged: part 13)
+    Alerts = [M || {<<"genhub/alerts">>, M} <- collected(Mqtt), not is_map_key(<<"source">>, M)],
     Refused = refused(maps:get(id, Job)),
     Accounts = accounts(Users),
     Aggregates = aggregates(Users),
     Sharing = sharing(Users, [maps:get(id, Job), maps:get(id, Viamqtt)], maps:get(hash, Upload), Tree),
     Metrics = metrics(),
     Beacon = beacon(Users, maps:get(id, Job), maps:get(id, Sharing)),
+    Settings = settings(Users, Mqtt),
     Checks = checks(Page, Job, MqttMsgs, WsMsgs, Viamqtt, Refused)
         ++ more_checks(Job, Viamqtt, Exports, Tree, Summary, Alerts) ++ accounts_checks(Accounts)
         ++ aggregates_checks(Aggregates) ++ sharing_checks(Sharing, [maps:get(id, Job), maps:get(id, Viamqtt)])
-        ++ metrics_checks(Metrics) ++ beacon_checks(Beacon, maps:get(id, Sharing)),
+        ++ metrics_checks(Metrics) ++ beacon_checks(Beacon, maps:get(id, Sharing)) ++ settings_checks(Settings),
     R = #{date => list_to_binary(calendar:system_time_to_rfc3339(erlang:system_time(second), [{offset, "Z"}])),
           host => list_to_binary(net_adm:localhost()), emqx => <<"emqx/emqx:5.8.9">>,
           upload => Upload, job_seconds => maps:get(seconds, Job), job_state => maps:get(state, Job),
           mqtt_topics => count([T || {T, _} <- MqttMsgs]), websocket_topics => count([T || {T, _} <- WsMsgs]),
           job_from_mqtt => Viamqtt, exports => Exports, tree => maps:remove(svg, Tree), summary => Summary,
           alerts => Alerts, refused => Refused, accounts => Accounts, aggregates => Aggregates, sharing => Sharing,
-          metrics => Metrics, beacon => Beacon,
+          metrics => Metrics, beacon => Beacon, settings => Settings,
           usher_tree => UsherTree,
           checks => Checks,
           seconds => (erlang:monotonic_time(millisecond) - T0) / 1000},
@@ -427,6 +431,43 @@ aggregates_checks(A) ->
            andalso lists:member(<<"check-other-site">>, maps:get(<<"sites">>, Al)), Al),
      check(<<"aggregates: a researcher reads the aggregates and the alerts">>,
            maps:get(researcher, A) =:= #{aggregates => 200, alerts => 200}, maps:get(researcher, A))].
+
+%%% 13. alert thresholds and notifications
+
+settings(Users, Mqtt) ->
+    {AnName, AnSecret} = maps:get(analyst, Users),
+    {AdName, AdSecret} = maps:get(admin, Users),
+    {ReName, ReSecret} = maps:get(researcher, Users),
+    Put = fun(Body) -> element(1, http(put, "/api/settings", {"application/json", json:encode(Body)})) end,
+    {200, <<"analyst">>} = login(AnName, AnSecret),
+    AnalystPut = Put(#{alert_thresholds => #{min_n => 3}}),
+    {200, <<"admin">>} = login(AdName, AdSecret),
+    Bad = [Put(B) || B <- [#{alert_thresholds => #{min_share => 2}}, #{alert_thresholds => #{colour => 1}},
+                          #{notify => #{mqtt => <<"yes">>}}, #{volume => 11}]],
+    {AdminPut, _, AB} = http(put, "/api/settings", {"application/json", json:encode(#{alert_thresholds => #{min_n => 3, ratio => 1.5}})}),
+    {200, _, AuditB} = http(get, "/api/audit?from=1&limit=10000", none),
+    Changes = [maps:get(<<"object">>, X) || #{<<"action">> := <<"settings_change">>} = X <- json:decode(AuditB)],
+    {200, <<"researcher">>} = login(ReName, ReSecret),
+    {ResGet, _, RB} = http(get, "/api/settings", none),
+    timer:sleep(1000),
+    Merged = [M || {<<"genhub/alerts">>, #{<<"source">> := <<"merged">>} = M} <- collected(Mqtt)],
+    #{analyst_put => AnalystPut, bad => Bad, admin_put => AdminPut, saved => maps:get(<<"alert_thresholds">>, json:decode(AB)),
+      audited => Changes, researcher_get => ResGet, researcher_sees => maps:get(<<"alert_thresholds">>, json:decode(RB)),
+      merged_published => [maps:with([<<"type">>, <<"lineage">>, <<"week">>], M) || M <- Merged]}.
+
+settings_checks(S) ->
+    [check(<<"settings: an analyst cannot change them (403); bad values or names 400; an admin's change applied and audited">>,
+           maps:get(analyst_put, S) =:= 403 andalso maps:get(bad, S) =:= [400, 400, 400, 400]
+           andalso maps:get(admin_put, S) =:= 200
+           andalso maps:with([<<"min_n">>, <<"ratio">>], maps:get(saved, S)) =:= #{<<"min_n">> => 3, <<"ratio">> => 1.5}
+           andalso maps:get(audited, S) =:= [<<"alert_thresholds">>]
+           andalso maps:get(researcher_get, S) =:= 200 andalso maps:get(researcher_sees, S) =:= maps:get(saved, S), S),
+     %% B: new when the genome job with metadata is first counted (part 2); Z.9: new with the other site's import
+     %% (part 9), when B is also seen in an earlier week there, and so is not announced again
+     check(<<"notifications: each new lineage of the merged counts published once on genhub/alerts, as it appears (B, then Z.9)">>,
+           maps:get(merged_published, S) =:= [#{<<"type">> => <<"new_lineage">>, <<"lineage">> => L, <<"week">> => <<"2026-W46">>}
+                                              || L <- [<<"B">>, <<"Z.9">>]],
+           maps:get(merged_published, S))].
 
 %%% 12. Beacon
 

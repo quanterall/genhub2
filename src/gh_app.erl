@@ -19,6 +19,7 @@ site() ->
     ok = gh_audit:tables(),
     ok = gh_monitor:tables(),
     ok = gh_share:tables(),
+    ok = gh_settings:tables(),
     {ok, Sup} = gh_sup:start_link(),
     _ = case gh_storage:status() of
             off -> gh_audit:log(<<"system">>, storage_check, <<>>, ok, #{mode => off});
