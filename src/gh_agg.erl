@@ -5,7 +5,7 @@
 %%
 %% An aggregate (format genhub2-aggregates/1):
 %%   #{format, site, generated (ms), lineages => [#{week, region, lineage, n}], mutations => [#{week, region, mutation, n}],
-%%     totals => [#{week, region, n}]}
+%%     totals => [#{week, region, n}], lineage_mutations => [#{week, lineage, mutation, n}]}
 %%   week: the ISO week of the sample's collection date, "2026-W46"; region: ISO 3166-2 (e.g. "BG-22");
 %%   mutation: reference accession and substitution, e.g. "NC_045512.2:A23403G"; totals: the sequences counted.
 %% Sequences without a region and collection date are not counted (from_rows/3 says how many).
@@ -13,7 +13,9 @@
 %% Alerts (alerts/2), on the latest week of the merged counts:
 %%   new_lineage      a lineage counted in that week and in no earlier week, at any site
 %%   rising_mutation  a mutation whose share of that week's sequences is at least min_share, at least ratio times its
-%%                    mean share over the baseline_weeks before, in at least min_n sequences
+%%                    mean share over the baseline_weeks before, in at least min_n sequences; unless at least half of
+%%                    its sequences that week are of a new lineage: then it is listed in that lineage's alert
+%%                    (mutations), not raised on its own
 -module(gh_agg).
 -export([from_rows/3, merge/1, alerts/2, week/1, valid_region/1, valid_date/1, to_json/1, from_json/1]).
 
@@ -29,10 +31,13 @@ from_rows(Site, Rows, Now) ->
     L = count([{W, Reg, Lin} || #{week := W, region := Reg, lineage := Lin} <- Counted, Lin =/= <<>>]),
     M = count([{W, Reg, Mu} || #{week := W, region := Reg, mutations := Ms} <- Counted, Mu <- lists:usort(Ms)]),
     T = count([{W, Reg} || #{week := W, region := Reg} <- Counted]),
+    LM = count([{W, Lin, Mu} || #{week := W, lineage := Lin, mutations := Ms} <- Counted, Lin =/= <<>>, Mu <- lists:usort(Ms)]),
     {#{format => ?FORMAT, site => Site, generated => Now,
        lineages => [#{week => W, region => Reg, lineage => Lin, n => N} || {{W, Reg, Lin}, N} <- lists:sort(maps:to_list(L))],
        mutations => [#{week => W, region => Reg, mutation => Mu, n => N} || {{W, Reg, Mu}, N} <- lists:sort(maps:to_list(M))],
-       totals => [#{week => W, region => Reg, n => N} || {{W, Reg}, N} <- lists:sort(maps:to_list(T))]},
+       totals => [#{week => W, region => Reg, n => N} || {{W, Reg}, N} <- lists:sort(maps:to_list(T))],
+       lineage_mutations => [#{week => W, lineage => Lin, mutation => Mu, n => N}
+                             || {{W, Lin, Mu}, N} <- lists:sort(maps:to_list(LM))]},
      length(Rows) - length(Counted)}.
 
 %% the aggregates of several sites as one: per site the newest; counts summed; the sites listed
@@ -44,20 +49,23 @@ merge(Aggs) ->
                                                  _ -> Acc#{S => A}
                                              end
                                      end, #{}, [A || #{format := ?FORMAT} = A <- Aggs])),
+    %% optional in older aggregates
+    WithLM = [A#{lineage_mutations => maps:get(lineage_mutations, A, [])} || A <- Newest],
     Sum = fun(Key, Fields) ->
                   C = lists:foldl(fun(E, Acc) -> maps:update_with([maps:get(F, E) || F <- Fields],
                                                                   fun(N) -> N + maps:get(n, E) end, maps:get(n, E), Acc)
-                                  end, #{}, lists:append([maps:get(Key, A) || A <- Newest])),
+                                  end, #{}, lists:append([maps:get(Key, A) || A <- WithLM])),
                   [maps:from_list(lists:zip(Fields, K) ++ [{n, N}]) || {K, N} <- lists:sort(maps:to_list(C))]
           end,
     #{format => ?FORMAT, sites => lists:sort([S || #{site := S} <- Newest]),
       lineages => Sum(lineages, [week, region, lineage]), mutations => Sum(mutations, [week, region, mutation]),
-      totals => Sum(totals, [week, region])}.
+      totals => Sum(totals, [week, region]), lineage_mutations => Sum(lineage_mutations, [week, lineage, mutation])}.
 
 %% the alerts of merged aggregates (merge/1) for their latest week; Opts overrides ?DEFAULTS
 -spec alerts(map(), map()) -> [map()].
 alerts(#{totals := []}, _) -> [];
-alerts(#{lineages := Ls, mutations := Ms, totals := Ts}, Opts0) ->
+alerts(#{lineages := Ls, mutations := Ms, totals := Ts} = Merged, Opts0) ->
+    LMs = maps:get(lineage_mutations, Merged, []),
     #{min_share := MinShare, ratio := Ratio, min_n := MinN, baseline_weeks := BW} = maps:merge(?DEFAULTS, Opts0),
     Weeks = lists:usort([W || #{week := W} <- Ts]),
     Last = lists:last(Weeks),
@@ -76,7 +84,18 @@ alerts(#{lineages := Ls, mutations := Ms, totals := Ts}, Opts0) ->
                  MutN(Last, Mu) >= MinN, Share(Last, Mu) >= MinShare,
                  Base <- [case Before of [] -> 0.0; _ -> lists:sum([Share(W, Mu) || W <- Before]) / length(Before) end],
                  Share(Last, Mu) >= Ratio * Base, Before =/= []],
-    New ++ Rising.
+    %% a rising mutation mostly in a new lineage's sequences goes into that lineage's alert
+    NewL = [L || #{lineage := L} <- New],
+    InLin = fun(Mu, L) -> lists:sum([N || #{week := W, lineage := X, mutation := Y, n := N} <- LMs, W =:= Last, X =:= L, Y =:= Mu]) end,
+    Owner = fun(#{mutation := Mu, n := N}) ->
+                    case lists:reverse(lists:sort([{InLin(Mu, L), L} || L <- NewL])) of
+                        [{K, L} | _] when 2 * K >= N, K > 0 -> L;
+                        _ -> none
+                    end
+            end,
+    Owned = [{Owner(R), R} || R <- Rising],
+    [A#{mutations => [maps:with([mutation, n, share, baseline], R) || {L, R} <- Owned, L =:= maps:get(lineage, A)]} || A <- New]
+        ++ [R || {none, R} <- Owned].
 
 round4(X) -> round(X * 10000) / 10000.
 
@@ -113,12 +132,13 @@ from_json(B) ->
     end.
 
 convert(#{<<"format">> := ?FORMAT, <<"site">> := S, <<"generated">> := G, <<"lineages">> := L, <<"mutations">> := M,
-          <<"totals">> := T}) when is_binary(S), is_integer(G) ->
+          <<"totals">> := T} = Agg) when is_binary(S), is_integer(G) ->
     Row = fun(Fields) -> fun(E) -> maps:from_list([{F, field(E, F)} || F <- Fields] ++ [{n, count_n(E)}]) end end,
     #{format => ?FORMAT, site => S, generated => G,
       lineages => lists:map(Row([week, region, lineage]), L),
       mutations => lists:map(Row([week, region, mutation]), M),
-      totals => lists:map(Row([week, region]), T)}.
+      totals => lists:map(Row([week, region]), T),
+      lineage_mutations => lists:map(Row([week, lineage, mutation]), maps:get(<<"lineage_mutations">>, Agg, []))}.
 
 field(E, F) ->
     case maps:get(atom_to_binary(F), E) of

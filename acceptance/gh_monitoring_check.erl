@@ -124,6 +124,7 @@ checks(W, C, Planted, Genomes) ->
            [lists:member(Planted, B) || B <- Before] =:= [false, false, true], Before),
      check(<<"after the exchange, every site raises the same alerts">>, lists:usort(After) =:= [hd(After)],
            [#{new_lineage => length([x || #{type := new_lineage} <- A]),
+              mutations_in_new_lineages => lists:sum([length(maps:get(mutations, X, [])) || #{type := new_lineage} = X <- A]),
               rising_mutation => length([x || #{type := rising_mutation} <- A])} || A <- After]),
      check(<<"after the exchange, every site alerts on the planted lineage">>,
            lists:all(fun(A) -> lists:member(Planted, NewOf(A)) end, After), [NewOf(A) || A <- After]),

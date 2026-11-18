@@ -80,7 +80,8 @@ async function trends() {
   const a = await api("/api/aggregates/alerts");
   $("#t-sites").textContent = `Sites in the merge: ${a.sites.join(", ")}; latest week ${a.latest_week ?? "none"}.`;
   $("#t-alerts").innerHTML = a.alerts.length ? a.alerts.map((x) => `<li>${x.type === "new_lineage"
-      ? `new lineage <b>${esc(x.lineage)}</b> in ${esc(x.week)}: ${x.n} sequences (${esc(x.regions.join(", "))})`
+      ? `new lineage <b>${esc(x.lineage)}</b> in ${esc(x.week)}: ${x.n} sequences (${esc(x.regions.join(", "))})` +
+        ((x.mutations || []).length ? `, bringing ${x.mutations.length} rising mutations (${esc(x.mutations.slice(0, 5).map((m) => m.mutation.split(":")[1]).join(", "))}${x.mutations.length > 5 ? ", ..." : ""})` : "")
       : `<b>${esc(x.mutation)}</b> rising in ${esc(x.week)}: ${Math.round(x.share * 100)}% of sequences, baseline ${Math.round(x.baseline * 100)}% (${x.n})`}</li>`).join("")
     : `<li class="hint">None.</li>`;
   if (me.role === "admin") {

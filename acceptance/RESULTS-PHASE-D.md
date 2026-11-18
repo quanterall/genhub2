@@ -6,8 +6,9 @@ server. Phase D is done when a planted novel lineage triggers an alert at every 
 not need the federation: three sites simulated in one test, exchanging their counts as files. Between real labs, the
 counts will travel through the FVLLMP federation.
 
-Results file: [`results/monitoring-dgx-spark-2026-11-17T1813Z.json`](results/monitoring-dgx-spark-2026-11-17T1813Z.json),
-17 November 2026. How it is run: [`run_monitoring.sh`](run_monitoring.sh) and
+Results file: [`results/monitoring-dgx-spark-2026-11-18T0337Z.json`](results/monitoring-dgx-spark-2026-11-18T0337Z.json),
+18 November 2026 (the run of 17 November, before mutations were grouped into lineage alerts:
+[`results/monitoring-dgx-spark-2026-11-17T1813Z.json`](results/monitoring-dgx-spark-2026-11-17T1813Z.json)). How it is run: [`run_monitoring.sh`](run_monitoring.sh) and
 [`gh_monitoring_check.erl`](gh_monitoring_check.erl). How to reproduce it: [REPRODUCE-PHASE-D.md](REPRODUCE-PHASE-D.md).
 
 **All 6 checks hold.**
@@ -17,7 +18,9 @@ Results file: [`results/monitoring-dgx-spark-2026-11-17T1813Z.json`](results/mon
 An aggregate (format `genhub2-aggregates/1`, `gh_agg`) holds, for one site:
 - counts per ISO week, region and lineage;
 - counts per week, region and mutation (e.g. `NC_045512.2:A23403G`);
-- the number of sequences per week and region.
+- the number of sequences per week and region;
+- the sequences of each lineage with each mutation, per week (summed over regions), so an alert can say which
+  mutations a new lineage brings.
 
 Nothing else is in it: no sequence, no sample name, no job, no patient data.
 - **The week** is that of the sample's collection date, not of the analysis.
@@ -36,7 +39,9 @@ aggregates arrive in, so every site that holds the same aggregates computes the 
 **Alerts,** for the latest week of the merged counts (`gh_agg:alerts/2`):
 - **a new lineage:** counted in that week and in no earlier week, at any site;
 - **a rising mutation:** its share of that week's sequences is at least 10%, at least twice its mean share over the
-  4 weeks before, and in at least 5 sequences. The three numbers are settings (`alert_thresholds`).
+  4 weeks before, and in at least 5 sequences. The thresholds are settings an admin changes on the page.
+- **Grouping:** a rising mutation whose sequences that week are mostly (at least half) of a new lineage is listed in
+  that lineage's alert, not raised on its own.
 
 ## The test
 
@@ -53,7 +58,7 @@ aggregates arrive in, so every site that holds the same aggregates computes the 
 | check | result |
 | --- | --- |
 | before the exchange, only site C sees the planted lineage | yes |
-| after it, all three sites raise the same alerts | yes: 1 new lineage and 51 rising mutations each |
+| after it, all three sites raise the same alerts | yes: 1 alert each, the new lineage with the 51 rising mutations it brings |
 | after it, every site alerts on LB.1.7 | yes |
 | a control run without the planted genomes: no new-lineage alert | none at any site (and no mutation alert either) |
 | the merge does not depend on the order of the aggregates | yes |
@@ -64,9 +69,9 @@ aggregates arrive in, so every site that holds the same aggregates computes the 
 - **Exchanging counts removes false alerts.** On its own counts, site A saw 2 lineages as new, site B 3, and site C 7
   (LB.1.7 among them). All but LB.1.7 had been seen at another site. After the exchange, LB.1.7 is the only new
   lineage at every site.
-- **A new lineage brings many mutation alerts.** The 51 rising mutations are LB.1.7's own: each of its defining
-  mutations rises with it. They are all correct, but they say one thing 51 times. A later version should report the
-  mutations a new lineage explains as part of its alert.
+- **A new lineage brings many rising mutations.** All 51 are LB.1.7's own defining mutations. The first version
+  raised each as an alert of its own (1 lineage alert and 51 mutation alerts per site, 17 November). Since 18
+  November they are listed in the lineage's alert, and no mutation alert is left.
 - **Simulated sites and dates.** The genomes are real, but their sites and collection dates are assigned by the
   test. Real data would bring uneven reporting delays: a week's counts keep growing as late samples are analysed. The
   alerts are then recomputed on each new aggregate.

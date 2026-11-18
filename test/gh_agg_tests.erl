@@ -31,7 +31,9 @@ from_rows_test() ->
     ?assertEqual([#{week => <<"2026-W45">>, region => <<"BG-02">>, n => 1}, #{week => <<"2026-W45">>, region => <<"BG-22">>, n => 2}],
                  maps:get(totals, A)),
     %% nothing in it names a sample
-    ?assertEqual([format, generated, lineages, mutations, site, totals], lists:sort(maps:keys(A))).
+    ?assertEqual([format, generated, lineage_mutations, lineages, mutations, site, totals], lists:sort(maps:keys(A))),
+    ?assertEqual([#{week => <<"2026-W45">>, lineage => <<"BA.2">>, mutation => <<"R:A1G">>, n => 2},
+                  #{week => <<"2026-W45">>, lineage => <<"BA.2">>, mutation => <<"R:C2T">>, n => 1}], maps:get(lineage_mutations, A)).
 
 merge_test() ->
     {Old, _} = gh_agg:from_rows(<<"s1">>, [row(<<"X">>, [], <<"BG">>, <<"2026-11-02">>)], 1),
@@ -54,11 +56,26 @@ alerts_test() ->
     {A, 0} = gh_agg:from_rows(<<"s1">>, Base ++ Last, 1),
     Alerts = gh_agg:alerts(gh_agg:merge([A]), #{}),
     %% NEW.1 is new; C9T rises from 10% to 30% (3x); A1G falls; G5A has 4 < min_n sequences
-    ?assertEqual([#{type => new_lineage, week => <<"2026-W45">>, lineage => <<"NEW.1">>, n => 4, regions => [<<"BG-22">>]},
+    ?assertEqual([#{type => new_lineage, week => <<"2026-W45">>, lineage => <<"NEW.1">>, n => 4, regions => [<<"BG-22">>],
+                    mutations => []},
                   #{type => rising_mutation, week => <<"2026-W45">>, mutation => <<"R:C9T">>, n => 6, share => 0.3,
                     baseline => 0.1}], Alerts),
     %% a stricter ratio: C9T's 3x is not enough
     ?assertEqual([new_lineage], [T || #{type := T} <- gh_agg:alerts(gh_agg:merge([A]), #{ratio => 4.0})]).
+
+%% a rising mutation carried by a new lineage is listed in its alert, not raised on its own
+grouped_test() ->
+    Week = fun(D, Rows) -> [row(L, Ms, <<"BG-22">>, D) || {L, Ms} <- Rows] end,
+    Base = lists:append([Week(D, [{<<"BA.2">>, [<<"R:A1G">>]} || _ <- lists:seq(1, 20)])
+                         || D <- [<<"2026-10-05">>, <<"2026-10-12">>, <<"2026-10-19">>, <<"2026-10-26">>]]),
+    Last = Week(<<"2026-11-02">>, [{<<"BA.2">>, [<<"R:A1G">>]} || _ <- lists:seq(1, 14)]
+                                  ++ [{<<"NEW.1">>, [<<"R:G5A">>, <<"R:T7C">>]} || _ <- lists:seq(1, 6)]),
+    {A, 0} = gh_agg:from_rows(<<"s1">>, Base ++ Last, 1),
+    [#{type := new_lineage, lineage := <<"NEW.1">>, mutations := Muts}] = gh_agg:alerts(gh_agg:merge([A]), #{}),
+    ?assertEqual([<<"R:G5A">>, <<"R:T7C">>], [M || #{mutation := M} <- Muts]),
+    %% an aggregate from a site without lineage_mutations still merges; its mutations are then raised on their own
+    Old = maps:remove(lineage_mutations, A),
+    ?assertEqual([new_lineage, rising_mutation, rising_mutation], [T || #{type := T} <- gh_agg:alerts(gh_agg:merge([Old]), #{})]).
 
 json_test() ->
     {A, _} = gh_agg:from_rows(<<"s1">>, [row(<<"BA.2">>, [<<"R:A1G">>], <<"BG-22">>, <<"2026-11-02">>)], 7),

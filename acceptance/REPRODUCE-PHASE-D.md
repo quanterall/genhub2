@@ -31,11 +31,12 @@ The exit status is 0 when every check holds.
 
 ## How to compare with the published results
 
-The published run is [results/monitoring-dgx-spark-2026-11-17T1813Z.json](results/monitoring-dgx-spark-2026-11-17T1813Z.json).
+The published run is [results/monitoring-dgx-spark-2026-11-18T0337Z.json](results/monitoring-dgx-spark-2026-11-18T0337Z.json).
 These must be the same, because the test assigns sites and dates by each genome's place in the file:
 - the planted lineage (LB.1.7) and its 19 genomes;
 - the 842 genomes counted;
-- the alerts: 1 new lineage and 51 rising mutations at every site;
+- the alerts: at every site, 1 alert for the new lineage, listing the 51 rising mutations it brings, and no mutation
+  alert of its own;
 - each site's new lineages before the exchange.
 
 A different Nextclade dataset (`acceptance/gh_acceptance.erl` pins the tag) can change the lineages, and so the
@@ -48,5 +49,6 @@ planted one.
   built:
   - GenHub2's 48 tests passed;
   - `run.sh --reduced` built the bundles from NCBI and held its 14 checks;
-  - `run_monitoring.sh` held all 6. The results were the published ones: LB.1.7 with 19 genomes at site C, 842
-    genomes counted, and 1 new lineage and 51 rising mutations at every site.
+  - `run_monitoring.sh` held all 6, with the results of that version: LB.1.7 with 19 genomes at site C, 842
+    genomes counted, and 1 new lineage and 51 rising mutations at every site. Since then, the mutations are listed
+    in the lineage's alert: the same 51, now in one alert.
