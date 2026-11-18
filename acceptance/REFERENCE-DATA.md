@@ -74,3 +74,31 @@ It prints the number of genomes and the accession list's checksum for both, and 
 how many were added and removed since (exit 1). On 16 November 2026 NCBI Datasets still listed 19,607 complete RefSeq
 viral genomes. With genomes added, the held-out results can change where a new RefSeq genome is nearer than the old
 nearest one.
+
+## Updating a site's reference data from NCBI
+
+A site keeps the RefSeq snapshot it built first until its operator updates it, with the site stopped
+(`scripts/genhub2-admin.sh`, `gh_refdb:check_update/0` and `apply_update/0`):
+
+```sh
+sh scripts/genhub2-admin.sh data/mnesia check_references   # NCBI's current RefSeq viral genomes against the site's
+sh scripts/genhub2-admin.sh data/mnesia apply_references   # the checked bundle becomes the site's
+```
+
+- **`check_references`** downloads NCBI's current RefSeq viral genomes, not from the cache. It then decides:
+  - **unchanged:** the download is byte for byte the site's;
+  - **unchanged in content:** a new download whose references, taxonomy and sequences are all the site's. NCBI's
+    archive changes with its metadata. Nothing is staged, so results keep naming the same bundle.
+  - **changed:** the new bundle is built beside the site's (`bundles/refseq_viral.next`), with a report
+    (`refseq_viral.next.json`) of the accessions added and removed, and those whose taxonomy or sequence changed.
+- **`apply_references`** makes the checked bundle the site's and keeps the one before (`refseq_viral.previous`). It
+  rebuilds the protein database from NCBI's current protein download, keeping the previous one too. The report
+  becomes `refseq_viral.applied.json`.
+- **Both are in the audit log.** Results made before an update keep the hashes of the bundles they used in their
+  provenance, and the old bundles stay in the store, so they can still be traced and reproduced.
+
+**Tried on 18 November 2026,** in a copy of this site's data:
+- NCBI's download differed from the 13 November snapshot's, but in nothing else: the same 19,607 references, no
+  taxonomy or sequence changed. The check now reports this as unchanged in content.
+- Applied by hand on that copy (before that rule existed), the update switched the bundles, rebuilt the proteins and
+  kept both previous bundles.

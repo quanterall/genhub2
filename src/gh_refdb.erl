@@ -8,7 +8,7 @@
 %%   nextclade(Tag)      Nextclade's SARS-CoV-2 dataset at a pinned tag
 %%   genomes(Accs, Dir)  (for tests) the GenBank genomes with these accessions: a FASTA file and their taxonomy
 -module(gh_refdb).
--export([usher_sars_cov_2/3, refseq_viral/0, viral_proteins/0, host/1, hostile/1, primers/2, kraken/1, nextclade/1,
+-export([check_update/0, apply_update/0, usher_sars_cov_2/3, refseq_viral/0, viral_proteins/0, host/1, hostile/1, primers/2, kraken/1, nextclade/1,
          nextclade_datasets/0, genomes/2, named/2, taxonomy_tsv/2]).
 
 %% Nextclade datasets for the viruses Bulgarian labs see most, besides SARS-CoV-2 (its tag pinned in nextclade/1)
@@ -56,9 +56,14 @@ usher_sars_cov_2(Genomes, Refs, Nextclade) ->
 
 -spec refseq_viral() -> gh_store:hash().
 refseq_viral() ->
-    named("refseq_viral", fun() ->
-        Url = gh_ncbi:genome_download_url("10239", #{"refseq_only" => "true", "complete_only" => "true"}),
-        Zip = gh_fetch:cached(Url),
+    named("refseq_viral", fun() -> build_refseq_viral(gh_fetch:cached(refseq_url())) end).
+
+refseq_url() -> gh_ncbi:genome_download_url("10239", #{"refseq_only" => "true", "complete_only" => "true"}).
+
+proteins_url() -> lists:flatten(string:replace(refseq_url(), "include_sequence=GENOME", "include_sequence=PROTEIN")).
+
+%% the RefSeq bundle of an NCBI Datasets download (in the store)
+build_refseq_viral(Zip) ->
         gh_store:with_tmp(fun(Dir) ->
             [Fasta, Reports, Tax, Sketch] = [filename:join(Dir, F) || F <- ["refs.fasta", "reports.jsonl",
                                                                              "taxonomy.tsv", "refs.sketch"]],
@@ -68,20 +73,18 @@ refseq_viral() ->
             _ = gh_tool:gh2k_must(["sketch", ?K, ?S, Fasta, Sketch]),
             gh_refs:bundle(#{"refs.fasta" => Fasta, "refs.fasta.fai" => Fasta ++ ".fai", "refs.sketch" => Sketch,
                              "taxonomy.tsv" => Tax, "ncbi_dataset.zip" => gh_store:path(Zip)})
-        end)
-    end).
+        end).
 
 %% Every protein of the complete RefSeq viral genomes, as a DIAMOND database (proteins.dmnd), and each protein's
 %% taxonomy (proteins.tsv: protein, taxid, species, genus, family, organism), from its organism's entry in the
 %% RefSeq bundle's taxonomy.
 -spec viral_proteins() -> gh_store:hash().
 viral_proteins() ->
-    named("refseq_viral_proteins", fun() ->
-        Refs = refseq_viral(),
+    named("refseq_viral_proteins", fun() -> build_viral_proteins(refseq_viral(), gh_fetch:cached(proteins_url())) end).
+
+%% the protein bundle of an NCBI Datasets protein download, its proteins labelled from the RefSeq bundle Refs
+build_viral_proteins(Refs, Zip) ->
         ByOrganism = maps:from_list([{maps:get(organism, T), T} || T <- maps:values(gh_refs:taxonomy(Refs, node()))]),
-        Url = gh_ncbi:genome_download_url("10239", #{"refseq_only" => "true", "complete_only" => "true"}),
-        PUrl = string:replace(Url, "include_sequence=GENOME", "include_sequence=PROTEIN"),
-        Zip = gh_fetch:cached(lists:flatten(PUrl)),
         gh_store:with_tmp(fun(Dir) ->
             [Faa, Tsv, Db] = [filename:join(Dir, F) || F <- ["proteins.faa", "proteins.tsv", "proteins"]],
             _ = gh_tool:bash("unzip -p \"$1\" ncbi_dataset/data/protein.faa > \"$2\"", [gh_store:path(Zip), Faa]),
@@ -114,8 +117,84 @@ viral_proteins() ->
             _ = gh_tool:bash("diamond makedb --quiet --in \"$1\" -d \"$2\"", [Faa, Db]),
             gh_refs:bundle(#{"proteins.dmnd" => Db ++ ".dmnd", "taxonomy.tsv" => Tsv,
                              "translated.txt" => filename:join(Dir, "translated.txt")})
-        end)
-    end).
+        end).
+
+%%% updates of the reference data from NCBI (FS 3.3: public data, fetched and cached; plan phase E)
+
+%% Downloads NCBI's current RefSeq viral genomes (not from the cache). The same download as the site's bundle:
+%% unchanged. A new download whose references, taxonomy and sequences are all the same (NCBI's archive changes with
+%% its metadata): unchanged as well, and nothing is staged, so results keep naming the same bundle. Otherwise the new
+%% bundle is saved as refseq_viral.next, with a report (refseq_viral.next.json) of what changed.
+%% {changed, Report} | unchanged | {unchanged, same_content}
+-spec check_update() -> unchanged | {unchanged, same_content} | {changed, map()}.
+check_update() ->
+    Current = current("refseq_viral"),
+    #{hash := Zip} = gh_fetch:run({fetch_public, refseq_url()}, #{}),
+    case maps:get("ncbi_dataset.zip", gh_refs:manifest(Current, node())) of
+        Zip -> unchanged;
+        _ ->
+            New = build_refseq_viral(Zip),
+            Old = gh_refs:taxonomy(Current, node()),
+            Now = gh_refs:taxonomy(New, node()),
+            Changed = [A || {A, T} <- maps:to_list(Now), is_map_key(A, Old), maps:get(A, Old) =/= T],
+            SeqOld = gh_fasta:seq_hashes(gh_refs:file(Current, "refs.fasta", node())),
+            SeqNew = gh_fasta:seq_hashes(gh_refs:file(New, "refs.fasta", node())),
+            SeqChanged = [A || {A, H} <- maps:to_list(SeqNew), is_map_key(A, SeqOld), maps:get(A, SeqOld) =/= H],
+            Report = #{current => Current, next => New, checked => erlang:system_time(millisecond),
+                       references => #{current => maps:size(Old), next => maps:size(Now)},
+                       added => lists:sort(maps:keys(Now) -- maps:keys(Old)),
+                       removed => lists:sort(maps:keys(Old) -- maps:keys(Now)),
+                       taxonomy_changed => lists:sort(Changed), sequence_changed => lists:sort(SeqChanged)},
+            case Report of
+                #{added := [], removed := [], taxonomy_changed := [], sequence_changed := []} -> {unchanged, same_content};
+                _ ->
+                    ok = write_bundle("refseq_viral.next", New),
+                    ok = file:write_file(bundle_file("refseq_viral.next.json"), json:encode(Report)),
+                    {changed, Report}
+            end
+    end.
+
+%% Makes refseq_viral.next the site's RefSeq bundle, keeping the one before as refseq_viral.previous, and rebuilds the
+%% protein bundle from the new genomes' current protein download. {ok, #{refseq_viral, refseq_viral_proteins,
+%% previous}} | {error, nothing_to_apply}. Results made before keep their bundles' hashes in their provenance; the
+%% old bundles stay in the store.
+-spec apply_update() -> {ok, map()} | {error, nothing_to_apply}.
+apply_update() ->
+    case file:read_file(bundle_file("refseq_viral.next")) of
+        {error, enoent} -> {error, nothing_to_apply};
+        {ok, N} ->
+            New = string:trim(N),
+            Prev = current("refseq_viral"),
+            #{hash := PZip} = gh_fetch:run({fetch_public, proteins_url()}, #{}),
+            Proteins = build_viral_proteins(New, PZip),
+            ok = write_bundle("refseq_viral.previous", Prev),
+            case file:read_file(bundle_file("refseq_viral_proteins")) of
+                {ok, P} -> ok = write_bundle("refseq_viral_proteins.previous", string:trim(P));
+                {error, enoent} -> ok
+            end,
+            ok = write_bundle("refseq_viral", New),
+            ok = write_bundle("refseq_viral_proteins", Proteins),
+            ok = file:delete(bundle_file("refseq_viral.next")),
+            %% the report of what changed is kept as the last applied update's
+            _ = file:rename(bundle_file("refseq_viral.next.json"), bundle_file("refseq_viral.applied.json")),
+            {ok, #{refseq_viral => New, refseq_viral_proteins => Proteins, previous => Prev}}
+    end.
+
+%% the hash of the site's bundle Name; there must be one (built by the site's first run)
+current(Name) ->
+    case file:read_file(bundle_file(Name)) of
+        {ok, H} -> string:trim(H);
+        {error, enoent} -> error({no_bundle_yet, Name})
+    end.
+
+bundle_file(Name) -> filename:join([application:get_env(genhub2, data_dir, "data"), "bundles", Name]).
+
+write_bundle(Name, Hash) ->
+    F = bundle_file(Name),
+    ok = filelib:ensure_dir(F),
+    Tmp = F ++ ".part",
+    ok = file:write_file(Tmp, Hash),
+    file:rename(Tmp, F).
 
 %% A coding sequence translated with the standard genetic code; a final stop is left off, other stops and codons with
 %% other letters than A, C, G, T become X.

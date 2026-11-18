@@ -185,6 +185,10 @@ sh scripts/genhub2-admin.sh data/mnesia add_user NAME admin    # asks for the pa
 It prints the admin's one-time secret, once, to add to an authenticator app. The admin then adds the other users on
 the page. Behind TLS, also set `secure_cookies => true` in `http`.
 
+**Reference data from NCBI:** a site keeps its RefSeq snapshot until its operator checks NCBI for changes and applies
+them, with the site stopped: `scripts/genhub2-admin.sh data/mnesia check_references`, then `apply_references`
+([`acceptance/REFERENCE-DATA.md`](acceptance/REFERENCE-DATA.md), "Updating").
+
 **Encryption at rest** (FS 3.4, 6.2): put the site's data directory, and its Mnesia directory, on an encrypted
 volume (Linux dm-crypt with LUKS, AES-256-XTS by default), set up by the machine's owner.
 - **The check:** at start GenHub2 checks that both are on one (`gh_storage`: the directory's block device, or a

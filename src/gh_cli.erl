@@ -4,6 +4,9 @@
 %%   add_user NAME ROLE    the password is read from standard input (one line), never from the command line; prints
 %%                         the user's TOTP secret, once, for an authenticator app
 %%   audit_verify          whether the audit log's chain is whole
+%%   check_references      downloads NCBI's current RefSeq viral genomes; if they changed, builds the new bundle
+%%                         beside the site's and reports what changed (gh_refdb:check_update/0)
+%%   apply_references      makes the checked bundle the site's, keeping the one before; rebuilds the proteins
 %%   build_usher_tree FASTA    the site's SARS-CoV-2 tree for placing new genomes (gh_refdb:usher_sars_cov_2/3), from
 %%                         the genomes of FASTA (complete SARS-CoV-2 genomes); needs the site's reference bundles
 %%
@@ -13,6 +16,8 @@
 
 -spec main([string()]) -> no_return().
 main(Args) ->
+    %% loaded, so the command line's -genhub2 settings (data_dir) apply
+    ok = application:load(genhub2),
     ok = mnesia:start(),
     ok = case mnesia:table_info(schema, storage_type) of
              disc_copies -> ok;
@@ -55,6 +60,34 @@ run(["build_usher_tree", Fasta]) ->
     ok = gh_audit:log(<<"cli">>, usher_tree_build, Mat, ok, #{fasta => list_to_binary(filename:basename(Fasta))}),
     io:format("the site's SARS-CoV-2 tree: ~s~n", [Mat]),
     0;
+run(["check_references"]) ->
+    case gh_refdb:check_update() of
+        unchanged ->
+            ok = gh_audit:log(<<"cli">>, references_check, <<>>, ok, #{result => unchanged}),
+            io:format("NCBI's RefSeq viral genomes are unchanged since the site's bundle~n"), 0;
+        {unchanged, same_content} ->
+            ok = gh_audit:log(<<"cli">>, references_check, <<>>, ok, #{result => same_content}),
+            io:format("NCBI's download is new, but its references, taxonomy and sequences are the site's: nothing to "
+                      "update~n"), 0;
+        {changed, R} ->
+            #{added := A, removed := Rm, taxonomy_changed := T, sequence_changed := Sq,
+              references := #{current := C, next := N}} = R,
+            ok = gh_audit:log(<<"cli">>, references_check, maps:get(next, R), ok,
+                              #{added => length(A), removed => length(Rm), taxonomy_changed => length(T),
+                                sequence_changed => length(Sq)}),
+            io:format("NCBI's RefSeq viral genomes changed: ~b references now, ~b in the site's bundle~n"
+                      "  added ~b, removed ~b, taxonomy changed ~b, sequence changed ~b~n"
+                      "  the new bundle is ready (refseq_viral.next, report refseq_viral.next.json);~n"
+                      "  apply it with: apply_references~n", [N, C, length(A), length(Rm), length(T), length(Sq)]), 0
+    end;
+run(["apply_references"]) ->
+    case gh_refdb:apply_update() of
+        {ok, #{refseq_viral := New, refseq_viral_proteins := P, previous := Prev}} ->
+            ok = gh_audit:log(<<"cli">>, references_apply, New, ok, #{previous => Prev, proteins => P}),
+            io:format("the site's RefSeq bundle is now ~s (before: ~s); proteins ~s~n", [New, Prev, P]), 0;
+        {error, nothing_to_apply} ->
+            io:format(standard_error, "nothing to apply: run check_references first~n", []), 1
+    end;
 run(["audit_verify"]) ->
     case gh_audit:verify() of
         {ok, N} -> io:format("the audit chain of ~b records is whole~n", [N]), 0;
@@ -62,5 +95,5 @@ run(["audit_verify"]) ->
     end;
 run(_) ->
     io:format(standard_error, "usage: add_user NAME admin|analyst|researcher (password on stdin) | audit_verify | "
-              "build_usher_tree FASTA~n", []),
+              "build_usher_tree FASTA | check_references | apply_references~n", []),
     2.
