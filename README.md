@@ -129,6 +129,13 @@ Built:
   ([`acceptance/RESULTS-PHASE-D.md`](acceptance/RESULTS-PHASE-D.md)). Between labs, the counts will travel through the
   federation.
 
+## Status: phase E, the first learned model, measured and not adopted
+
+A multinomial naive Bayes classifier on 6-mers (the RDP classifier's approach), trained on all RefSeq viral genomes,
+was tested against GenHub2's classical classification on phase A's 593 held-out genomes, with the rule set before
+the test. It got 416 species right, against 572 for GenHub2 today. On MinHash's weak calls, where a model was meant
+to help, it got 46 of 132, against 115. **Not adopted** ([`acceptance/RESULTS-PHASE-E.md`](acceptance/RESULTS-PHASE-E.md)).
+
 ## Status: the page, against the specification (FS 3.1)
 
 - **Uploads:** files, or a sequence typed or pasted with a DNA/RNA choice; optional region and collection date.
@@ -191,6 +198,7 @@ sh acceptance/run_gateway.sh          # starts emqx/emqx:5.8.9 on 127.0.0.1:2188
 sh acceptance/run_phase_b.sh          # two nodes on this machine (after run.sh, which builds the bundles)
 sh acceptance/run_federation.sh       # tasks through the FVLLMP node this machine runs (acceptance/FEDERATION.md)
 sh acceptance/run_monitoring.sh       # monitoring from aggregated counts, three simulated sites (after run.sh)
+sh acceptance/run_model.sh            # phase E: a learned model against the classical classification (after run.sh)
 ```
 
 To run a site: set `{genhub2, [{http, #{ip => ..., port => ...}}, {mqtt, #{host => "127.0.0.1", port => 1883}}]}` and

@@ -12,12 +12,14 @@
 //!   gh2k boot ALIGNED.fasta SEED [OUT]       one bootstrap replicate's tree (task bootstrap), to OUT or stdout
 //!   gh2k boots ALIGNED.fasta FIRST COUNT OUT COUNT replicates with seeds FIRST.., one tree a line (a batch)
 //!   gh2k support TREE REPLICATES...          the tree with each branch's bootstrap support
+//!   gh2k nb REFS.fasta TAXONOMY.tsv QUERY.fasta K   naive Bayes on k-mers: the phase E test's learned model (nb.rs)
 //!   gh2k simulate GENOME.fa PAIRS LEN INSERT ERR SEED OUT [SPIKE.fa SPIKE_PAIRS]   paired reads for tests
 //!
 //! Exit status: 0 done; 2 the input is invalid (validate: the report says why); 1 a usage or I/O error.
 
 mod fasta;
 mod minhash;
+mod nb;
 mod nj;
 mod phylo;
 mod simulate;
@@ -47,6 +49,7 @@ fn main() {
             phylo::boots(aligned, num(first) as u64, num(count) as u64, out)
         }
         ["support", tree, reps @ ..] if !reps.is_empty() => phylo::support(tree, reps),
+        ["nb", refs, taxonomy, query, k] => nb::run(refs, taxonomy, query, num(k)),
         ["simulate", genome, pairs, len, insert, err, seed, out] => simulate::run(
             genome,
             num(pairs),
@@ -71,7 +74,7 @@ fn main() {
         }
         _ => {
             eprintln!(
-                "usage: gh2k validate|sketch|classify|screen|nj|dist|njtiles|boot|boots|support|simulate ... (see the source's header)"
+                "usage: gh2k validate|sketch|classify|screen|nj|dist|njtiles|boot|boots|support|nb|simulate ... (see the source's header)"
             );
             exit(1)
         }

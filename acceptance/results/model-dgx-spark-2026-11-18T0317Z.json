@@ -1,0 +1,989 @@
+{
+  "complete": true,
+  "date": "2026-11-18T03:18:33Z",
+  "genomes": 593,
+  "host": "genhub2",
+  "k": 6,
+  "references": 19607,
+  "scores": {
+    "classical": {
+      "all": {
+        "family": {
+          "right": 593,
+          "total": 593
+        },
+        "genus": {
+          "right": 573,
+          "total": 573
+        },
+        "species": {
+          "right": 572,
+          "total": 593
+        }
+      },
+      "high": {
+        "family": {
+          "right": 275,
+          "total": 275
+        },
+        "genus": {
+          "right": 273,
+          "total": 273
+        },
+        "species": {
+          "right": 274,
+          "total": 275
+        }
+      },
+      "low": {
+        "family": {
+          "right": 132,
+          "total": 132
+        },
+        "genus": {
+          "right": 116,
+          "total": 116
+        },
+        "species": {
+          "right": 115,
+          "total": 132
+        }
+      },
+      "medium": {
+        "family": {
+          "right": 185,
+          "total": 185
+        },
+        "genus": {
+          "right": 183,
+          "total": 183
+        },
+        "species": {
+          "right": 182,
+          "total": 185
+        }
+      },
+      "unclassified": {
+        "family": {
+          "right": 1,
+          "total": 1
+        },
+        "genus": {
+          "right": 1,
+          "total": 1
+        },
+        "species": {
+          "right": 1,
+          "total": 1
+        }
+      }
+    },
+    "minhash": {
+      "all": {
+        "family": {
+          "right": 591,
+          "total": 593
+        },
+        "genus": {
+          "right": 572,
+          "total": 573
+        },
+        "species": {
+          "right": 564,
+          "total": 593
+        }
+      },
+      "high": {
+        "family": {
+          "right": 275,
+          "total": 275
+        },
+        "genus": {
+          "right": 273,
+          "total": 273
+        },
+        "species": {
+          "right": 274,
+          "total": 275
+        }
+      },
+      "low": {
+        "family": {
+          "right": 131,
+          "total": 132
+        },
+        "genus": {
+          "right": 116,
+          "total": 116
+        },
+        "species": {
+          "right": 108,
+          "total": 132
+        }
+      },
+      "medium": {
+        "family": {
+          "right": 185,
+          "total": 185
+        },
+        "genus": {
+          "right": 183,
+          "total": 183
+        },
+        "species": {
+          "right": 182,
+          "total": 185
+        }
+      },
+      "unclassified": {
+        "family": {
+          "right": 0,
+          "total": 1
+        },
+        "genus": {
+          "right": 0,
+          "total": 1
+        },
+        "species": {
+          "right": 0,
+          "total": 1
+        }
+      }
+    },
+    "minhash+model": {
+      "all": {
+        "family": {
+          "right": 527,
+          "total": 593
+        },
+        "genus": {
+          "right": 506,
+          "total": 573
+        },
+        "species": {
+          "right": 502,
+          "total": 593
+        }
+      },
+      "high": {
+        "family": {
+          "right": 275,
+          "total": 275
+        },
+        "genus": {
+          "right": 273,
+          "total": 273
+        },
+        "species": {
+          "right": 274,
+          "total": 275
+        }
+      },
+      "low": {
+        "family": {
+          "right": 67,
+          "total": 132
+        },
+        "genus": {
+          "right": 50,
+          "total": 116
+        },
+        "species": {
+          "right": 46,
+          "total": 132
+        }
+      },
+      "medium": {
+        "family": {
+          "right": 185,
+          "total": 185
+        },
+        "genus": {
+          "right": 183,
+          "total": 183
+        },
+        "species": {
+          "right": 182,
+          "total": 185
+        }
+      },
+      "unclassified": {
+        "family": {
+          "right": 0,
+          "total": 1
+        },
+        "genus": {
+          "right": 0,
+          "total": 1
+        },
+        "species": {
+          "right": 0,
+          "total": 1
+        }
+      }
+    },
+    "model": {
+      "all": {
+        "family": {
+          "right": 460,
+          "total": 593
+        },
+        "genus": {
+          "right": 428,
+          "total": 573
+        },
+        "species": {
+          "right": 416,
+          "total": 593
+        }
+      },
+      "high": {
+        "family": {
+          "right": 275,
+          "total": 275
+        },
+        "genus": {
+          "right": 273,
+          "total": 273
+        },
+        "species": {
+          "right": 274,
+          "total": 275
+        }
+      },
+      "low": {
+        "family": {
+          "right": 67,
+          "total": 132
+        },
+        "genus": {
+          "right": 50,
+          "total": 116
+        },
+        "species": {
+          "right": 46,
+          "total": 132
+        }
+      },
+      "medium": {
+        "family": {
+          "right": 118,
+          "total": 185
+        },
+        "genus": {
+          "right": 105,
+          "total": 183
+        },
+        "species": {
+          "right": 96,
+          "total": 185
+        }
+      },
+      "unclassified": {
+        "family": {
+          "right": 0,
+          "total": 1
+        },
+        "genus": {
+          "right": 0,
+          "total": 1
+        },
+        "species": {
+          "right": 0,
+          "total": 1
+        }
+      }
+    },
+    "protein": {
+      "all": {
+        "family": {
+          "right": 586,
+          "total": 593
+        },
+        "genus": {
+          "right": 566,
+          "total": 573
+        },
+        "species": {
+          "right": 547,
+          "total": 593
+        }
+      },
+      "high": {
+        "family": {
+          "right": 275,
+          "total": 275
+        },
+        "genus": {
+          "right": 273,
+          "total": 273
+        },
+        "species": {
+          "right": 255,
+          "total": 275
+        }
+      },
+      "low": {
+        "family": {
+          "right": 125,
+          "total": 132
+        },
+        "genus": {
+          "right": 109,
+          "total": 116
+        },
+        "species": {
+          "right": 108,
+          "total": 132
+        }
+      },
+      "medium": {
+        "family": {
+          "right": 185,
+          "total": 185
+        },
+        "genus": {
+          "right": 183,
+          "total": 183
+        },
+        "species": {
+          "right": 183,
+          "total": 185
+        }
+      },
+      "unclassified": {
+        "family": {
+          "right": 1,
+          "total": 1
+        },
+        "genus": {
+          "right": 1,
+          "total": 1
+        },
+        "species": {
+          "right": 1,
+          "total": 1
+        }
+      }
+    }
+  },
+  "seconds": {
+    "minhash": 0.529103,
+    "model": 24.110941,
+    "protein": 34.1156
+  },
+  "species_trained": 14859,
+  "total_seconds": 73.6,
+  "verdict": "do_not_adopt",
+  "weak_calls_where_they_differ": [
+    {
+      "classical": "Orthoflavivirus encephalitidis",
+      "minhash_confidence": "low",
+      "model": "Norovirus norwalkense",
+      "query": "AB753012.1",
+      "truth": "Orthoflavivirus encephalitidis"
+    },
+    {
+      "classical": "Orthohantavirus dobravaense",
+      "minhash_confidence": "low",
+      "model": "Manticavirus vombatidgamma1",
+      "query": "AY533120.2",
+      "truth": "Orthohantavirus dobravaense"
+    },
+    {
+      "classical": "Orthohantavirus dobravaense",
+      "minhash_confidence": "low",
+      "model": "Macavirus suidgamma3",
+      "query": "AY961616.1",
+      "truth": "Orthohantavirus dobravaense"
+    },
+    {
+      "classical": "Orthohantavirus dobravaense",
+      "minhash_confidence": "low",
+      "model": "Manticavirus vombatidgamma1",
+      "query": "AY961618.1",
+      "truth": "Orthohantavirus dobravaense"
+    },
+    {
+      "classical": "Orthoflavivirus encephalitidis",
+      "minhash_confidence": "low",
+      "model": "Norovirus norwalkense",
+      "query": "FJ402885.1",
+      "truth": "Orthoflavivirus encephalitidis"
+    },
+    {
+      "classical": "Metapneumovirus hominis",
+      "minhash_confidence": "unclassified",
+      "model": "Orthoflavivirus denguei",
+      "query": "GQ888739.1",
+      "truth": "Metapneumovirus hominis"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "GU206559.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Orthoflavivirus encephalitidis",
+      "minhash_confidence": "low",
+      "model": "Norovirus norwalkense",
+      "query": "HQ201303.1",
+      "truth": "Orthoflavivirus encephalitidis"
+    },
+    {
+      "classical": "Orthohantavirus dobravaense",
+      "minhash_confidence": "low",
+      "model": "Macavirus suidgamma3",
+      "query": "JQ026205.1",
+      "truth": "Orthohantavirus dobravaense"
+    },
+    {
+      "classical": "Orthohantavirus dobravaense",
+      "minhash_confidence": "low",
+      "model": "Macavirus suidgamma3",
+      "query": "JQ026206.1",
+      "truth": "Orthohantavirus dobravaense"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "JQ679013.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Orthoflavivirus encephalitidis",
+      "minhash_confidence": "low",
+      "model": "Norovirus norwalkense",
+      "query": "KF951037.1",
+      "truth": "Orthoflavivirus encephalitidis"
+    },
+    {
+      "classical": "Orthoflavivirus encephalitidis",
+      "minhash_confidence": "low",
+      "model": "Norovirus norwalkense",
+      "query": "KP844724.1",
+      "truth": "Orthoflavivirus encephalitidis"
+    },
+    {
+      "classical": "Orthonairovirus haemorrhagiae",
+      "minhash_confidence": "low",
+      "model": "Orthonairovirus sakhalinense",
+      "query": "KR814856.1",
+      "truth": "Orthonairovirus haemorrhagiae"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "KR872417.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Orthoflavivirus encephalitidis",
+      "minhash_confidence": "low",
+      "model": "Norovirus norwalkense",
+      "query": "KU761570.1",
+      "truth": "Orthoflavivirus encephalitidis"
+    },
+    {
+      "classical": "Rotavirus alphagastroenteritidis",
+      "minhash_confidence": "low",
+      "model": "Bracoviriform indiense",
+      "query": "LC208545.2",
+      "truth": "Rotavirus alphagastroenteritidis"
+    },
+    {
+      "classical": "Rotavirus alphagastroenteritidis",
+      "minhash_confidence": "low",
+      "model": "Gammanudivirus hogammari",
+      "query": "LC810925.1",
+      "truth": "Rotavirus alphagastroenteritidis"
+    },
+    {
+      "classical": "Morbillivirus hominis",
+      "minhash_confidence": "low",
+      "model": "Simplexvirus humanalpha1",
+      "query": "LC830465.1",
+      "truth": "Morbillivirus hominis"
+    },
+    {
+      "classical": "Rotavirus alphagastroenteritidis",
+      "minhash_confidence": "low",
+      "model": "Fadolivirus algeromassiliense",
+      "query": "LC909798.1",
+      "truth": "Rotavirus alphagastroenteritidis"
+    },
+    {
+      "classical": "Rotavirus alphagastroenteritidis",
+      "minhash_confidence": "low",
+      "model": "Gammanudivirus pemonodonis",
+      "query": "LC909848.1",
+      "truth": "Rotavirus alphagastroenteritidis"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "MF444055.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "MF444091.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "MF444123.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Lyssavirus rabies",
+      "minhash_confidence": "low",
+      "model": "Rhabdoviridae sp.",
+      "query": "MG458308.1",
+      "truth": "Lyssavirus rabies"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "MG783570.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Orthohantavirus dobravaense",
+      "minhash_confidence": "low",
+      "model": "Macavirus suidgamma5",
+      "query": "MH251335.1",
+      "truth": "Orthohantavirus dobravaense"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "MH504127.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Orthoflavivirus encephalitidis",
+      "minhash_confidence": "low",
+      "model": "Norovirus norwalkense",
+      "query": "MH645617.1",
+      "truth": "Orthoflavivirus encephalitidis"
+    },
+    {
+      "classical": "Orthoflavivirus encephalitidis",
+      "minhash_confidence": "low",
+      "model": "Norovirus norwalkense",
+      "query": "MN115817.1",
+      "truth": "Orthoflavivirus encephalitidis"
+    },
+    {
+      "classical": "Orthonairovirus haemorrhagiae",
+      "minhash_confidence": "low",
+      "model": "Orthonairovirus sakhalinense",
+      "query": "MN866172.1",
+      "truth": "Orthonairovirus haemorrhagiae"
+    },
+    {
+      "classical": "Orthonairovirus parahaemorrhagiae",
+      "minhash_confidence": "low",
+      "model": "Orthonairovirus sakhalinense",
+      "query": "MN866206.1",
+      "truth": "Orthonairovirus haemorrhagiae"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "MW355219.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "MW355247.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "MW355276.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "MW355304.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "MW355332.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "MW355361.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "MW355389.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Paslahepevirus balayani",
+      "minhash_confidence": "low",
+      "model": "Rhadinovirus humangamma8",
+      "query": "MW837255.1",
+      "truth": "Hepatitis E virus"
+    },
+    {
+      "classical": "Metapneumovirus hominis",
+      "minhash_confidence": "low",
+      "model": "Parajeilongvirus hainanense",
+      "query": "MZ504964.1",
+      "truth": "Metapneumovirus hominis"
+    },
+    {
+      "classical": "Orthohantavirus dobravaense",
+      "minhash_confidence": "low",
+      "model": "Macavirus suidgamma5",
+      "query": "OK422868.1",
+      "truth": "Orthohantavirus dobravaense"
+    },
+    {
+      "classical": "Orthohantavirus dobravaense",
+      "minhash_confidence": "low",
+      "model": "Parajeilongvirus hainanense",
+      "query": "OK422869.1",
+      "truth": "Orthohantavirus dobravaense"
+    },
+    {
+      "classical": "Orthohantavirus dobravaense",
+      "minhash_confidence": "low",
+      "model": "Parajeilongvirus hainanense",
+      "query": "OK422871.1",
+      "truth": "Orthohantavirus dobravaense"
+    },
+    {
+      "classical": "Metapneumovirus hominis",
+      "minhash_confidence": "low",
+      "model": "Parajeilongvirus hainanense",
+      "query": "OL794393.1",
+      "truth": "Metapneumovirus hominis"
+    },
+    {
+      "classical": "Lyssavirus rabies",
+      "minhash_confidence": "low",
+      "model": "Rhabdoviridae sp.",
+      "query": "ON808418.1",
+      "truth": "Lyssavirus rabies"
+    },
+    {
+      "classical": "Rotavirus alphagastroenteritidis",
+      "minhash_confidence": "low",
+      "model": "Eneladusvirus Yen904",
+      "query": "OP487333.2",
+      "truth": "Rotavirus alphagastroenteritidis"
+    },
+    {
+      "classical": "Morbillivirus hominis",
+      "minhash_confidence": "low",
+      "model": "Lymphocryptovirus humangamma4",
+      "query": "OP660930.1",
+      "truth": "Morbillivirus hominis"
+    },
+    {
+      "classical": "Morbillivirus hominis",
+      "minhash_confidence": "low",
+      "model": "Lymphocryptovirus humangamma4",
+      "query": "OP660980.1",
+      "truth": "Morbillivirus hominis"
+    },
+    {
+      "classical": "Morbillivirus hominis",
+      "minhash_confidence": "low",
+      "model": "Lymphocryptovirus humangamma4",
+      "query": "OP661030.1",
+      "truth": "Morbillivirus hominis"
+    },
+    {
+      "classical": "Morbillivirus hominis",
+      "minhash_confidence": "low",
+      "model": "Lymphocryptovirus humangamma4",
+      "query": "OP661080.1",
+      "truth": "Morbillivirus hominis"
+    },
+    {
+      "classical": "Orthohepacivirus hominis",
+      "minhash_confidence": "low",
+      "model": "Simplexvirus humanalpha1",
+      "query": "OQ351558.1",
+      "truth": "Orthohepacivirus hominis"
+    },
+    {
+      "classical": "Lyssavirus rabies",
+      "minhash_confidence": "low",
+      "model": "Rhabdoviridae sp.",
+      "query": "OQ410146.1",
+      "truth": "Lyssavirus rabies"
+    },
+    {
+      "classical": "Orthonairovirus haemorrhagiae",
+      "minhash_confidence": "low",
+      "model": "Orthonairovirus sakhalinense",
+      "query": "OR047171.1",
+      "truth": "Orthonairovirus haemorrhagiae"
+    },
+    {
+      "classical": "Hepatovirus ahepa",
+      "minhash_confidence": "low",
+      "model": "Parajeilongvirus hainanense",
+      "query": "OR452343.1",
+      "truth": "Hepatovirus ahepa"
+    },
+    {
+      "classical": "Orthorubulavirus parotitidis",
+      "minhash_confidence": "low",
+      "model": "Parajeilongvirus hainanense",
+      "query": "OR727673.1",
+      "truth": "Orthorubulavirus parotitidis"
+    },
+    {
+      "classical": "Lyssavirus rabies",
+      "minhash_confidence": "low",
+      "model": "Rhabdoviridae sp.",
+      "query": "OR971327.1",
+      "truth": "Lyssavirus rabies"
+    },
+    {
+      "classical": "Lyssavirus rabies",
+      "minhash_confidence": "low",
+      "model": "Rhabdoviridae sp.",
+      "query": "OR971377.1",
+      "truth": "Lyssavirus rabies"
+    },
+    {
+      "classical": "Lyssavirus rabies",
+      "minhash_confidence": "low",
+      "model": "Rhabdoviridae sp.",
+      "query": "OR971427.1",
+      "truth": "Lyssavirus rabies"
+    },
+    {
+      "classical": "Lyssavirus rabies",
+      "minhash_confidence": "low",
+      "model": "Rhabdoviridae sp.",
+      "query": "OR971477.1",
+      "truth": "Lyssavirus rabies"
+    },
+    {
+      "classical": "Lyssavirus rabies",
+      "minhash_confidence": "low",
+      "model": "Rhabdoviridae sp.",
+      "query": "OR971527.1",
+      "truth": "Lyssavirus rabies"
+    },
+    {
+      "classical": "Lyssavirus rabies",
+      "minhash_confidence": "low",
+      "model": "Rhabdoviridae sp.",
+      "query": "OR971577.1",
+      "truth": "Lyssavirus rabies"
+    },
+    {
+      "classical": "Lyssavirus rabies",
+      "minhash_confidence": "low",
+      "model": "Rhabdoviridae sp.",
+      "query": "OR971627.1",
+      "truth": "Lyssavirus rabies"
+    },
+    {
+      "classical": "Rotavirus alphagastroenteritidis",
+      "minhash_confidence": "low",
+      "model": "Cohcovirus hiberniae",
+      "query": "PP453583.1",
+      "truth": "Rotavirus alphagastroenteritidis"
+    },
+    {
+      "classical": "Orthoflavivirus encephalitidis",
+      "minhash_confidence": "low",
+      "model": "Norovirus norwalkense",
+      "query": "PP473573.1",
+      "truth": "Orthoflavivirus encephalitidis"
+    },
+    {
+      "classical": "Morbillivirus hominis",
+      "minhash_confidence": "low",
+      "model": "Lymphocryptovirus humangamma4",
+      "query": "PP693927.1",
+      "truth": "Morbillivirus hominis"
+    },
+    {
+      "classical": "Rotavirus alphagastroenteritidis",
+      "minhash_confidence": "low",
+      "model": "Donellivirus gee",
+      "query": "PP848537.1",
+      "truth": "Rotavirus alphagastroenteritidis"
+    },
+    {
+      "classical": "Rotavirus alphagastroenteritidis",
+      "minhash_confidence": "low",
+      "model": "Fadolivirus algeromassiliense",
+      "query": "PP848637.1",
+      "truth": "Rotavirus alphagastroenteritidis"
+    },
+    {
+      "classical": "Rotavirus alphagastroenteritidis",
+      "minhash_confidence": "low",
+      "model": "Tequatrovirus kit03",
+      "query": "PP848769.1",
+      "truth": "Rotavirus alphagastroenteritidis"
+    },
+    {
+      "classical": "Rotavirus alphagastroenteritidis",
+      "minhash_confidence": "low",
+      "model": "Bracoviriform indiense",
+      "query": "PP874408.1",
+      "truth": "Rotavirus alphagastroenteritidis"
+    },
+    {
+      "classical": "Metapneumovirus hominis",
+      "minhash_confidence": "low",
+      "model": "Parajeilongvirus hainanense",
+      "query": "PP947570.1",
+      "truth": "Metapneumovirus hominis"
+    },
+    {
+      "classical": "Metapneumovirus hominis",
+      "minhash_confidence": "low",
+      "model": "Parajeilongvirus hainanense",
+      "query": "PP947670.1",
+      "truth": "Metapneumovirus hominis"
+    },
+    {
+      "classical": "Lyssavirus rabies",
+      "minhash_confidence": "low",
+      "model": "Rhabdoviridae sp.",
+      "query": "PQ379849.1",
+      "truth": "Lyssavirus rabies"
+    },
+    {
+      "classical": "Rotavirus alphagastroenteritidis",
+      "minhash_confidence": "low",
+      "model": "Orthopoxvirus monkeypox",
+      "query": "PQ822046.1",
+      "truth": "Rotavirus alphagastroenteritidis"
+    },
+    {
+      "classical": "Orthoflavivirus encephalitidis",
+      "minhash_confidence": "low",
+      "model": "Norovirus norwalkense",
+      "query": "PV173737.1",
+      "truth": "Orthoflavivirus encephalitidis"
+    },
+    {
+      "classical": "Metapneumovirus hominis",
+      "minhash_confidence": "low",
+      "model": "Parajeilongvirus hainanense",
+      "query": "PV218033.1",
+      "truth": "Metapneumovirus hominis"
+    },
+    {
+      "classical": "Metapneumovirus hominis",
+      "minhash_confidence": "low",
+      "model": "Parajeilongvirus hainanense",
+      "query": "PV218085.1",
+      "truth": "Metapneumovirus hominis"
+    },
+    {
+      "classical": "Lyssavirus rabies",
+      "minhash_confidence": "low",
+      "model": "Rhabdoviridae sp.",
+      "query": "PV591861.1",
+      "truth": "Lyssavirus rabies"
+    },
+    {
+      "classical": "Orthorubulavirus parotitidis",
+      "minhash_confidence": "low",
+      "model": "Kuttervirus maane",
+      "query": "PX738780.1",
+      "truth": "Orthorubulavirus parotitidis"
+    },
+    {
+      "classical": "Orthorubulavirus parotitidis",
+      "minhash_confidence": "low",
+      "model": "Kuttervirus maane",
+      "query": "PX738830.1",
+      "truth": "Orthorubulavirus parotitidis"
+    },
+    {
+      "classical": "Orthorubulavirus parotitidis",
+      "minhash_confidence": "low",
+      "model": "Parajeilongvirus hainanense",
+      "query": "PX738880.1",
+      "truth": "Orthorubulavirus parotitidis"
+    },
+    {
+      "classical": "Orthorubulavirus parotitidis",
+      "minhash_confidence": "low",
+      "model": "Parajeilongvirus hainanense",
+      "query": "PX738930.1",
+      "truth": "Orthorubulavirus parotitidis"
+    },
+    {
+      "classical": "Orthorubulavirus parotitidis",
+      "minhash_confidence": "low",
+      "model": "Parajeilongvirus hainanense",
+      "query": "PX738980.1",
+      "truth": "Orthorubulavirus parotitidis"
+    },
+    {
+      "classical": "Lyssavirus rabies",
+      "minhash_confidence": "low",
+      "model": "Rhabdoviridae sp.",
+      "query": "PZ050832.1",
+      "truth": "Lyssavirus rabies"
+    },
+    {
+      "classical": "Morbillivirus hominis",
+      "minhash_confidence": "low",
+      "model": "Lymphocryptovirus humangamma4",
+      "query": "PZ137877.1",
+      "truth": "Morbillivirus hominis"
+    },
+    {
+      "classical": "Metapneumovirus hominis",
+      "minhash_confidence": "low",
+      "model": "Parajeilongvirus hainanense",
+      "query": "PZ399269.1",
+      "truth": "Metapneumovirus hominis"
+    },
+    {
+      "classical": "Lentivirus humimdef1",
+      "minhash_confidence": "low",
+      "model": "Manticavirus vombatidgamma1",
+      "query": "QB003202.1",
+      "truth": "Lentivirus humimdef1"
+    }
+  ]
+}
