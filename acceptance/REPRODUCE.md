@@ -145,12 +145,21 @@ yours is `acceptance/results/phase-a-<host>-<date>.json`.
 - **Only the four times differ:** the 10 MB upload, the 1,000 classifications, and the two trees. They must stay
   under the targets (5 s, 60 s, 300 s for neighbour-joining).
 
-## The other two checks
+## The other checks
 
-[run_methods.sh](run_methods.sh) (the added methods: VeryFastTree, UShER, Nextclade's datasets, Hostile, iVar,
-Kraken 2 with Bracken) and [run_gateway.sh](run_gateway.sh) (the HTTP API, WebSocket and MQTT through EMQX) use the
-reference bundles that step 4 builds; their instructions are at the top of each script. They were not rerun for this
-page.
+They use the reference bundles and genomes that step 4 builds, and their instructions are at the top of each script:
+- [run_gateway.sh](run_gateway.sh): the HTTP API, WebSocket and MQTT through EMQX; accounts, the audit log, sharing,
+  Beacon, metrics, alert settings, the structure viewer's link ([RESULTS.md](RESULTS.md), section 5). It starts EMQX
+  5.8.9 on 127.0.0.1:21883 for the check and stops it afterwards.
+- [run_model.sh](run_model.sh): phase E's model test ([RESULTS-PHASE-E.md](RESULTS-PHASE-E.md)).
+- [run_methods.sh](run_methods.sh): the added methods (VeryFastTree, UShER, Nextclade's datasets, Hostile, iVar,
+  Kraken 2 with Bracken). Not rerun for this page.
+
+**Tested from a fresh clone at 2784ac9** on 18 November 2026, on the same DGX Spark, after step 4's reduced run
+(14 of 14 checks):
+- `run_gateway.sh`: all 46 checks held.
+- `run_model.sh`: every count equal to the published run (572, 416 and 502 species right; the verdict, not
+  adopted).
 
 ## Tested
 

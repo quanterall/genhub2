@@ -68,3 +68,6 @@ textarea { width: 100%; font: 13px/1.4 ui-monospace, monospace; background: var(
 #manual-in label { display: block; margin: 6px 0; }
 details.meta { margin-top: 10px; font-size: 14px; }
 details.meta label { display: block; margin: 6px 0; }
+#ds-new label { display: block; margin: 8px 0; }
+#ds-consent { width: 100%; max-width: 100%; }
+details code { display: block; white-space: normal; word-break: break-word; margin-top: 4px; }

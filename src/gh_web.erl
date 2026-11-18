@@ -22,6 +22,8 @@
 %%   GET  /api/aggregates            this site's aggregated counts (gh_agg, format genhub2-aggregates/1)
 %%   POST /api/aggregates            another site's aggregates, imported (admin)
 %%   GET  /api/aggregates/alerts     the alerts of this site's and the imported aggregates, merged
+%%   GET  /api/viewer; GET /api/jobs/:id/structure-view?query=NAME   whether the structure viewer is on and for which
+%%                                   viruses; a signed, short-lived link to it for one genome (gh_viewer), audited
 %%   GET  /api/settings, PUT /api/settings (admin)   alert thresholds and notification settings (gh_settings)
 %%   GET  /api/datasets, POST /api/datasets (admin)   shared datasets (gh_share): {"title", "description",
 %%                                   "consent": [DUO codes], "jobs": [id, ...]}; GET /api/datasets/:id; POST
@@ -49,12 +51,14 @@ start() ->
                          {"/api/uploads", gh_web_api, uploads},
                          {"/api/jobs", gh_web_api, jobs},
                          {"/api/jobs/:id", gh_web_api, job},
+                         {"/api/jobs/:id/structure-view", gh_web_api, structure_view},
                          {"/api/jobs/:id/:export", gh_web_api, export},
                          {"/api/trees", gh_web_api, trees},
                          {"/api/summary", gh_web_api, summary},
                          {"/api/files/:hash", gh_web_api, file},
                          {"/api/aggregates", gh_web_api, aggregates},
                          {"/api/settings", gh_web_api, settings},
+                         {"/api/viewer", gh_web_api, viewer},
                          {"/metrics", gh_web_api, metrics},
                          {"/beacon", gh_web_api, beacon_info},
                          {"/beacon/info", gh_web_api, beacon_info},

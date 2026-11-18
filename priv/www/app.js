@@ -5,6 +5,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<
 let selected = location.hash ? decodeURIComponent(location.hash.slice(1)) : null;
 
 let me = null;   // {user, role} of this session
+let viewer = {enabled: false, viruses: []};   // the structure viewer (gh_viewer), if the site has one
 
 // every changing request carries the gateway's header (protection against requests from other sites); a 401 means
 // the session ended, so the login form comes back
@@ -29,6 +30,8 @@ function showLogin() {
 async function start() {
   try { me = await api("/api/me"); } catch (e) { showLogin(); return; }
   $("#login").hidden = true; $("#app").hidden = false;
+  viewer = await api("/api/viewer").catch(() => viewer);
+  $("#beacon").hidden = false;
   $("#who").textContent = `${me.user} (${me.role})`; $("#who").hidden = false; $("#logout").hidden = false;
   const lab = me.role === "admin" || me.role === "analyst";
   document.querySelectorAll(".lab").forEach((el) => { el.hidden = !lab || el.id === "detail"; });
@@ -120,6 +123,37 @@ $("#t-settings").addEventListener("submit", async (ev) => {
   } catch (e) { $("#t-msg").textContent = "Failed: " + e.message; }
 });
 
+$("#t-export").addEventListener("click", async () => {
+  try {
+    const a = await api("/api/aggregates");
+    delete a.not_counted;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(a)], {type: "application/json"}));
+    const link = Object.assign(document.createElement("a"), {href: url, download: `aggregates-${a.site}-${new Date().toISOString().slice(0, 10)}.json`});
+    document.body.append(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+    $("#t-msg").textContent = "Downloaded: counts only, no sequences or sample names.";
+  } catch (e) { $("#t-msg").textContent = "Failed: " + e.message; }
+});
+
+// Beacon (gh_beacon): a 1-based mutation name (A23403G) as Beacon v2's 0-based start
+$("#b-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const q = new URLSearchParams();
+  const mut = $("#b-mut").value.trim().toUpperCase(), lin = $("#b-lin").value.trim();
+  const m = mut.match(/^([ACGT])([0-9]+)([ACGT])$/);
+  if (mut && !m) { $("#b-result").innerHTML = `<li class="hint">A mutation looks like A23403G.</li>`; return; }
+  if (m) { q.set("referenceName", $("#b-ref").value.trim()); q.set("start", String(Number(m[2]) - 1));
+           q.set("referenceBases", m[1]); q.set("alternateBases", m[3]); }
+  if (lin) q.set("filters", "lineage:" + lin);
+  if (me.role !== "researcher") q.set("requestedGranularity", "count");
+  try {
+    const r = await api("/beacon/g_variants?" + q.toString());
+    const sets = r.response.resultSets;
+    $("#b-result").innerHTML = `<li><b>${r.responseSummary.exists ? "Yes" : "No"}</b>${r.responseSummary.numTotalResults !== undefined
+        ? `: ${r.responseSummary.numTotalResults} genomes` : ""}</li>` +
+      sets.filter((x) => x.exists).map((x) => `<li>dataset <code>${esc(x.id)}</code>${x.resultsCount !== undefined ? `: ${x.resultsCount}` : ""}</li>`).join("");
+  } catch (e) { $("#b-result").innerHTML = `<li>${esc(e.message)}</li>`; }
+});
+
 $("#t-import").addEventListener("change", async () => {
   const f = $("#t-import").files[0];
   if (!f) return;
@@ -153,9 +187,11 @@ async function datasets() {
 $("#ds-new").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   try {
-    const jobs = (await api("/api/jobs")).filter((j) => j.state === "done" && j.kind !== "tree").map((j) => j.id);
+    const jobs = await chosenJobs();
+    const consent = [...$("#ds-consent").selectedOptions].map((o) => o.value);
+    if (!consent.length) throw new Error("choose at least one consent code");
     const d = await api("/api/datasets", {method: "POST", headers: {"content-type": "application/json"},
-      body: JSON.stringify({title: $("#ds-title").value.trim(), consent: [$("#ds-consent").value], jobs})});
+      body: JSON.stringify({title: $("#ds-title").value.trim(), description: $("#ds-desc").value.trim(), consent, jobs})});
     $("#ds-msg").textContent = `Shared ${d.id}: ${d.jobs} analyses.`;
     await datasets();
   } catch (e) {
@@ -305,10 +341,17 @@ function boot() {
 }
 $("#t-method").addEventListener("change", () => { $("#t-boot").disabled = $("#t-method").value !== "nj"; });
 
+$("#j-all").addEventListener("change", async () => {
+  ticked.clear();
+  if ($("#j-all").checked)
+    (await api("/api/jobs")).filter((j) => j.state === "done" && j.kind !== "tree").forEach((j) => ticked.add(j.id));
+  await refresh();
+});
+
 $("#t-go").addEventListener("click", async () => {
   $("#t-go").disabled = true;
   try {
-    const jobs = (await api("/api/jobs")).filter((j) => j.state === "done" && j.kind !== "tree").map((j) => j.id);
+    const jobs = await chosenJobs();
     const r = await api("/api/trees", {method: "POST", headers: {"content-type": "application/json"},
                                        body: JSON.stringify({jobs, method: $("#t-method").value, bootstrap: boot()})});
     $("#t-msg").textContent = `Started ${r.id}: ${jobs.length} analyses against ${r.reference}.`;
@@ -329,11 +372,28 @@ async function monitor() {
   $("#m-sp tbody").innerHTML = rows(s.species);
 }
 
+const ticked = new Set();   // analyses chosen for a tree or a dataset
+
+// the ticked finished analyses, or all finished ones when none is ticked
+async function chosenJobs() {
+  const done = (await api("/api/jobs")).filter((j) => j.state === "done" && j.kind !== "tree").map((j) => j.id);
+  const t = done.filter((id) => ticked.has(id));
+  return t.length ? t : done;
+}
+
 async function refresh() {
   const jobs = await api("/api/jobs");
+  const pick = (j) => j.state === "done" && j.kind !== "tree";
   $("#jobs tbody").innerHTML = jobs.map((j) => `<tr data-id="${esc(j.id)}" class="${j.id === selected ? "sel" : ""}">
+    <td>${pick(j) ? `<input type="checkbox" data-tick="${esc(j.id)}" ${ticked.has(j.id) ? "checked" : ""} aria-label="tick ${esc(j.id)}">` : ""}</td>
     <td><code>${esc(j.id)}</code></td><td>${esc(j.kind)}</td><td class="state-${esc(j.state)}">${esc(j.state)}</td>
     <td>${new Date(j.created).toLocaleString()}</td></tr>`).join("");
+  $("#j-count").textContent = ticked.size ? `${ticked.size} ticked.` : "";
+  document.querySelectorAll("[data-tick]").forEach((c) => {
+    c.addEventListener("click", (ev) => ev.stopPropagation());
+    c.addEventListener("change", () => { c.checked ? ticked.add(c.dataset.tick) : ticked.delete(c.dataset.tick);
+      $("#j-count").textContent = ticked.size ? `${ticked.size} ticked.` : ""; });
+  });
   document.querySelectorAll("#jobs tbody tr").forEach((tr) => tr.addEventListener("click", () => {
     selected = tr.dataset.id; history.replaceState(null, "", "#" + selected); refresh();
   }));
@@ -424,11 +484,33 @@ async function show(id) {
     <td>${p.parsimony ?? ""}</td><td>${p.placements ?? ""}</td></tr>`).join("");
   const lin = res("lineage").flat();
   $("#d-lineage-wrap").hidden = lin.length === 0;
+  const species = Object.fromEntries(res("classify").flat().map((c) => [c.query, (c.call || {}).species]));
+  const aa = (l) => [...(l.aa_substitutions || []), ...(l.aa_deletions || [])];
+  const viewable = (l) => viewer.enabled && viewer.viruses.includes(species[l.query]) && aa(l).length;
   $("#d-lineage tbody").innerHTML = lin.map((l) => `<tr><td>${esc(l.query)}</td><td>${esc(l.pango)}</td>
-    <td>${esc(l.clade)}</td><td>${esc(l.qc)}</td></tr>`).join("");
+    <td>${esc(l.clade)}</td><td>${esc(l.qc)}</td>
+    <td>${aa(l).length ? `<details><summary>${aa(l).length}</summary><code>${esc(aa(l).join(", "))}</code></details>` : ""}</td>
+    <td>${aa(l).length ? `${viewable(l) ? `<button class="small" data-view="${esc(l.query)}">Open</button> ` : ""}
+      <button class="small" data-copy="${esc(aa(l).join(", "))}">Copy changes</button>` : ""}</td></tr>`).join("");
+  $("#d-viewer-note").hidden = !lin.some(viewable);
+  document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", async () => {
+    // a signed link, valid for 10 minutes, carrying the changes but no sample or job names (gh_viewer)
+    try {
+      const v = await api(`/api/jobs/${encodeURIComponent(j.id)}/structure-view?query=${encodeURIComponent(b.dataset.view)}`);
+      window.open(v.url, "_blank", "noopener");
+    } catch (e) { alert("The structure view failed: " + e.message); }
+  }));
+  document.querySelectorAll("[data-copy]").forEach((b) => b.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = "Copied"; }
+    catch (e) { prompt("Copy the changes:", b.dataset.copy); }
+  }));
   $("#d-mut tbody").innerHTML = res("mutations").flat().map((m) => m.aligned ? `<tr><td>${esc(m.query)}</td>
     <td>${esc(m.reference)}</td><td>${m.substitutions.length}</td><td>${m.insertions.length}</td>
-    <td>${m.deletions.length}</td><td>${m.missing}</td></tr>` : `<tr><td>${esc(m.query)}</td><td colspan="5">not aligned</td></tr>`).join("");
+    <td>${m.deletions.length}</td><td>${m.missing}</td>
+    <td>${m.substitutions.length + m.insertions.length + m.deletions.length ? `<details><summary>show</summary><code>${esc(
+      [...m.substitutions.map(([p, r, a]) => r + p + a), ...m.insertions.map(([p, sq]) => `ins${p}${sq}`),
+       ...m.deletions.map(([p, n]) => `del${p}-${p + n - 1}`)].join(", "))}</code></details>` : ""}</td></tr>`
+    : `<tr><td>${esc(m.query)}</td><td colspan="6">not aligned</td></tr>`).join("");
   const kr = res("kraken")[0];
   $("#d-kraken-wrap").hidden = !kr;
   if (kr) $("#d-kraken tbody").innerHTML = kr.species.map((s) => `<tr><td>${esc(s.name)}</td><td>${s.reads}</td>

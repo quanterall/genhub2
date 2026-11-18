@@ -25,7 +25,9 @@
 %%  13. alert thresholds and notifications: only an admin changes them, checked and audited; each new lineage of the
 %%      merged counts published once on genhub/alerts, as it appears;
 %%  14. one's own account: sessions listed, the others ended; a password change (refused with a wrong code); an
-%%      admin's reset ends the user's sessions and gives a new secret.
+%%      admin's reset ends the user's sessions and gives a new secret;
+%%  15. the structure viewer: a signed, short-lived link for the genome with A23403G (part 12), carrying S:D614G and
+%%      no job or sample names; checked as the viewer checks it; not for researchers; audited.
 %% Parts 1-7 run as an analyst who logged in through the API.
 %%
 %% Needs the reference bundles of the phase A acceptance test, and EMQX on 127.0.0.1:21883 (run_gateway.sh); the
@@ -42,6 +44,13 @@ main([Out]) ->
     ok = application:set_env(genhub2, mqtt, #{host => "127.0.0.1", port => ?MQTT_PORT}),
     ok = application:set_env(genhub2, http, #{ip => {127, 0, 0, 1}, port => 28090}),
     ok = application:set_env(genhub2, metrics_token, binary:encode_hex(crypto:strong_rand_bytes(24), lowercase)),
+    %% a structure viewer with a secret of the check's own (part 15)
+    ViewerSecret = binary:encode_hex(crypto:strong_rand_bytes(24), lowercase),
+    ViewerSecretFile = filename:join("/tmp", "gh-check-viewer-" ++ os:getpid()),
+    ok = file:write_file(ViewerSecretFile, ViewerSecret),
+    ok = application:set_env(genhub2, structure_viewer, #{url => "https://viewer.example/genhub2/open",
+                                                          secret_file => ViewerSecretFile,
+                                                          viruses => [<<"Betacoronavirus pandemicum">>]}),
     {ok, _} = application:ensure_all_started([genhub2, gun]),
     T0 = erlang:monotonic_time(millisecond),
     %% the site's SARS-CoV-2 tree, from phase A's 1,000 public genomes, so genome jobs place their genomes in it
@@ -78,17 +87,19 @@ main([Out]) ->
     Beacon = beacon(Users, maps:get(id, Job), maps:get(id, Sharing)),
     Settings = settings(Users, Mqtt),
     Account = account(Users),
+    Viewer = viewer(Users, maps:get(mutant_job, Beacon), ViewerSecret),
+    ok = file:delete(ViewerSecretFile),
     Checks = checks(Page, Job, MqttMsgs, WsMsgs, Viamqtt, Refused)
         ++ more_checks(Job, Viamqtt, Exports, Tree, Summary, Alerts) ++ accounts_checks(Accounts)
         ++ aggregates_checks(Aggregates) ++ sharing_checks(Sharing, [maps:get(id, Job), maps:get(id, Viamqtt)])
-        ++ metrics_checks(Metrics) ++ beacon_checks(Beacon, maps:get(id, Sharing)) ++ settings_checks(Settings) ++ account_checks(Account),
+        ++ metrics_checks(Metrics) ++ beacon_checks(Beacon, maps:get(id, Sharing)) ++ settings_checks(Settings) ++ account_checks(Account) ++ viewer_checks(Viewer),
     R = #{date => list_to_binary(calendar:system_time_to_rfc3339(erlang:system_time(second), [{offset, "Z"}])),
           host => list_to_binary(net_adm:localhost()), emqx => <<"emqx/emqx:5.8.9">>,
           upload => Upload, job_seconds => maps:get(seconds, Job), job_state => maps:get(state, Job),
           mqtt_topics => count([T || {T, _} <- MqttMsgs]), websocket_topics => count([T || {T, _} <- WsMsgs]),
           job_from_mqtt => Viamqtt, exports => Exports, tree => maps:remove(svg, Tree), summary => Summary,
           alerts => Alerts, refused => Refused, accounts => Accounts, aggregates => Aggregates, sharing => Sharing,
-          metrics => Metrics, beacon => Beacon, settings => Settings, account => Account,
+          metrics => Metrics, beacon => Beacon, settings => Settings, account => Account, viewer => Viewer,
           usher_tree => UsherTree,
           checks => Checks,
           seconds => (erlang:monotonic_time(millisecond) - T0) / 1000},
@@ -434,6 +445,43 @@ aggregates_checks(A) ->
            andalso lists:member(<<"check-other-site">>, maps:get(<<"sites">>, Al)), Al),
      check(<<"aggregates: a researcher reads the aggregates and the alerts">>,
            maps:get(researcher, A) =:= #{aggregates => 200, alerts => 200}, maps:get(researcher, A))].
+
+%%% 15. the structure viewer
+
+viewer(Users, MJob, Secret) ->
+    {AnName, AnSecret} = maps:get(analyst, Users),
+    {ReName, ReSecret} = maps:get(researcher, Users),
+    {AdName, AdSecret} = maps:get(admin, Users),
+    Path = "/api/jobs/" ++ binary_to_list(MJob) ++ "/structure-view?query=",
+    {200, <<"analyst">>} = login(AnName, AnSecret),
+    {200, _, CB} = http(get, "/api/viewer", none),
+    {S, _, B} = http(get, Path ++ "mutant", none),
+    #{<<"url">> := Url, <<"mutations">> := Muts} = json:decode(B),
+    #{query := Qs} = uri_string:parse(Url),
+    #{<<"d">> := P, <<"s">> := Sig} = maps:from_list(uri_string:dissect_query(Qs)),
+    Verified = gh_viewer:verify(P, Sig, Secret),
+    Json = base64:decode(P, #{mode => urlsafe, padding => false}),
+    {NoGenome, _, _} = http(get, Path ++ "no-such-genome", none),
+    {200, <<"researcher">>} = login(ReName, ReSecret),
+    {Researcher, _, _} = http(get, Path ++ "mutant", none),
+    {200, <<"admin">>} = login(AdName, AdSecret),
+    {200, _, AuditB} = http(get, "/api/audit?from=1&limit=10000", none),
+    #{config => json:decode(CB), status => S, mutations => Muts,
+      verified => case Verified of {ok, M} -> maps:with([<<"v">>, <<"virus">>, <<"lineage">>, <<"mutations">>], M); E -> E end,
+      names => [N || N <- [MJob, <<"mutant">>], binary:match(Json, N) =/= nomatch],
+      no_genome => NoGenome, researcher => Researcher,
+      audited => length([x || #{<<"action">> := <<"structure_view">>} <- json:decode(AuditB)])}.
+
+viewer_checks(V) ->
+    [check(<<"viewer: a signed link for the genome with A23403G, carrying S:D614G, checked as the viewer checks it">>,
+           maps:get(status, V) =:= 200 andalso lists:member(<<"S:D614G">>, maps:get(mutations, V))
+           andalso is_map(maps:get(verified, V))
+           andalso maps:get(<<"mutations">>, maps:get(verified, V)) =:= maps:get(mutations, V)
+           andalso maps:get(<<"virus">>, maps:get(verified, V)) =:= <<"Betacoronavirus pandemicum">>, V),
+     check(<<"viewer: no job or sample names in the link; an unknown genome 400; not for researchers (403); audited">>,
+           maps:get(names, V) =:= [] andalso maps:get(no_genome, V) =:= 400 andalso maps:get(researcher, V) =:= 403
+           andalso maps:get(audited, V) =:= 1
+           andalso maps:get(config, V) =:= #{<<"enabled">> => true, <<"viruses">> => [<<"Betacoronavirus pandemicum">>]}, V)].
 
 %%% 14. one's own account
 

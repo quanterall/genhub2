@@ -59,7 +59,10 @@
 
   <section class="card lab" id="jobs-card">
     <h2>Analyses</h2>
-    <div class="scroll"><table id="jobs"><thead><tr><th>Job</th><th>Kind</th><th>State</th><th>Started</th></tr></thead>
+    <p class="hint">Tick analyses to build a tree of them or to share them; with none ticked, all finished ones are used.
+      <span id="j-count"></span></p>
+    <div class="scroll"><table id="jobs"><thead><tr><th><input type="checkbox" id="j-all" aria-label="tick all finished"></th>
+      <th>Job</th><th>Kind</th><th>State</th><th>Started</th></tr></thead>
       <tbody></tbody></table></div>
   </section>
 
@@ -108,6 +111,7 @@
         <button type="submit">Save</button>
       </form>
       <label>Import another site's aggregates (JSON) <input id="t-import" type="file" accept="application/json,.json"></label>
+      <button class="small" id="t-export" type="button">Download this site's aggregates (to send to another lab)</button>
       <p id="t-msg" role="status"></p>
     </div>
   </section>
@@ -133,13 +137,15 @@
       <th>Identity</th><th>Confidence</th><th>Method</th><th>Nearest references</th></tr></thead><tbody></tbody></table></div>
     <div id="d-lineage-wrap"><h3>Lineage (Nextclade)</h3>
       <div class="scroll"><table id="d-lineage"><thead><tr><th>Sequence</th><th>Pango</th><th>Clade</th>
-        <th>QC</th></tr></thead><tbody></tbody></table></div></div>
+        <th>QC</th><th>Amino-acid changes</th><th>Structure</th></tr></thead><tbody></tbody></table></div>
+      <p class="notice" id="d-viewer-note" hidden>The structure view shows where the changes fall on the virus's proteins:
+        information for experts, not a diagnosis.</p></div>
     <div id="d-place-wrap" hidden><h3>Placement in this site's SARS-CoV-2 tree (UShER)</h3>
       <div class="scroll"><table id="d-place"><thead><tr><th>Sequence</th><th>Lineage where it lands</th>
         <th>Parsimony</th><th>Equally good placements</th></tr></thead><tbody></tbody></table></div></div>
     <h3>Mutations against the reference</h3>
     <div class="scroll"><table id="d-mut"><thead><tr><th>Sequence</th><th>Reference</th><th>Substitutions</th>
-      <th>Insertions</th><th>Deletions</th><th>Missing</th></tr></thead><tbody></tbody></table></div>
+      <th>Insertions</th><th>Deletions</th><th>Missing</th><th>List</th></tr></thead><tbody></tbody></table></div>
     <div id="d-kraken-wrap" hidden><h3>Sample composition (Kraken 2 + Bracken)</h3>
       <div class="scroll"><table id="d-kraken"><thead><tr><th>Species</th><th>Read pairs</th><th>Share</th></tr></thead>
         <tbody></tbody></table></div></div>
@@ -152,16 +158,30 @@
     <details><summary>Provenance</summary><pre id="d-prov"></pre></details>
   </section>
 
+  <section class="card wide" id="beacon" hidden>
+    <h2>Discover (GA4GH Beacon)</h2>
+    <p class="hint">Does this lab hold shared genomes with a mutation, or of a lineage? Searches the approved shared
+      datasets only. Positions are 1-based here, as in mutation names (A23403G).</p>
+    <form id="b-form" class="row">
+      <label>Reference <input id="b-ref" value="NC_045512.2" size="12"></label>
+      <label>Mutation <input id="b-mut" placeholder="A23403G" pattern="[ACGT][0-9]+[ACGT]" size="10"></label>
+      <label>Lineage <input id="b-lin" placeholder="BA.2" size="10"></label>
+      <button type="submit">Search</button>
+    </form>
+    <ul id="b-result"></ul>
+  </section>
+
   <section class="card wide" id="datasets" hidden>
     <h2>Shared datasets</h2>
     <p class="hint">Datasets the lab approved for sharing: genomes renamed and results with the week of collection, served
       through GA4GH DRS. Raw reads are never shared.</p>
     <div class="scroll"><table id="ds-list"><thead><tr><th>Dataset</th><th>From</th><th>Consent (DUO)</th><th>State</th>
       <th>Files (DRS)</th><th></th></tr></thead><tbody></tbody></table></div>
-    <form id="ds-new" class="row" hidden>
+    <form id="ds-new" hidden>
       <label>Title <input id="ds-title" required></label>
-      <label>Consent <select id="ds-consent"></select></label>
-      <button type="submit">Share all finished analyses</button>
+      <label>Description <input id="ds-desc"></label>
+      <label>Consent (DUO; one or more) <select id="ds-consent" multiple size="5"></select></label>
+      <button type="submit" id="ds-go">Share the ticked analyses</button>
     </form>
     <p id="ds-msg" role="status"></p>
   </section>

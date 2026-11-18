@@ -35,6 +35,8 @@ allowed(W) when W =:= datasets; W =:= dataset; W =:= drs_info; W =:= drs_object;
     [admin, analyst, researcher];
 allowed(dataset_withdraw) -> [admin];
 allowed(settings) -> [admin, analyst, researcher];
+allowed(viewer) -> [admin, analyst, researcher];
+allowed(structure_view) -> [admin, analyst];
 allowed(W) when W =:= beacon_info; W =:= beacon_datasets; W =:= beacon_terms; W =:= beacon_variants ->
     [admin, analyst, researcher];
 allowed(W) when W =:= users; W =:= user_disable; W =:= audit; W =:= audit_verify -> [admin];
@@ -381,6 +383,17 @@ handle(aggregates, <<"POST">>, Req) ->
                 {error, own_site} -> throw({status, 400, <<"these are this site's own aggregates">>})
             end;
         {error, _} -> throw({status, 400, <<"not an aggregate (format genhub2-aggregates/1)">>})
+    end;
+handle(viewer, <<"GET">>, Req) ->
+    reply(200, gh_viewer:config(), Req);
+handle(structure_view, <<"GET">>, Req) ->
+    J = view(Req),
+    #{query := Query} = cowboy_req:match_qs([{query, nonempty}], Req),
+    case gh_viewer:link(J, Query, gh_monitor:site()) of
+        {ok, #{ref := Ref} = L} ->
+            audit(structure_view, maps:get(id, J), ok, #{genome => Query, ref => Ref}),
+            reply(200, maps:without([ref], L), Req);
+        {error, Why} -> throw({status, 400, Why})
     end;
 handle(settings, <<"GET">>, Req) ->
     reply(200, #{alert_thresholds => gh_settings:get(alert_thresholds), notify => gh_settings:get(notify)}, Req);

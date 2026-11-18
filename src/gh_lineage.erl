@@ -3,7 +3,8 @@
 %% nextclade_datasets/0) holds Nextclade's minimizer index: nextclade sort sends each genome to the dataset it matches
 %% best (SARS-CoV-2, influenza HA, RSV A and B, mpox, measles, ...), and each dataset runs on its genomes. A bundle of
 %% one dataset (gh_refdb:nextclade/1) runs that dataset on every genome.
-%%   {lineage, GenomesHash, DatasetBundle} -> [#{query, dataset, clade, pango, qc, substitutions, total_missing}]
+%%   {lineage, GenomesHash, DatasetBundle} -> [#{query, dataset, clade, pango, qc, substitutions, aa_substitutions,
+%%                                              aa_deletions, total_missing}]
 %%   in the file's order; a genome no dataset matches has dataset <<>> and nothing else
 -module(gh_lineage).
 -behaviour(pq_task).
@@ -68,7 +69,11 @@ row(M, Dataset) ->
     G = fun(K) -> maps:get(K, M, <<>>) end,
     #{query => first_word(G(<<"seqName">>)), dataset => Dataset, clade => G(<<"clade">>),
       pango => G(<<"Nextclade_pango">>), qc => G(<<"qc.overallStatus">>), total_missing => G(<<"totalMissing">>),
-      substitutions => [S || S <- binary:split(G(<<"substitutions">>), <<",">>, [global]), S =/= <<>>]}.
+      substitutions => list(G(<<"substitutions">>)),
+      %% amino-acid changes, as Nextclade writes them (S:N501Y; deletions S:H69-): what the structure viewer shows
+      aa_substitutions => list(G(<<"aaSubstitutions">>)), aa_deletions => list(G(<<"aaDeletions">>))}.
+
+list(B) -> [S || S <- binary:split(B, <<",">>, [global]), S =/= <<>>].
 
 first_word(S) -> hd(binary:split(S, [<<" ">>, <<"\t">>])).
 

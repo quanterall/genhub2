@@ -122,7 +122,8 @@ neighbour-joining, `4c441ab1...` for FastTree).
 [`gh_gateway_check.erl`](gh_gateway_check.erl), run by [`run_gateway.sh`](run_gateway.sh) against EMQX 5.8.9, on a site
 with no earlier jobs.
 - **18 November 2026, with accounts, placement, aggregates, sharing, metrics, Beacon, alert settings and one's own
-  account:** **all 46 checks hold** ([`results/gateway-dgx-spark-2026-11-18T0305Z.json`](results/gateway-dgx-spark-2026-11-18T0305Z.json); the check of
+  account, and the structure viewer's link:** **all 48 checks hold**
+  ([`results/gateway-dgx-spark-2026-11-18T0359Z.json`](results/gateway-dgx-spark-2026-11-18T0359Z.json); the check of
   encryption at rest in `warn` mode: this test machine's disk is not encrypted).
   - The 13 below now run as an analyst who logged in through the API.
   - 8 more cover accounts and the audit log (at the end of this section).
@@ -135,6 +136,10 @@ with no earlier jobs.
     date ([RESULTS-PHASE-D.md](RESULTS-PHASE-D.md), "At a site").
   - 8 cover sharing (below).
   - 5 cover Beacon (below).
+  - 2 cover the structure viewer's link (`gh_viewer`):
+    - it is signed and short-lived, for the genome with A23403G, and carries `S:D614G`;
+    - it is checked as the viewer checks it, and carries no job or sample names;
+    - an unknown genome is refused, researchers get no link, and every link is audited.
   - 3 cover one's own account:
     - one's sessions are listed, and the others ended;
     - a password change is refused with a wrong code and done with the right one;
@@ -237,6 +242,16 @@ with no earlier jobs.
     uploaded genomes (7 leaves with the earlier runs' genomes and the reference, 4 support values). Zoom in and fit
     change the view. Finding a job highlights its genome (1 of 7). Clicking the genome opens its analysis. A reload
     keeps the tree, because the address now carries the selected job. At 390 px, no horizontal scrolling.
+  - **Results, the viewer, choosing, Beacon, export:**
+    - a genome with A23403G, uploaded with its region and date, shows its amino-acid change (S:D614G) and its
+      mutation list (A23403G);
+    - with a viewer configured, Structure view opens it with a signed link that verifies and carries no names, and
+      Copy changes copies `S:D614G`;
+    - an admin ticked that one analysis and shared it with two DUO codes, and the dataset shows its source, country,
+      region and week;
+    - Beacon found A23403G only after sharing (no before, yes after);
+    - the aggregates download is a `genhub2-aggregates/1` file;
+    - at 390 px, no horizontal scrolling.
 
 ## 6. The added methods, each against what it adds to
 

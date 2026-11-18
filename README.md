@@ -141,6 +141,14 @@ to help, it got 46 of 132, against 115. **Not adopted** ([`acceptance/RESULTS-PH
 - **Uploads:** files, or a sequence typed or pasted with a DNA/RNA choice; optional region and collection date.
 - **Interactive trees:** zoom, move, find a job or genome, click a genome to open its analysis; bootstrap support
   at the branches.
+- **Results:** each genome's mutation list, and its amino-acid changes (Nextclade's). With a structure viewer
+  configured (`structure_viewer`, `gh_viewer`), a Structure view button opens it with a signed link valid for 10
+  minutes. The link carries no sample, job or user names, and is audited. A Copy changes button works with any
+  viewer.
+- **Choosing analyses:** a tree or a shared dataset is made of the ticked analyses; datasets take a description and
+  several consent codes.
+- **Discovery:** Beacon search by mutation (A23403G) or lineage.
+- **Exchange:** a download of the site's aggregates, to send to another lab until the federation carries them.
 - **One's own account:** open sessions, with the others ended in one click; a password change (password, a
   one-time code and the new password); an admin's reset of a user who lost their phone or password (a new password
   and one-time secret, every session ended, the account unlocked).

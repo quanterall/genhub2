@@ -71,4 +71,5 @@ sh acceptance/run.sh --reduced        # once: the reference bundles and genomes
 sh acceptance/run_model.sh            # about a minute on 10 cores
 ```
 
-Every count above must be the same; only the times differ. Tested in the development worktree on 18 November 2026.
+Every count above must be the same; only the times differ. Tested in the development worktree, and from a fresh
+clone at 2784ac9 on 18 November 2026: every count the same ([REPRODUCE.md](REPRODUCE.md), "The other checks").
