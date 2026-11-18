@@ -21,9 +21,9 @@ info(Site) ->
 
 -spec datasets() -> [map()].
 datasets() ->
-    [#{id => Id, name => T, description => De,
+    [#{id => Id, name => T, description => De, info => M,
        dataUseConditions => #{duoDataUse => [#{id => C, label => L} || #{code := C, label := L} <- Cs]}}
-     || #{id := Id, title := T, description := De, consent := Cs, state := approved} <- gh_share:list()].
+     || #{id := Id, title := T, description := De, consent := Cs, state := approved, metadata := M} <- gh_share:list()].
 
 %% the lineages in approved datasets, as Beacon filtering terms
 -spec filtering_terms() -> [map()].

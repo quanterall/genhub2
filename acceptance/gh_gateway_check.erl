@@ -669,6 +669,7 @@ sharing(Users, Jobs, UploadHash, Tree) ->
     {AfterFile, _, _} = http(get, "/ga4gh/drs/v1/objects/" ++ binary_to_list(maps:get(<<"genomes.fasta">>, Files)) ++ "/data", none),
     {AfterDataset, _, _} = http(get, "/api/datasets/" ++ binary_to_list(Id), none),
     #{analyst_make => AnalystMake, bad_duo => BadDuo, tree_job => TreeJob, made => Made, id => Id,
+      metadata => maps:get(<<"metadata">>, D),
       listed => lists:member(Id, Listed), bundle_files => lists:sort(maps:keys(Files)),
       bundle_checksum => maps:get(<<"checksums">>, Bundle, []),
       genomes => #{status => maps:get(status, G), hash_ok => maps:get(hash_ok, G),
@@ -699,6 +700,11 @@ sharing_checks(S, Jobs) ->
                                                                                      orelse {W, R} =:= {null, null} end,
                              maps:get(rows, maps:get(results, S))),
            {maps:get(genomes, S), maps:get(rows, maps:get(results, S)), length(Jobs)}),
+     check(<<"sharing: the dataset says where and when its genomes come from: the site, 2 genomes, BG (BG-22), 2026-W46">>,
+           maps:with([<<"genomes">>, <<"countries">>, <<"regions">>, <<"collection_weeks">>], maps:get(metadata, S))
+           =:= #{<<"genomes">> => 2, <<"countries">> => [<<"BG">>], <<"regions">> => [<<"BG-22">>],
+                 <<"collection_weeks">> => [<<"2026-W46">>, <<"2026-W46">>]}
+           andalso is_binary(maps:get(<<"source">>, maps:get(metadata, S))), maps:get(metadata, S)),
      check(<<"sharing: a file outside approved datasets is not served through DRS (404)">>,
            maps:get(outside, S) =:= {404, 404}, maps:get(outside, S)),
      check(<<"sharing: withdrawn, the dataset and its files are gone for a researcher (404)">>,

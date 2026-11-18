@@ -147,4 +147,18 @@ to_map(#gh_dataset{id = Id, title = T, description = De, consent = C, jobs = J, 
                    created = Cr, state = S}) ->
     Duo = duo(),
     #{id => Id, title => T, description => De, consent => [#{code => X, label => maps:get(X, Duo, <<>>)} || X <- C],
-      jobs => length(J), files => [#{name => N, id => H} || {N, H} <- F], created_by => B, created => Cr, state => S}.
+      jobs => length(J), files => [#{name => N, id => H} || {N, H} <- F], created_by => B, created => Cr, state => S,
+      metadata => metadata(F)}.
+
+%% what a dataset says about where and when its genomes come from (FS 3.1: source lab, country, date), from its own
+%% anonymised results: the site, the genomes, their countries and regions, the range of collection weeks
+metadata(Files) ->
+    Rows = case [H || {<<"results.json">>, H} <- Files] of
+               [H] -> json:decode(gh_store:read(H));
+               [] -> []
+           end,
+    Regions = lists:usort([R || #{<<"region">> := R} <- Rows, is_binary(R)]),
+    Weeks = lists:usort([W || #{<<"collection_week">> := W} <- Rows, is_binary(W)]),
+    #{source => gh_monitor:site(), genomes => length(Rows),
+      countries => lists:usort([binary:part(R, 0, 2) || R <- Regions]), regions => Regions,
+      collection_weeks => case Weeks of [] -> []; _ -> [hd(Weeks), lists:last(Weeks)] end}.

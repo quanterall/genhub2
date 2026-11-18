@@ -122,7 +122,7 @@ neighbour-joining, `4c441ab1...` for FastTree).
 [`gh_gateway_check.erl`](gh_gateway_check.erl), run by [`run_gateway.sh`](run_gateway.sh) against EMQX 5.8.9, on a site
 with no earlier jobs.
 - **18 November 2026, with accounts, placement, aggregates, sharing, metrics, Beacon, alert settings and one's own
-  account:** **all 45 checks hold** ([`results/gateway-dgx-spark-2026-11-18T0253Z.json`](results/gateway-dgx-spark-2026-11-18T0253Z.json); the check of
+  account:** **all 46 checks hold** ([`results/gateway-dgx-spark-2026-11-18T0305Z.json`](results/gateway-dgx-spark-2026-11-18T0305Z.json); the check of
   encryption at rest in `warn` mode: this test machine's disk is not encrypted).
   - The 13 below now run as an analyst who logged in through the API.
   - 8 more cover accounts and the audit log (at the end of this section).
@@ -133,7 +133,7 @@ with no earlier jobs.
     reference itself). GenHub2 now gives each genome a name of its own for UShER, and maps the results back.
   - 5 cover the aggregated counts of phase D at the site: the genome job is uploaded with a region and collection
     date ([RESULTS-PHASE-D.md](RESULTS-PHASE-D.md), "At a site").
-  - 7 cover sharing (below).
+  - 8 cover sharing (below).
   - 5 cover Beacon (below).
   - 3 cover one's own account:
     - one's sessions are listed, and the others ended;
@@ -189,7 +189,7 @@ with no earlier jobs.
 
   Its chain of 42 records is whole.
 
-**Sharing** (FS 3.3, 3.4; phase C, the part inside a lab), the 7 checks added on 17 November:
+**Sharing** (FS 3.3, 3.4; phase C, the part inside a lab), the 7 checks added on 17 November and 1 on 18 November:
 - **Approval:** an admin approves a dataset of the two genome jobs, with consent DUO:0000042 (general research use,
   [GA4GH DUO](https://www.ga4gh.org/product/data-use-ontology-duo/)). An analyst cannot; an unknown DUO code and a
   tree job are refused.
@@ -200,6 +200,8 @@ with no earlier jobs.
   - the genomes are renamed after the dataset (`<dataset>-1`, `-2`), with no job id and no sample name, not even
     the reference's own;
   - the results give the week of collection (2026-W46) and the region, not the date.
+- **Where and when:** the dataset reports its source (the site), its 2 genomes, their country and region (BG, BG-22)
+  and the range of collection weeks (2026-W46). All of it comes from its own anonymised results.
 - **Only what is approved:** a file outside approved datasets (the uploaded genome itself) is not served (404).
   Once the dataset is withdrawn, it and its files are gone (404).
 - **Audit:** the dataset's creation and withdrawal, and every DRS object read and download, are in the audit log.

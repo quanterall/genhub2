@@ -155,7 +155,9 @@ Built:
   - by substitution (`/beacon/g_variants?referenceName=NC_045512.2&start=23402&referenceBases=A&alternateBases=G`)
     and by lineage (`filters=lineage:B`);
   - researchers get yes or no per dataset, the lab's own roles also counts.
-- **The gateway check:** all 40 checks hold, 7 of them for sharing and 5 for Beacon.
+- **What a dataset says about itself:** its source lab, genomes, countries and regions, and collection weeks, from
+  its own anonymised results; shown on the page, in `/api/datasets` and in Beacon's datasets.
+- **The gateway check:** all 46 checks hold now, 8 of them for sharing and 5 for Beacon.
 - **With the federation (phase C proper):** GA4GH Passports for researchers of other labs, and Beacon queries across
   labs.
 

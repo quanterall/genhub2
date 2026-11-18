@@ -134,7 +134,10 @@ async function datasets() {
   const {datasets: ds, duo} = await api("/api/datasets");
   if (!$("#ds-consent").options.length)
     $("#ds-consent").innerHTML = Object.entries(duo).sort().map(([c, l]) => `<option value="${esc(c)}">${esc(c)} ${esc(l)}</option>`).join("");
-  $("#ds-list tbody").innerHTML = ds.map((d) => `<tr><td><b>${esc(d.title)}</b><br><code>${esc(d.id)}</code></td>
+  const from = (m) => `${esc(m.source)}: ${m.genomes} genomes` + (m.countries.length ? `, ${esc(m.countries.join(", "))}` : "")
+    + (m.regions.length ? ` (${esc(m.regions.join(", "))})` : "")
+    + (m.collection_weeks.length ? `<br>collected ${esc(m.collection_weeks[0])}${m.collection_weeks[1] !== m.collection_weeks[0] ? " to " + esc(m.collection_weeks[1]) : ""}` : "");
+  $("#ds-list tbody").innerHTML = ds.map((d) => `<tr><td><b>${esc(d.title)}</b><br><code>${esc(d.id)}</code></td><td>${from(d.metadata)}</td>
     <td>${d.consent.map((c) => `${esc(c.code)} ${esc(c.label)}`).join("<br>")}</td><td>${esc(d.state)}</td>
     <td>${d.state === "approved" ? d.files.map((f) => `<a href="/ga4gh/drs/v1/objects/${esc(f.id)}/data">${esc(f.name)}</a>`).join("<br>") : ""}</td>
     <td>${me.role === "admin" && d.state === "approved" ? `<button class="small" data-withdraw="${esc(d.id)}">Withdraw</button>` : ""}</td></tr>`).join("");
