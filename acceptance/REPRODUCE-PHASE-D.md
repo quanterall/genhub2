@@ -43,4 +43,10 @@ planted one.
 
 ## Tested
 
-In the development worktree on 17 November 2026, on phase A's data: twice, with identical results.
+- **In the development worktree** on 17 November 2026, on phase A's data: twice, with identical results.
+- **From a fresh clone of GenHub2 at 619bbcd** on 18 November 2026, on the same DGX Spark, with the images already
+  built:
+  - GenHub2's 48 tests passed;
+  - `run.sh --reduced` built the bundles from NCBI and held its 14 checks;
+  - `run_monitoring.sh` held all 6. The results were the published ones: LB.1.7 with 19 genomes at site C, 842
+    genomes counted, and 1 new lineage and 51 rising mutations at every site.
