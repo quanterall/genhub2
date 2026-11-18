@@ -6,6 +6,8 @@
 # (data/phase-b-worker) and fetches what its tasks need from the site by hash. The distribution cookie is made for
 # the run and is not kept.
 set -e
+# storage_encryption warn: a test on public data, on a disk that may not be encrypted (gh_storage); a site with
+# patients' data keeps the default, required
 cd "$(dirname "$0")/.."
 SITE_CPUS=${1:-0-4}; WORKER_CPUS=${2:-10-14}
 NET=genhub2-phase-b; WORKER=genhub2-phase-b-worker
@@ -24,10 +26,10 @@ trap 'docker stop $WORKER genhub2-phase-b-site >/dev/null 2>&1 || true' EXIT
 docker run --rm --user "$(id -u):$(id -g)" -e HOME="$PWD/.cache-home" -e CARGO_HOME="$PWD/.cache-home/cargo" \
   -v "$HOME:$HOME" -w "$PWD" genhub2-dev sh -c "rebar3 compile >/dev/null"
 $RUN -d --name $WORKER --hostname $WORKER --cpuset-cpus="$WORKER_CPUS" genhub2-dev sh -c "
-  erl -noshell -sname gh_worker -setcookie \"\$COOKIE\" -mnesia dir '\"/tmp/mnesia\"' -pa _build/default/lib/*/ebin \
+  erl -noshell -sname gh_worker -setcookie \"\$COOKIE\" -mnesia dir '\"/tmp/mnesia\"' -pa _build/default/lib/*/ebin -genhub2 storage_encryption warn \
       -genhub2 role worker -genhub2 data_dir '\"data/phase-b-worker\"' -genhub2 http undefined \
       -eval '{ok, _} = application:ensure_all_started(genhub2)'" >/dev/null
 $RUN --name genhub2-phase-b-site --hostname genhub2-phase-b-site --cpuset-cpus="$SITE_CPUS" genhub2-dev sh -c "
-  erl -noshell -sname gh_site -setcookie \"\$COOKIE\" -mnesia dir '\"data/mnesia-phase-b\"' -pa _build/default/lib/*/ebin \
+  erl -noshell -sname gh_site -setcookie \"\$COOKIE\" -mnesia dir '\"data/mnesia-phase-b\"' -pa _build/default/lib/*/ebin -genhub2 storage_encryption warn \
       -pa _build/default/lib/genhub2/acceptance -genhub2 http undefined \
       -eval 'gh_phase_b:main([\"gh_worker@$WORKER\", \"$OUT\"])'"

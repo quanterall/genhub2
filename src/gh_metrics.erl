@@ -27,6 +27,11 @@ render() ->
      metric(<<"genhub2_datasets">>, gauge, <<"Shared datasets by state">>,
             [{[{state, S}], N} || {S, N} <- lists:sort(maps:to_list(Datasets))]),
      metric(<<"genhub2_aggregate_imports">>, gauge, <<"Other sites' aggregates held">>, [{[], length(gh_monitor:imported())}]),
+     metric(<<"genhub2_storage_encrypted">>, gauge, <<"1 if the data or Mnesia directory is on an encrypted volume (gh_storage)">>,
+            case gh_storage:status() of
+                off -> [];
+                St -> [{[{directory, D}], case R of {encrypted, _} -> 1; _ -> 0 end} || {D, R} <- lists:sort(maps:to_list(St))]
+            end),
      metric(<<"genhub2_erlang_processes">>, gauge, <<"Erlang processes">>, [{[], erlang:system_info(process_count)}]),
      metric(<<"genhub2_erlang_memory_bytes">>, gauge, <<"Memory the Erlang VM uses">>, [{[], erlang:memory(total)}])].
 

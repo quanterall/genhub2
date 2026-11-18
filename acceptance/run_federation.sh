@@ -7,6 +7,8 @@
 # mode 600, outside the repository). The node is $GENHUB2_FED_NODE (default http://127.0.0.1:18100). Part 2 uses the
 # reference bundles and genomes of phase A's run (run.sh).
 set -e
+# storage_encryption warn: a test on public data, on a disk that may not be encrypted (gh_storage); a site with
+# patients' data keeps the default, required
 cd "$(dirname "$0")/.."
 IMAGE=${1:-none}
 TOKEN=${GENHUB2_FED_TOKEN:-$HOME/.config/genhub2/federation/genhub2.token}
@@ -19,7 +21,7 @@ mkdir -p data/mnesia-federation .cache-home
 docker run --rm --network host --user "$(id -u):$(id -g)" -e HOME="$PWD/.cache-home" \
   -e CARGO_HOME="$PWD/.cache-home/cargo" -v "$HOME:$HOME" -w "$PWD" genhub2-dev sh -c "
   rebar3 compile >/dev/null &&
-  erl -noshell -sname gh_federation -mnesia dir '\"data/mnesia-federation\"' -pa _build/default/lib/*/ebin \
+  erl -noshell -sname gh_federation -mnesia dir '\"data/mnesia-federation\"' -pa _build/default/lib/*/ebin -genhub2 storage_encryption warn \
       -pa _build/default/lib/genhub2/acceptance -genhub2 http undefined \
       -genhub2 federation '#{node => \"$NODE\", token_file => \"$TOKEN\", image => \"$IMAGE\", slots => 1}' \
       -eval 'gh_federation_check:main([\"$IMAGE\", \"$OUT\"])'"

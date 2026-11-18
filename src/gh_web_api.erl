@@ -89,7 +89,14 @@ handle(logout, <<"POST">>, Req) ->
     audit(logout, actor(), ok, #{}),
     reply(200, #{}, cowboy_req:set_resp_cookie(?COOKIE, <<>>, Req, (cookie_opts())#{max_age => 0}));
 handle(me, <<"GET">>, Req) ->
-    reply(200, #{user => actor(), role => get(gh_role)}, Req);
+    Storage = case {get(gh_role), gh_storage:status()} of
+                  {admin, off} -> #{check => off};
+                  {admin, St} -> #{check => application:get_env(genhub2, storage_encryption, required),
+                                   directories => [#{directory => D, result => element(1, R), device => element(2, R)}
+                                                   || {D, R} <- maps:to_list(St)]};
+                  _ -> null
+              end,
+    reply(200, #{user => actor(), role => get(gh_role), storage => Storage}, Req);
 handle(users, <<"GET">>, Req) ->
     reply(200, gh_accounts:users(), Req);
 handle(users, <<"POST">>, Req) ->

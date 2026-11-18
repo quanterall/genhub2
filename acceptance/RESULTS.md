@@ -122,7 +122,8 @@ neighbour-joining, `4c441ab1...` for FastTree).
 [`gh_gateway_check.erl`](gh_gateway_check.erl), run by [`run_gateway.sh`](run_gateway.sh) against EMQX 5.8.9, on a site
 with no earlier jobs.
 - **17 November 2026, with accounts, placement, aggregates, sharing and metrics:** **all 35 checks hold**
-  ([`results/gateway-dgx-spark-2026-11-17T2127Z.json`](results/gateway-dgx-spark-2026-11-17T2127Z.json)).
+  ([`results/gateway-dgx-spark-2026-11-18T0203Z.json`](results/gateway-dgx-spark-2026-11-18T0203Z.json), rerun on 18
+  November with the check of encryption at rest in `warn` mode: this test machine's disk is not encrypted).
   - The 13 below now run as an analyst who logged in through the API.
   - 8 more cover accounts and the audit log (at the end of this section).
   - 1 covers placement: the site's SARS-CoV-2 tree is built from phase A's 1,000 public genomes, and the genome

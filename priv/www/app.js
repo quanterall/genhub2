@@ -86,6 +86,11 @@ $("#logout").addEventListener("click", async () => {
 });
 
 async function admin() {
+  const st = me.storage;
+  $("#a-storage").textContent = !st ? "" : st.check === "off" ? "Storage: the encryption check is off."
+    : "Storage: " + st.directories.map((d) => `${d.directory} ${d.result === "encrypted" ? "is on an encrypted volume"
+        : d.result === "unencrypted" ? "is NOT on an encrypted volume" : "could not be checked"}`).join("; ") +
+      (st.directories.every((d) => d.result === "encrypted") ? "." : ` (setting: ${st.check}).`);
   const users = await api("/api/users");
   $("#a-users tbody").innerHTML = users.sort((a, b) => a.name.localeCompare(b.name)).map((u) => `<tr>
     <td>${esc(u.name)}</td><td>${esc(u.role)}</td>

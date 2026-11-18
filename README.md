@@ -185,6 +185,17 @@ sh scripts/genhub2-admin.sh data/mnesia add_user NAME admin    # asks for the pa
 It prints the admin's one-time secret, once, to add to an authenticator app. The admin then adds the other users on
 the page. Behind TLS, also set `secure_cookies => true` in `http`.
 
+**Encryption at rest** (FS 3.4, 6.2): put the site's data directory, and its Mnesia directory, on an encrypted
+volume (Linux dm-crypt with LUKS, AES-256-XTS by default), set up by the machine's owner.
+- **The check:** at start GenHub2 checks that both are on one (`gh_storage`: the directory's block device, or a
+  device it is built on, is dm-crypt). By default (`storage_encryption => required`) it does not start otherwise.
+- **The result:** shown on the admin's page, logged in the audit log, and reported as the metric
+  `genhub2_storage_encrypted`.
+- **Other settings:** `warn` starts anyway with a warning. The acceptance tests use it, because they run on public
+  data on a test machine whose disk is not encrypted. `off` skips the check.
+- **Not covered:** ZFS or other native filesystem encryption is not recognised; such a site uses `warn` and documents
+  its own encryption.
+
 Metrics for Prometheus: set `metrics_token` (a random string of 32 bytes or more), and scrape `/metrics` with
 `Authorization: Bearer <metrics_token>`. Without the setting, `/metrics` is off.
 

@@ -5,6 +5,8 @@
 # acceptance/run.sh.
 #   sh acceptance/run_gateway.sh [cpuset]
 set -e
+# storage_encryption warn: a test on public data, on a disk that may not be encrypted (gh_storage); a site with
+# patients' data keeps the default, required
 cd "$(dirname "$0")/.."
 CPUS=${1:-0-4,10-14}
 DATE=$(date -u +%Y-%m-%dT%H%MZ); HOSTNAME=$(hostname -s)
@@ -22,7 +24,7 @@ set +e
 docker run --rm --network host --user "$(id -u):$(id -g)" --cpuset-cpus="$CPUS" \
   -e HOME="$PWD/.cache-home" -v "$HOME:$HOME" -w "$PWD" genhub2-dev sh -c "
   rebar3 compile >/dev/null &&
-  erl -noshell -sname gh_acceptance -mnesia dir '\"data/mnesia-gateway\"' -pa _build/default/lib/*/ebin \
+  erl -noshell -sname gh_acceptance -mnesia dir '\"data/mnesia-gateway\"' -pa _build/default/lib/*/ebin -genhub2 storage_encryption warn \
       -pa _build/default/lib/genhub2/acceptance -eval 'gh_gateway_check:main([\"$OUT\"])'"
 RC=$?
 [ -n "$STARTED" ] && [ -z "$KEEP_EMQX" ] && docker stop genhub2-emqx >/dev/null

@@ -4,6 +4,8 @@
 # gh_refdb:hostile/1, primers/2 and kraken/1 (README).
 #   sh acceptance/run_methods.sh HOST_INDEX GRCH38_FASTA [cpuset]
 set -e
+# storage_encryption warn: a test on public data, on a disk that may not be encrypted (gh_storage); a site with
+# patients' data keeps the default, required
 cd "$(dirname "$0")/.."
 HOSTIDX=$(realpath "$1"); GRCH38=$(realpath "$2"); CPUS=${3:-0-4,10-14}
 DATE=$(date -u +%Y-%m-%dT%H%MZ); HOSTNAME=$(hostname -s)
@@ -13,5 +15,5 @@ mkdir -p data/mnesia-methods .cache-home
 docker run --rm --hostname genhub2 --user "$(id -u):$(id -g)" --cpuset-cpus="$CPUS" -e HOME="$PWD/.cache-home" \
   -v "$HOME:$HOME" -w "$PWD" genhub2-dev sh -c "
   rebar3 compile >/dev/null &&
-  erl -noshell -sname gh_methods -mnesia dir '\"data/mnesia-methods\"' -pa _build/default/lib/*/ebin \
+  erl -noshell -sname gh_methods -mnesia dir '\"data/mnesia-methods\"' -pa _build/default/lib/*/ebin -genhub2 storage_encryption warn \
       -pa _build/default/lib/genhub2/acceptance -eval 'gh_methods_check:main([\"$HOSTIDX\", \"$GRCH38\", \"$OUT\"])'"

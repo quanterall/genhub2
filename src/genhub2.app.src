@@ -19,6 +19,9 @@
            {federation, undefined},
            %% the bearer token Prometheus scrapes /metrics with (32 bytes or more); undefined: no metrics
            {metrics_token, undefined},
+           %% encryption at rest (gh_storage): required (the node does not start unless its data and Mnesia
+           %% directories are on a dm-crypt/LUKS volume), warn, or off (development only)
+           {storage_encryption, required},
            %% the task types this node runs for PQCF's executors (pq_task's allow-list)
            {task_modules, [gh_validate, gh_dehost, gh_screen, gh_consensus, gh_classify, gh_protein, gh_mutations, gh_lineage,
                            gh_tree, gh_phylo, gh_usher, gh_kraken, gh_knowledge, gh_fetch]}]},
