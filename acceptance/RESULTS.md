@@ -401,6 +401,10 @@ RSV-B at 2026-04-14--11-55-23Z.
   - **Plain HTTP:** requests to `/ext/push` and `/ext/open` are refused with 400 and not redirected. These were
     empty requests only.
   - The handles are kept out of the result file. Each is good once, for ten minutes.
+  - **In a browser:** a person opened each of the four handles, and the view showed each genome's changes.
+    - A handle opened a second time was refused (`no_handle` in TechUPGRADE's log), as it should be.
+    - For BA.2 and RSV-B, the handles first used were opened twice, so the view was confirmed with fresh handles
+      from a second run of the same test.
 - **What a pass means:** the hand-off is sound. It does **not** mean the biology has been checked. That is the
   independent virologist's review of each dataset, which has not happened yet; until it has, the view says so.
 - **What TechUPGRADE ran on its side:** the refusals only it can drive, such as a withdrawn key, a handle used twice,
