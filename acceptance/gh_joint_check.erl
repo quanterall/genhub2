@@ -1,6 +1,7 @@
 %% The joint test with TechUPGRADE (their EXT-57; their plan docs/integration/joint-test-genhub2.md): GenHub2's side.
-%% A GenHub2 test site with the published test key genhub2-test-2026a (iss test.genhub2.quanterall.com) analyses four
-%% public genomes and opens the structure view genhub2.structures for each:
+%% A GenHub2 test site with the test key genhub2-test-2026a (iss test.genhub2.quanterall.com) analyses four public
+%% genomes and opens the structure view genhub2.structures for each. Only the key's id and public half are in this
+%% repository; the private half stays in the test site's key file (run_joint.sh, VIEWER_KEY), outside it.
 %%
 %%   1. d614g       the reference Wuhan-Hu-1 (NC_045512.2) with A23403G: one change, S:D614G (sars-cov-2)
 %%   2. ON544943    a BA.2 genome, many changes across several proteins (sars-cov-2)
