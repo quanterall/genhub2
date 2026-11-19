@@ -24,7 +24,7 @@
 %%   direct mode (EXT-22): <base>/ext/open?k=Kid&d=P&s=S. aud is <base>/ext/open.
 %% verify/3 is a reference verifier of TechUPGRADE's checks, for GenHub2's own tests and the joint test.
 -module(gh_viewer).
--export([config/0, link/3, payload/4, sign/3, verify/4, new_key/0, public_key/1, dataset/2]).
+-export([config/0, link/3, payload/4, sign/3, push/5, verify/4, new_key/0, public_key/1, dataset/2]).
 
 -define(TTL_MS, 600000).
 -define(SKEW_MS, 60000).
@@ -111,6 +111,17 @@ sign(P, 'HS256', Secret) -> b64(crypto:mac(hmac, sha256, Secret, P)).
 open(direct, Base, Kid, P, S, _C) ->
     {ok, iolist_to_binary([Base, "/ext/open?k=", uri_string:quote(Kid), "&d=", P, "&s=", S])};
 open(push, Base, Kid, P, S, C) ->
+    case push(Base, Kid, P, S, C) of
+        {ok, #{handle := H}} -> {ok, iolist_to_binary([Base, "/ext/open?h=", uri_string:quote(H)])};
+        {error, {refused, Code, _}} -> {error, iolist_to_binary(io_lib:format("the viewer refused the hand-off (~b)", [Code]))};
+        {error, no_handle} -> {error, <<"the viewer did not return a handle">>};
+        {error, unreachable} -> {error, <<"the viewer could not be reached">>}
+    end.
+
+%% POST {"kid", "d", "s"} to <base>/ext/push over TLS (public CAs; mutual TLS when C has client_cert and client_key;
+%% no redirects followed): {ok, #{handle, expires}} | {error, {refused, Status, Body} | no_handle | unreachable}
+-spec push(string(), binary(), binary(), binary(), map()) -> {ok, map()} | {error, term()}.
+push(Base, Kid, P, S, C) ->
     case uri_string:parse(Base) of
         #{scheme := "https"} -> ok;
         _ -> error(structure_viewer_base_must_be_https)                 % EXT-27: never plain HTTP
@@ -127,11 +138,11 @@ open(push, Base, Kid, P, S, C) ->
                        [{body_format, binary}]) of
         {ok, {{_, 200, _}, _, Body}} ->
             case catch json:decode(Body) of
-                #{<<"handle">> := H} when is_binary(H) -> {ok, iolist_to_binary([Base, "/ext/open?h=", uri_string:quote(H)])};
-                _ -> {error, <<"the viewer did not return a handle">>}
+                #{<<"handle">> := H} = R when is_binary(H) -> {ok, #{handle => H, expires => maps:get(<<"expires">>, R, null)}};
+                _ -> {error, no_handle}
             end;
-        {ok, {{_, Code, _}, _, _}} -> {error, iolist_to_binary(io_lib:format("the viewer refused the hand-off (~b)", [Code]))};
-        {error, _} -> {error, <<"the viewer could not be reached">>}
+        {ok, {{_, Code, _}, _, Body}} -> {error, {refused, Code, Body}};
+        {error, _} -> {error, unreachable}
     end.
 
 %% A reference verifier of the protocol's checks (EXT-10..20, 41, 43, 44), as TechUPGRADE's entry point makes them:
