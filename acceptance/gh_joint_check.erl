@@ -15,7 +15,8 @@
 %% job names. A tampered link and an expired one are refused (bad_signature, expired).
 %% Mode push (the joint test): the same, then each genome's hand-off pushed to <base>/ext/push; the handle that comes
 %% back opens the view, for a person to check against the mutations listed here. A tampered payload and an expired
-%% one, each signed with the test key, are pushed too and must be refused (400 {"error": "refused"}).
+%% one, each signed with the test key, are pushed too and must be refused (400 {"error": "refused"}); plain HTTP to
+%% the entry points (empty requests only) must be refused, not redirected.
 %%
 %%   main([Out, Mode, Base, KeyFile, GenomeDir])
 -module(gh_joint_check).
@@ -58,11 +59,13 @@ main([Out, Mode0, Base, KeyFile, GenomeDir]) ->
                  push -> remote_refusals(Base, KeyFile)
              end,
     Checks = checks(Mode, Jobs, Direct, Refusals, Pushed, Remote),
+    %% the handles are printed for the person who opens them, not kept in the result
+    Kept = [maps:without([open], X) || X <- Pushed],
     R = #{date => list_to_binary(calendar:system_time_to_rfc3339(erlang:system_time(second), [{offset, "Z"}])),
           host => list_to_binary(net_adm:localhost()), mode => Mode, base => list_to_binary(Base), kid => ?KID,
           iss => ?ISS, public_key => gh_viewer:public_key(KeyFile),
           genomes => [maps:without([job], J) || J <- Jobs], direct => Direct, local_refusals => Refusals,
-          pushed => Pushed, remote_refusals => Remote, checks => Checks,
+          pushed => Kept, remote_refusals => Remote, checks => Checks,
           seconds => (erlang:monotonic_time(millisecond) - T0) / 1000},
     ok = filelib:ensure_dir(Out),
     ok = file:write_file(Out, json:format(gh_json:term(R))),
@@ -143,7 +146,19 @@ remote_refusals(Base, KeyFile) ->
     {P, S} = signed(Base ++ "/ext/push", KeyFile, erlang:system_time(millisecond)),
     {PE, SE} = signed(Base ++ "/ext/push", KeyFile, erlang:system_time(millisecond) - 1200000),
     #{tampered => gh_viewer:push(Base, ?KID, tamper(P), S, #{}),
-      expired => gh_viewer:push(Base, ?KID, PE, SE, #{})}.
+      expired => gh_viewer:push(Base, ?KID, PE, SE, #{}),
+      plain_http => plain_http(Base)}.
+
+%% plain HTTP to the entry points, with empty requests only (no payload, no key): {Status, Location}, each to be 400
+%% with no redirect (EXT-27)
+plain_http("https://" ++ Host) ->
+    [begin
+         {ok, {{_, St, _}, H, _}} = httpc:request(M, Req, [{autoredirect, false}, {timeout, 10000}], []),
+         {list_to_binary(Name), St, list_to_binary(proplists:get_value("location", H, ""))}
+     end || {Name, M, Req} <- [{"GET /ext/push", get, {"http://" ++ Host ++ "/ext/push", []}},
+                               {"POST /ext/push {}", post, {"http://" ++ Host ++ "/ext/push", [], "application/json", "{}"}},
+                               {"GET /ext/open?h=x", get, {"http://" ++ Host ++ "/ext/open?h=x", []}},
+                               {"GET /ext/open?k=&d=&s=", get, {"http://" ++ Host ++ "/ext/open?k=&d=&s=", []}}]].
 
 %% a D614G payload as GenHub2 signs it, at time Now
 signed(Aud, KeyFile, Now) ->
@@ -185,11 +200,14 @@ checks(Mode, Jobs, Direct, Refusals, Pushed, Remote) ->
            dry -> [];
            push ->
                [check(<<"pushed to the viewer: ", N/binary, " (", Ds/binary, ") gets a handle that opens the view">>,
-                      maps:get(status, X) =:= 200 andalso maps:get(handle, X, false), X)
+                      maps:get(status, X) =:= 200 andalso maps:get(handle, X, false), maps:without([open], X))
                 || #{name := N, dataset := Ds} = X <- Pushed]
                ++ [check(<<"pushed to the viewer: a tampered payload and an expired one refused, 400 {\"error\": \"refused\"}">>,
-                         Remote =:= #{tampered => {error, {refused, 400, <<"{\"error\":\"refused\"}">>}},
-                                      expired => {error, {refused, 400, <<"{\"error\":\"refused\"}">>}}}, Remote)]
+                         maps:without([plain_http], Remote) =:= #{tampered => {error, {refused, 400, <<"{\"error\":\"refused\"}">>}},
+                                      expired => {error, {refused, 400, <<"{\"error\":\"refused\"}">>}}}, maps:without([plain_http], Remote)),
+                   check(<<"plain HTTP to /ext/push and /ext/open: 400 and not redirected (empty requests only)">>,
+                         [{St, L} || {_, St, L} <- maps:get(plain_http, Remote)] =:= [{400, <<>>} || _ <- lists:seq(1, 4)],
+                         maps:get(plain_http, Remote))]
        end.
 
 check(Name, Ok, Value) -> #{name => Name, ok => Ok, value => iolist_to_binary(io_lib:format("~0P", [Value, 40]))}.

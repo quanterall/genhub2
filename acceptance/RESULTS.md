@@ -365,3 +365,45 @@ k2_viral_20241228. The sample:
 
 There was one false species: BeAn 58058 virus 0.7%,
 almost certainly from some of the human reads. Classifying the 12,000 pairs took 0.9 s.
+
+## 7. The joint test with TechUPGRADE's structure view
+
+[`gh_joint_check.erl`](gh_joint_check.erl), run by [`run_joint.sh`](run_joint.sh). It tests TechUPGRADE's external
+integration protocol v1, which must pass before a laboratory uses the view (their EXT-57).
+
+**What ran:** a GenHub2 test site with the test key `genhub2-test-2026a` (Ed25519; issuer
+`test.genhub2.quanterall.com`), against TechUPGRADE's test installation at `https://techupgrade2.quanterall.com`.
+The site opened the view `genhub2.structures` for four public genomes:
+
+| Genome | Dataset | Sent |
+|---|---|---|
+| the reference NC_045512.2 with A23403G | `sars-cov-2` | `S:D614G` only; lineage B |
+| [ON544943](https://www.ncbi.nlm.nih.gov/nuccore/ON544943) | `sars-cov-2` | 65 amino-acid changes; lineage BA.2 |
+| [PP_0030E57](https://pathoplexus.org/seq/PP_0030E57) | `rsv-a` | 41 changes; clade A.D.3.11 |
+| [PP_002XZ5U](https://pathoplexus.org/seq/PP_002XZ5U) | `rsv-b` | 28 changes, among them F:S211N; clade B.D.E.1 |
+
+The last three are example sequences of Nextclade's datasets: SARS-CoV-2 at tag 2026-10-28--15-04-26Z, RSV-A and
+RSV-B at 2026-04-14--11-55-23Z.
+
+- **19 November 2026, push mode: all 14 checks hold**
+  ([`results/joint-push-dgx-spark-2026-11-19T2001Z.json`](results/joint-push-dgx-spark-2026-11-19T2001Z.json)).
+  - **GenHub2's own checks.** Before anything is sent, each genome's link is checked here, as the viewer checks it,
+    with the public key only. That means:
+    - the signature;
+    - `aud`;
+    - the dataset;
+    - the mutations signed are exactly the result's;
+    - no sample or job names.
+  - **Refused here:** a tampered link and an expired one.
+  - **Pushed to the viewer:** each of the four hand-offs went to `/ext/push` and got a handle that opens the view.
+  - **Refused by the viewer:** a tampered payload and an expired one, each signed with the test key, both with
+    `400 {"error": "refused"}`.
+  - **Plain HTTP:** requests to `/ext/push` and `/ext/open` are refused with 400 and not redirected. These were
+    empty requests only.
+  - The handles are kept out of the result file. Each is good once, for ten minutes.
+- **What a pass means:** the hand-off is sound. It does **not** mean the biology has been checked. That is the
+  independent virologist's review of each dataset, which has not happened yet; until it has, the view says so.
+- **What TechUPGRADE ran on its side:** the refusals only it can drive, such as a withdrawn key, a handle used twice,
+  and what a view session may reach. Their result is published with their test.
+- **Earlier the same day:** the same test in dry mode (nothing sent), 8 of 8
+  ([`results/joint-dry-dgx-spark-2026-11-19T1937Z.json`](results/joint-dry-dgx-spark-2026-11-19T1937Z.json)).

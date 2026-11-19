@@ -151,6 +151,10 @@ They use the reference bundles and genomes that step 4 builds, and their instruc
 - [run_gateway.sh](run_gateway.sh): the HTTP API, WebSocket and MQTT through EMQX; accounts, the audit log, sharing,
   Beacon, metrics, alert settings, the structure viewer's link ([RESULTS.md](RESULTS.md), section 5). It starts EMQX
   5.8.9 on 127.0.0.1:21883 for the check and stops it afterwards.
+- [run_joint.sh](run_joint.sh): the joint test with TechUPGRADE's structure view ([RESULTS.md](RESULTS.md), section
+  7). `sh acceptance/run_joint.sh dry` needs no network beyond Nextclade's datasets. Make a key of your own first
+  (`sh scripts/genhub2-admin.sh MNESIA_DIR viewer_key genhub2-test-2026a FILE`) and set `VIEWER_KEY=FILE`. `push` sends to TechUPGRADE's test
+  installation, so it works only with a test key TechUPGRADE has registered.
 - [run_model.sh](run_model.sh): phase E's model test ([RESULTS-PHASE-E.md](RESULTS-PHASE-E.md)).
 - [run_methods.sh](run_methods.sh): the added methods (VeryFastTree, UShER, Nextclade's datasets, Hostile, iVar,
   Kraken 2 with Bracken). Not rerun for this page.
