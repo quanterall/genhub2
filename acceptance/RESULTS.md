@@ -409,5 +409,11 @@ RSV-B at 2026-04-14--11-55-23Z.
   independent virologist's review of each dataset, which has not happened yet; until it has, the view says so.
 - **What TechUPGRADE ran on its side:** the refusals only it can drive, such as a withdrawn key, a handle used twice,
   and what a view session may reach. Their result is published with their test.
-- **Earlier the same day:** the same test in dry mode (nothing sent), 8 of 8
+- **20 November 2026, genhub2.quanterall.com's own key: all 14 checks hold**
+  ([`results/joint-push-dgx-spark-2026-11-20T0740Z.json`](results/joint-push-dgx-spark-2026-11-20T0740Z.json)).
+  - The key: `genhub2-quanterall-2026a`, issuer `genhub2.quanterall.com`, registered by TechUPGRADE as a production
+    key on an installation no longer in test mode.
+  - The same test as above, run with `VIEWER_KID` and `VIEWER_ISS`.
+  - The site switched the view on only after this passed.
+- **19 November 2026, earlier:** the same test in dry mode (nothing sent), 8 of 8
   ([`results/joint-dry-dgx-spark-2026-11-19T1937Z.json`](results/joint-dry-dgx-spark-2026-11-19T1937Z.json)).
