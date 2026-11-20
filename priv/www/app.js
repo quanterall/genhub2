@@ -493,6 +493,8 @@ async function show(id) {
     <td>${aa(l).length ? `${viewable(l) ? `<button class="small" data-view="${esc(l.query)}">Open</button> ` : ""}
       <button class="small" data-copy="${esc(aa(l).join(", "))}">Copy changes</button>` : ""}</td></tr>`).join("");
   $("#d-viewer-note").hidden = !lin.some(viewable);
+  // RSV-B's structures have no antibody at site Zero (TechUPGRADE, 20 November 2026): said before anyone looks
+  $("#d-rsvb-note").hidden = !lin.some((l) => viewable(l) && /rsv[\/_-]b/i.test(l.dataset || ""));
   document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", async () => {
     // a signed link, valid for 10 minutes, carrying the changes but no sample or job names (gh_viewer)
     try {
