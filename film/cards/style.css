@@ -1,0 +1,43 @@
+/* the film's cards: 1920x1080, GenHub2's colours and type (genhub2.quanterall.com), laid out as TechUPGRADE's films */
+@font-face { font-family: 'Cormorant Garamond'; font-weight: 300 700; src: url(../../priv/www/fonts/CormorantGaramond.woff2) format('woff2'); }
+@font-face { font-family: 'Outfit'; font-weight: 100 900; src: url(../../priv/www/fonts/Outfit.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-weight: 400; src: url(../../priv/www/fonts/IBMPlexMono-400.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-weight: 500; src: url(../../priv/www/fonts/IBMPlexMono-500.woff2) format('woff2'); }
+:root { --bg: #0c1220; --panel: #131c2e; --line: rgba(120,170,255,.14); --blue: #6ab0ff; --amber: #f5c842;
+  --green: #4fd08a; --red: #ff7b72; --white: #d8e8f8; --text: #b8d0ea; --muted: #8aa8c8; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); color: var(--text);
+  font-family: 'Outfit', sans-serif; font-weight: 300; }
+body { background-image: linear-gradient(rgba(120,170,255,.06) 1px, transparent 1px),
+  linear-gradient(90deg, rgba(120,170,255,.06) 1px, transparent 1px); background-size: 64px 64px; }
+.wrap { position: absolute; left: 120px; right: 120px; top: 110px; }
+.logo { font: 600 64px 'Cormorant Garamond', serif; color: var(--white); }
+.logo sup { font: 500 26px 'IBM Plex Mono', monospace; color: var(--blue); }
+.kicker { font: 400 22px 'IBM Plex Mono', monospace; letter-spacing: .2em; text-transform: uppercase; color: var(--amber); }
+h1 { font: 500 88px/1.06 'Cormorant Garamond', serif; color: var(--white); }
+h2 { font: 500 64px/1.1 'Cormorant Garamond', serif; color: var(--white); }
+.lead { font-size: 34px; line-height: 1.45; color: var(--text); max-width: 1560px; }
+.grid { display: grid; gap: 24px; margin-top: 56px; }
+.c2 { grid-template-columns: 1fr 1fr; } .c3 { grid-template-columns: 1fr 1fr 1fr; } .c4 { grid-template-columns: repeat(4, 1fr); }
+.box { background: rgba(19,28,46,.94); border: 1px solid var(--line); padding: 28px 30px; }
+.box h3 { font: 500 22px 'IBM Plex Mono', monospace; letter-spacing: .06em; color: var(--blue); margin-bottom: 14px; }
+.box p { font-size: 26px; line-height: 1.45; }
+.big { font: 500 64px 'Cormorant Garamond', serif; color: var(--white); line-height: 1; margin-bottom: 10px; }
+.mono { font-family: 'IBM Plex Mono', monospace; }
+.blue { color: var(--blue); } .amber { color: var(--amber); } .green { color: var(--green); } .white { color: var(--white); }
+.tag { display: inline-block; padding: 10px 20px; border: 1px solid var(--amber); color: var(--amber);
+  font: 500 22px 'IBM Plex Mono', monospace; letter-spacing: .04em; }
+.layer { display: grid; grid-template-columns: 110px 1fr; gap: 0 28px; align-items: start; padding: 26px 30px;
+  background: rgba(19,28,46,.94); border: 1px solid var(--line); margin-bottom: 20px; }
+.layer .n { font: 500 40px 'IBM Plex Mono', monospace; color: var(--amber); }
+.layer h3 { font: 500 34px 'Cormorant Garamond', serif; color: var(--white); margin-bottom: 6px; }
+.layer p { font-size: 25px; line-height: 1.45; }
+ul.list { list-style: none; margin-top: 48px; }
+ul.list li { font-size: 32px; line-height: 1.4; margin-bottom: 26px; padding-left: 40px; position: relative; color: var(--text); }
+ul.list li::before { content: ""; position: absolute; left: 0; top: 16px; width: 14px; height: 14px; background: var(--amber); }
+ul.list strong { color: var(--white); font-weight: 500; }
+.foot { position: absolute; left: 120px; right: 120px; bottom: 80px; font: 400 24px 'IBM Plex Mono', monospace; color: var(--muted); }
+.fade { opacity: 0; animation: fade .9s ease forwards; }
+@keyframes fade { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.d1 { animation-delay: .3s; } .d2 { animation-delay: 1s; } .d3 { animation-delay: 1.8s; } .d4 { animation-delay: 2.6s; }
+.d5 { animation-delay: 3.4s; } .d6 { animation-delay: 4.2s; } .d7 { animation-delay: 5s; } .d8 { animation-delay: 5.8s; }

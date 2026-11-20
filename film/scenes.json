@@ -1,0 +1,226 @@
+[
+ {
+  "name": "intro",
+  "src": [
+   "card:intro"
+  ],
+  "text": "GenHub2 tells a genetic laboratory which virus it has sequenced, which lineage it belongs to, and what has changed in it, on the laboratory's own machines. This film shows all of it, as it works today, on GenHub2's public site."
+ },
+ {
+  "name": "why",
+  "src": [
+   "card:why"
+  ],
+  "text": "A laboratory that sequences a virus needs four answers quickly. What is it? Which lineage? What has changed, and does any change matter? And is this new, here or anywhere else? The sequences are patients' data, so they should stay where they were made. GenHub2 is built around both needs: fast answers, and data that does not leave the laboratory."
+ },
+ {
+  "name": "layers",
+  "src": [
+   "card:layers"
+  ],
+  "text": "It is built in three layers. At the bottom, the laboratory's own nodes, joined to other laboratories through the FVLLMP federation, with mutual TLS between them and no central server. In the middle, PQCF: every analysis is a task described as plain data, run on this node, on the laboratory's other nodes, or on a peer, with a record of how each result was made. On top, GenHub2: the analyses, the site, and the page you are about to see."
+ },
+ {
+  "name": "front",
+  "src": [
+   "raw:front.webm"
+  ],
+  "full": true,
+  "text": "This is genhub2 dot quanterall dot com. The front page says what GenHub2 does, how a laboratory runs it, and every result we have measured, each with a link to its result file and to the instructions for running the test again. At the bottom are four public genomes to try it with. The site itself is behind the login."
+ },
+ {
+  "name": "login",
+  "src": [
+   "raw:login.webm"
+  ],
+  "full": true,
+  "text": "Signing in takes a password and a one-time code from an authenticator app. There are three roles. An admin manages users and approves what may be shared. An analyst uploads and analyses. A researcher sees only counts and the datasets shared with them. Every request is checked against the role, and every action goes into an audit log."
+ },
+ {
+  "name": "upload",
+  "src": [
+   "raw:upload.webm"
+  ],
+  "full": true,
+  "text": "A genome first. This is the SARS-CoV-2 reference with one change made for testing, at position 23,403. With it go the region and the collection date, for monitoring. The analysis starts at once, and its steps light up as they finish: the file is checked, the virus classified, the mutations called against the reference, the lineage assigned, and links to public knowledge gathered."
+ },
+ {
+  "name": "result",
+  "src": [
+   "raw:result.webm"
+  ],
+  "full": true,
+  "text": "The result. Species, genus and family, with how close the nearest references are and a confidence. The lineage from Nextclade, B, and the one amino-acid change it carries: D614G, on the spike. The genome is also placed in the site's tree of SARS-CoV-2 with UShER, in seconds. Then the mutations against the reference, links to public records, trials and literature, marked as information only, and the provenance of every step. It exports as CSV, PDF or JSON."
+ },
+ {
+  "name": "paste",
+  "src": [
+   "raw:paste.webm"
+  ],
+  "full": true,
+  "text": "A sequence can also be typed or pasted, as DNA or as RNA, in which case U is read as T. The same analysis runs on it."
+ },
+ {
+  "name": "reads",
+  "src": [
+   "raw:reads.webm"
+  ],
+  "full": true,
+  "text": "Most laboratories start from reads, not a finished genome. Here are two read files from a sequencer, simulated from a public BA.2 genome, with human reads mixed in on purpose. The human reads are removed first, here at the laboratory, before any other step sees the data. Then the nearest references are found, the sample's own genome is assembled from its reads, and that genome goes through the same analysis."
+ },
+ {
+  "name": "reads_result",
+  "src": [
+   "raw:reads_result.webm"
+  ],
+  "full": true,
+  "text": "The human reads are counted and gone. The consensus genome is BA.2, with its mutations listed, ready for the same questions as any other genome."
+ },
+ {
+  "name": "rsv",
+  "src": [
+   "raw:rsv.webm"
+  ],
+  "full": true,
+  "text": "Not only SARS-CoV-2. These are public genomes of respiratory syncytial virus, groups A and B. For each genome GenHub2 picks the right Nextclade dataset by itself. Lineages are assigned the same way for influenza, mpox, measles, dengue, Ebola and the other viruses Nextclade covers."
+ },
+ {
+  "name": "many",
+  "src": [
+   "raw:many.webm"
+  ],
+  "full": true,
+  "text": "A laboratory's everyday work is many genomes at once. These are sixty public SARS-CoV-2 genomes from GenBank, sent as one file through the API by a laboratory system, each with a region and a collection date. For this film the regions and dates were assigned, spread over eight weeks, so that the monitoring has weeks to show. Classifying a thousand genomes takes under a second."
+ },
+ {
+  "name": "tree",
+  "src": [
+   "raw:tree.webm"
+  ],
+  "full": true,
+  "text": "Tick the analyses and build a tree. Neighbour-joining with a hundred bootstrap replicates takes seconds; FastTree and VeryFastTree give maximum likelihood. The tree is drawn in the page, with the support for each branch. It zooms and moves, a genome can be found by name, and clicking one opens its analysis. It downloads as SVG or Newick."
+ },
+ {
+  "name": "structure_card",
+  "src": [
+   "card:structure"
+  ],
+  "text": "Then the question a list of changes cannot answer: where on the virus are they? For that GenHub2 hands the changes to the TechUPGRADE Digital Twin Platform, which draws them on measured three-dimensional structures of the virus's proteins. The hand-off is signed with this site's own key, lives for ten minutes, opens once, and carries the changes, never a sample's name."
+ },
+ {
+  "name": "structure",
+  "src": [
+   "raw:structure.webm"
+  ],
+  "full": true,
+  "text": "One click on Open. The platform's view opens beside GenHub2 with this genome's change on the spike.",
+  "a": "state:structure_at"
+ },
+ {
+  "name": "structure_view",
+  "src": [
+   "raw:structure_view.webm"
+  ],
+  "full": true,
+  "text": "From here a researcher can follow each change to the residues it touches, on the receptor, on an antibody or on a drug. TechUPGRADE's own film shows the view in depth. It is information for experts, not a diagnosis, and no independent virologist has reviewed it yet. A review, dataset by dataset, is being arranged."
+ },
+ {
+  "name": "rsvb_note",
+  "src": [
+   "raw:rsvb_note.webm"
+  ],
+  "full": true,
+  "text": "Where the view cannot show something, GenHub2 says so before anyone opens it. For RSV-B, no structure of the fusion protein with the infant antibody nirsevimab exists yet, and the page says exactly that."
+ },
+ {
+  "name": "monitor",
+  "src": [
+   "raw:monitor.webm"
+  ],
+  "full": true,
+  "text": "Every finished analysis also feeds the site's monitoring: counts by species and lineage, and when each was first seen. Here an mpox genome arrives, the public reference from NCBI, a species this site has never seen. The alert appears at once: on this page, on the site's MQTT broker, and on every other open page."
+ },
+ {
+  "name": "trends",
+  "src": [
+   "raw:trends.webm"
+  ],
+  "full": true,
+  "text": "From regions and collection dates GenHub2 builds counts per week, region, lineage and mutation. These counts contain no sequences and no sample names, which is what makes them safe to exchange. Alerts come from them too: a lineage never counted before, or a mutation whose share is rising. The thresholds are the admin's to set."
+ },
+ {
+  "name": "exchange",
+  "src": [
+   "raw:exchange.webm"
+  ],
+  "full": true,
+  "text": "Here a second laboratory's counts are imported. In this film that laboratory is simulated, with one lineage this site has never seen. After the import, the merged counts raise an alert for it. Every laboratory that merges the same counts raises the same alert, with no central server deciding anything. Between real laboratories the counts will travel through the federation."
+ },
+ {
+  "name": "share",
+  "src": [
+   "raw:share.webm"
+  ],
+  "full": true,
+  "text": "Sharing happens only on purpose. The admin ticks analyses and approves a dataset, with consent codes from GA4GH's Data Use Ontology. Genomes are renamed, dates become weeks, and raw reads are never shared. The dataset is served through GA4GH's data repository service, and it can be withdrawn."
+ },
+ {
+  "name": "beacon",
+  "src": [
+   "raw:beacon.webm"
+  ],
+  "full": true,
+  "text": "A researcher, signed in with the researcher role, asks the site's Beacon whether any shared genome carries a mutation, here A23403G, or belongs to a lineage. The answer is yes or no. Only the laboratory's own staff see the counts."
+ },
+ {
+  "name": "account",
+  "src": [
+   "raw:account.webm"
+  ],
+  "full": true,
+  "text": "Each user sees their own sessions and can end the others in one click, and changes their password with a fresh code."
+ },
+ {
+  "name": "admin",
+  "src": [
+   "raw:admin.webm"
+  ],
+  "full": true,
+  "text": "The admin adds users, each with their own authenticator secret, shown once, and disables them. The audit log lists every login, upload, analysis, view, export, share and refusal. Each record carries the hash of the one before, so the page can show that the chain is whole, and a record changed afterwards would show."
+ },
+ {
+  "name": "systems",
+  "src": [
+   "card:systems"
+  ],
+  "text": "Everything on the page is also an HTTP API, and every event is published on the site's MQTT broker and on a WebSocket. A sequencer's integration starts an analysis with one message on genhub slash sequences slash new, and a laboratory's own systems can listen for results as they come."
+ },
+ {
+  "name": "federation",
+  "src": [
+   "card:federation"
+  ],
+  "text": "A laboratory with several nodes runs the heavy steps across them: two nodes give exactly one node's results, almost twice as fast. Through the FVLLMP federation, tree tasks sent from one DGX ran on another, byte for byte the same. Task images are handed over privately, never through a public registry, and steps on raw data never leave the laboratory."
+ },
+ {
+  "name": "measured",
+  "src": [
+   "card:measured"
+  ],
+  "text": "Every claim in this film is measured, in the repository, with a page that says how to run the test again. Held-out genomes: species right for ninety-six and a half percent. A learned model was tested too, and not adopted, because it was worse. The joint test with TechUPGRADE passed fourteen of fourteen checks."
+ },
+ {
+  "name": "honest",
+  "src": [
+   "card:honest"
+  ],
+  "text": "Plainly, what this is not. GenHub2 gives information for experts; it is not a diagnostic device. The public site holds public genomes only; a laboratory runs GenHub2 on its own encrypted nodes. The structure view has not been reviewed by an independent virologist yet. And the federation between laboratories has only started."
+ },
+ {
+  "name": "outro",
+  "src": [
+   "card:outro"
+  ],
+  "text": "GenHub2 is open source, under the Apache licence, and it is the first application built on PQCF. Try it at genhub2 dot quanterall dot com, and read every line of it on GitHub."
+ }
+]

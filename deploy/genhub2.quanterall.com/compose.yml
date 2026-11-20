@@ -48,6 +48,8 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./www:/var/www/genhub2:ro
+      # the film and its subtitles (film/make_film.py), outside the repository: GENHUB2_SITE_DATA/media
+      - ${GENHUB2_SITE_DATA}/media:/var/www/genhub2-media:ro
     depends_on: [genhub2]
     networks:
       site:

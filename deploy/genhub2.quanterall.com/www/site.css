@@ -36,6 +36,8 @@ h3 { font: 500 13px 'IBM Plex Mono', monospace; letter-spacing: .5px; color: var
 .button.ghost:hover { color: var(--white); border-color: var(--white); }
 .note { margin-top: 24px; max-width: 760px; font-size: 15px; color: var(--muted); border-left: 2px solid var(--amber);
   padding-left: 14px; }
+video.film { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; border: 1px solid var(--border);
+  margin: 18px 0 4px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
 .grid article { background: var(--deep); border: 1px solid var(--border); padding: 20px 22px; font-size: 15.5px; }
 .layers { list-style: none; counter-reset: l; display: grid; gap: 14px; }
