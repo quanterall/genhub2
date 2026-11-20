@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GenHub2</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <header>
-  <h1>GenHub2</h1>
+  <h1><a href="/" title="GenHub2">GenHub<sup>2</sup></a></h1>
   <span class="sub">virus classification at this lab's node</span>
   <span id="live" class="pill" hidden>connecting</span>
   <span id="who" class="who" hidden></span>
@@ -16,14 +17,16 @@
 </header>
 <section class="card login" id="login" hidden>
   <h2>Log in</h2>
+  <p class="lede">With your password and a code from your authenticator app.</p>
   <form id="login-form">
     <label>User <input id="l-user" autocomplete="username" required></label>
     <label>Password <input id="l-pw" type="password" autocomplete="current-password" required></label>
-    <label>Code from your authenticator app <input id="l-code" inputmode="numeric" autocomplete="one-time-code"
+    <label>Code from the app <input id="l-code" inputmode="numeric" autocomplete="one-time-code"
       pattern="[0-9]{6}" maxlength="6" required></label>
     <button type="submit">Log in</button>
   </form>
   <p id="l-msg" role="status"></p>
+  <p class="foot">Accounts are made by this site's admin. Information for experts, not a diagnosis.</p>
 </section>
 <main id="app" hidden>
   <section class="card lab" id="submit">
