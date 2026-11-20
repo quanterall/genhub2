@@ -8,3 +8,4 @@ Mnesia.*/
 .cache-home/
 data-*/
 deploy/genhub2.quanterall.com/.env
+__pycache__/
