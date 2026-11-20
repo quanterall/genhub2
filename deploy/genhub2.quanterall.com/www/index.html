@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GenHub2 — virus classification for genetic labs</title>
+<meta name="description" content="GenHub2 classifies DNA and RNA viruses for genetic labs, on each lab's own nodes and the FVLLMP federation, with every result reproducible. Open source, the first application built on PQCF.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="GenHub2 — virus classification for genetic labs">
+<meta property="og:description" content="Virus classification, mutations, lineages and trees on a lab's own nodes; monitoring from aggregated counts; every result reproducible.">
+<meta property="og:url" content="https://genhub2.quanterall.com/">
+<link rel="canonical" href="https://genhub2.quanterall.com/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <a class="logo" href="/">GenHub<sup>2</sup></a>
+  <nav aria-label="Sections">
+    <a href="#what">What it does</a>
+    <a href="#labs">For labs</a>
+    <a href="#results">Results</a>
+    <a href="#security">Security</a>
+    <a href="#status">Status</a>
+    <a class="app" href="/app/">Log in</a>
+  </nav>
+</header>
+
+<main id="main">
+<section class="hero">
+  <p class="kicker">Open source · Apache-2.0 · the first application built on PQCF</p>
+  <h1>Virus classification for genetic labs, on the lab's own nodes</h1>
+  <p class="lead">Upload a genome or a read set. GenHub2 names the virus, lists its mutations and lineage, places it in
+    a tree and links it to public knowledge. The data stays at the lab: labs share counts, not sequences, and every
+    result carries the record of how it was made.</p>
+  <p class="cta"><a class="button" href="/app/">Open the GenHub2 site</a>
+    <a class="button ghost" href="https://github.com/quanterall/genhub2">Source on GitHub</a></p>
+  <p class="note">The site at <a href="/app/">/app/</a> is Quanterall's own GenHub2 site. It holds public genomes only,
+    and its accounts are by invitation. It is not for patients' data: a lab runs GenHub2 on its own nodes.</p>
+</section>
+
+<section id="what">
+  <h2>What it does</h2>
+  <div class="grid">
+    <article><h3>Classification</h3>
+      <p>Species, genus and family with a confidence, from MinHash against every complete viral genome in NCBI RefSeq
+        (<a href="https://doi.org/10.1186/s13059-016-0997-x">Mash</a>). For weak calls, a protein search against all
+        RefSeq viral proteins (<a href="https://doi.org/10.1038/s41592-021-01101-x">DIAMOND</a>).</p></article>
+    <article><h3>Mutations and lineages</h3>
+      <p>Substitutions, insertions and deletions against the reference, and amino-acid changes. Lineages and clades
+        from <a href="https://doi.org/10.21105/joss.03773">Nextclade</a>'s datasets: SARS-CoV-2, influenza, RSV A and
+        B, mpox, Ebola, measles, dengue, hMPV, rubella, mumps and West Nile.</p></article>
+    <article><h3>Reads to genome</h3>
+      <p>Human reads removed at the lab (<a href="https://doi.org/10.1093/bioinformatics/btad728">Hostile</a> or
+        minimap2), primers trimmed (<a href="https://doi.org/10.1186/s13059-018-1618-7">iVar</a>), mixed samples
+        resolved (<a href="https://doi.org/10.1186/s13059-019-1891-0">Kraken 2</a> and
+        <a href="https://doi.org/10.7717/peerj-cs.104">Bracken</a>), and the sample's consensus genome.</p></article>
+    <article><h3>Trees</h3>
+      <p>Neighbour-joining with bootstrap support, <a href="https://doi.org/10.1371/journal.pone.0009490">FastTree</a>
+        and <a href="https://doi.org/10.1093/gigascience/giaa055">VeryFastTree</a>; a new genome placed in the site's
+        SARS-CoV-2 tree in seconds (<a href="https://doi.org/10.1038/s41588-021-00862-7">UShER</a>). Interactive in
+        the page; SVG and Newick to download.</p></article>
+    <article><h3>Monitoring</h3>
+      <p>Counts by week, region, lineage and mutation. Alerts for a lineage not seen before and for a rising mutation,
+        from the lab's own counts and from counts exchanged with other labs, without sequences or sample names.</p></article>
+    <article><h3>Sharing and discovery</h3>
+      <p>Datasets approved by the lab's admin, with consent codes (GA4GH DUO), read through
+        <a href="https://ga4gh.github.io/data-repository-service-schemas/">GA4GH DRS</a>, anonymised. Researchers
+        search them by mutation or lineage through <a href="https://docs.genomebeacons.org/">Beacon v2</a> and get yes
+        or no.</p></article>
+    <article><h3>Protein structures</h3>
+      <p>A genome's amino-acid changes, drawn on the virus's protein structures in the TechUPGRADE Digital Twin
+        Platform's view, opened from the result with a signed, short-lived hand-off. Information for experts, not a
+        diagnosis. The view says which datasets have been independently reviewed; none has been yet.</p></article>
+    <article><h3>For a lab's systems</h3>
+      <p>An HTTP API and live events on a WebSocket and on MQTT (EMQX): a sequencer's integration can start an
+        analysis by publishing one message. Results as CSV, PDF and JSON.</p></article>
+  </div>
+</section>
+
+<section id="labs">
+  <h2>How a lab runs it</h2>
+  <ol class="layers">
+    <li><strong>The lab's own nodes.</strong> GenHub2 runs on the lab's machines (NVIDIA DGX Spark in our tests). The
+      lab's raw data and the human reads never leave them.</li>
+    <li><strong>PQCF underneath.</strong> Each analysis is a task described as plain data, run on this node, on the
+      lab's other nodes or on a federation peer, with a provenance record of every result
+      (<a href="https://github.com/quanterall/pqcf">PQCF</a>).</li>
+    <li><strong>The FVLLMP federation.</strong> Labs' nodes meet through mutual-TLS gates, with no central point. A
+      lab can send work that carries no patient data to a peer, and exchange monitoring counts. Task images are
+      handed over privately, never through a public registry.</li>
+  </ol>
+</section>
+
+<section id="results">
+  <h2>Results, each with how to reproduce it</h2>
+  <p>Every number here comes from a test in the repository, with its result file and a page that says how to run
+    it again.</p>
+  <table>
+    <thead><tr><th>Test</th><th>Result</th><th>Details</th></tr></thead>
+    <tbody>
+      <tr><td>Held-out genomes from NCBI Virus</td><td>species right for 96.5%, 99.6% at high confidence</td>
+        <td><a href="https://github.com/quanterall/genhub2/blob/main/acceptance/RESULTS.md">results</a> ·
+            <a href="https://github.com/quanterall/genhub2/blob/main/acceptance/REPRODUCE.md">reproduce</a></td></tr>
+      <tr><td>1,000 SARS-CoV-2 genomes</td><td>classified in 0.7 s; a neighbour-joining tree in 4 s; mutations agree
+        with Nextclade's away from genome ends and indels</td>
+        <td><a href="https://github.com/quanterall/genhub2/blob/main/acceptance/RESULTS.md">results</a></td></tr>
+      <tr><td>Two nodes of one lab</td><td>exactly one node's results, 1.87–1.97 times as fast</td>
+        <td><a href="https://github.com/quanterall/genhub2/blob/main/acceptance/RESULTS-PHASE-B.md">results</a> ·
+            <a href="https://github.com/quanterall/genhub2/blob/main/acceptance/REPRODUCE-PHASE-B.md">reproduce</a></td></tr>
+      <tr><td>Tasks through the FVLLMP federation</td><td>tree tasks run on a second DGX, byte for byte one node's
+        results</td>
+        <td><a href="https://github.com/quanterall/genhub2/blob/main/acceptance/FEDERATION.md">results</a></td></tr>
+      <tr><td>Monitoring across three sites</td><td>a planted lineage alerted at every site after the exchange of
+        counts, and only then</td>
+        <td><a href="https://github.com/quanterall/genhub2/blob/main/acceptance/RESULTS-PHASE-D.md">results</a> ·
+            <a href="https://github.com/quanterall/genhub2/blob/main/acceptance/REPRODUCE-PHASE-D.md">reproduce</a></td></tr>
+      <tr><td>The gateway: API, MQTT, accounts, audit, sharing, Beacon</td><td>48 of 48 checks</td>
+        <td><a href="https://github.com/quanterall/genhub2/blob/main/acceptance/RESULTS.md">results</a></td></tr>
+      <tr><td>A learned model (6-mer naive Bayes)</td><td>measured and not adopted: 416 species right of 593, against
+        572 for the classical classification</td>
+        <td><a href="https://github.com/quanterall/genhub2/blob/main/acceptance/RESULTS-PHASE-E.md">results</a></td></tr>
+      <tr><td>Joint test with TechUPGRADE's structure view</td><td>14 of 14: four genomes (D614G, BA.2, RSV-A, RSV-B)
+        opened in the view; tampered, expired and plain-HTTP hand-offs refused</td>
+        <td><a href="https://github.com/quanterall/genhub2/blob/main/acceptance/RESULTS.md#7-the-joint-test-with-techupgrades-structure-view">results</a></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="security">
+  <h2>Security and privacy</h2>
+  <ul class="plain">
+    <li><strong>Two factors:</strong> a password and a one-time code from an authenticator app
+      (<a href="https://doi.org/10.17487/RFC6238">TOTP, RFC 6238</a>). Passwords are kept only as PBKDF2-SHA256
+      hashes, 600,000 iterations (<a href="https://doi.org/10.17487/RFC8018">RFC 8018</a>).</li>
+    <li><strong>Roles:</strong> admin, analyst and researcher; every endpoint checks the session's role.</li>
+    <li><strong>An audit log that shows tampering:</strong> logins, uploads, analyses, views, exports and refusals,
+      each record carrying the hash of the one before.</li>
+    <li><strong>Encryption at rest:</strong> a lab's site refuses to start unless its data is on an encrypted volume.
+      This public site holds only public genomes and runs with that check as a warning.</li>
+    <li><strong>Sharing on purpose only:</strong> nothing leaves a lab unless its admin approves a dataset, with
+      consent codes; between labs, monitoring travels as counts.</li>
+  </ul>
+</section>
+
+<section id="status">
+  <h2>Status</h2>
+  <ul class="plain">
+    <li><strong>Done:</strong> one node; a lab's several nodes; accounts and the audit log; the page with uploads,
+      trees, monitoring, sharing and Beacon; monitoring from exchanged counts inside the labs; the structure view's
+      joint test.</li>
+    <li><strong>Started:</strong> tasks through the FVLLMP federation between DGX nodes.</li>
+    <li><strong>Next:</strong> the independent virologist's review of the structure view's datasets; influenza in the
+      view; the first partner lab's site, on its own nodes.</li>
+  </ul>
+  <p>GenHub2 gives information for experts. It is not a diagnostic device.</p>
+</section>
+</main>
+
+<footer>
+  <p>GenHub2 is made by <a href="https://quanterall.com/">Quanterall</a> ·
+    <a href="https://quanterall.com/genhub2.html">GenHub2 on quanterall.com</a> ·
+    <a href="https://github.com/quanterall/genhub2">GitHub</a> · Apache-2.0</p>
+</footer>
+</body>
+</html>

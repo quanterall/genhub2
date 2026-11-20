@@ -1,0 +1,57 @@
+# genhub2.quanterall.com: GenHub2's public page and a live GenHub2 site, on this machine (10.55.66.2). HTTPS and the
+# certificate are at the edge server (10.55.66.1 = 65.108.62.183), which proxies here over the VPN (edge-nginx.conf).
+#   nginx    the public page at /, the site's page at /app/, its API, WebSocket, Beacon and DRS; /metrics not served
+#   genhub2  the GenHub2 node (the genhub2-dev image, compiled from GENHUB2_SRC), data in GENHUB2_SITE_DATA
+#   emqx     the site's own EMQX 5.8.9, reachable only from the node
+# Settings in .env beside this file (setup.sh writes it): GENHUB2_SRC, GENHUB2_SITE_DATA, GENHUB2_UID, GENHUB2_GID.
+#   docker compose -f deploy/genhub2.quanterall.com/compose.yml up -d
+name: genhub2-site
+services:
+  emqx:
+    image: emqx/emqx:5.8.9
+    container_name: genhub2-site-emqx
+    restart: unless-stopped
+    networks:
+      site:
+        ipv4_address: 172.31.130.30
+  genhub2:
+    image: genhub2-dev
+    container_name: genhub2-site
+    hostname: genhub2
+    restart: unless-stopped
+    user: "${GENHUB2_UID}:${GENHUB2_GID}"
+    working_dir: ${GENHUB2_SRC}
+    environment:
+      HOME: ${GENHUB2_SITE_DATA}/home
+    volumes:
+      - ${GENHUB2_SRC}:${GENHUB2_SRC}
+      - ${GENHUB2_SITE_DATA}:${GENHUB2_SITE_DATA}
+    # compiled here, then the node: the same name as genhub2-admin.sh uses (Mnesia keeps it)
+    command: >
+      sh -c "rebar3 compile >/dev/null &&
+             exec erl -noshell -sname genhub2 -config ${GENHUB2_SITE_DATA}/site.config
+                 -mnesia dir '\"${GENHUB2_SITE_DATA}/mnesia\"' -pa _build/default/lib/*/ebin
+                 -eval '{ok, _} = application:ensure_all_started(genhub2)'"
+    depends_on: [emqx]
+    networks:
+      site:
+        ipv4_address: 172.31.130.20
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: genhub2-site-nginx
+    restart: unless-stopped
+    ports:
+      - "10.55.66.2:8130:80"
+      - "127.0.0.1:8130:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./www:/var/www/genhub2:ro
+    depends_on: [genhub2]
+    networks:
+      site:
+        ipv4_address: 172.31.130.10
+networks:
+  site:
+    ipam:
+      config:
+        - subnet: 172.31.130.0/24

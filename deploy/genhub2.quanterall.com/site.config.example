@@ -1,0 +1,15 @@
+%% genhub2.quanterall.com's settings; setup.sh copies this to GENHUB2_SITE_DATA/site.config (outside the repository)
+%% and puts the data directory in. A site on public genomes only: no patient data is to be uploaded here.
+[{genhub2, [
+    {data_dir, "@DATA@"},
+    {site, <<"genhub2.quanterall.com">>},
+    %% behind nginx (172.31.130.10) and the edge's TLS: Secure cookies, and the visitor's address from X-Real-IP
+    {http, #{ip => {0, 0, 0, 0}, port => 8480, secure_cookies => true, trusted_proxies => [{172, 31, 130, 10}]}},
+    {mqtt, #{host => "172.31.130.30", port => 1883}},
+    %% this machine's disk is not encrypted; the site holds public genomes only, so warn, and the page says so
+    {storage_encryption, warn},
+    {executor, local},
+    %% the TechUPGRADE structure view: off until this site's own key is registered on TechUPGRADE's production
+    %% installation and a joint test with it has passed (the test key genhub2-test-2026a is not for this site)
+    {structure_viewer, undefined}
+]}].

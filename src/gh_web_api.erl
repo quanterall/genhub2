@@ -464,9 +464,19 @@ cookie_opts() ->
     Secure = maps:get(secure_cookies, application:get_env(genhub2, http, #{}), false),
     #{http_only => true, same_site => strict, path => <<"/">>, secure => Secure}.
 
+%% the client's address; behind a reverse proxy listed in {http, #{trusted_proxies => [Ip]}}, the address that proxy
+%% puts in X-Real-IP
 peer(Req) ->
     {Ip, _} = cowboy_req:peer(Req),
-    list_to_binary(inet:ntoa(Ip)).
+    Trusted = maps:get(trusted_proxies, application:get_env(genhub2, http, #{}), []),
+    case lists:member(Ip, Trusted) andalso cowboy_req:header(<<"x-real-ip">>, Req) of
+        Real when is_binary(Real) ->
+            case inet:parse_address(binary_to_list(Real)) of
+                {ok, _} -> Real;
+                _ -> list_to_binary(inet:ntoa(Ip))
+            end;
+        _ -> list_to_binary(inet:ntoa(Ip))
+    end.
 
 beacon_id() -> <<"genhub2.", (gh_monitor:site())/binary>>.
 
