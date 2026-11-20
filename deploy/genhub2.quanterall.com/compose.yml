@@ -27,11 +27,13 @@ services:
       - ${GENHUB2_SRC}:${GENHUB2_SRC}
       - ${GENHUB2_SITE_DATA}:${GENHUB2_SITE_DATA}
     # compiled here, then the node: the same name as genhub2-admin.sh uses (Mnesia keeps it)
-    command: >
-      sh -c "rebar3 compile >/dev/null &&
-             exec erl -noshell -sname genhub2 -config ${GENHUB2_SITE_DATA}/site.config
-                 -mnesia dir '\"${GENHUB2_SITE_DATA}/mnesia\"' -pa _build/default/lib/*/ebin
-                 -eval '{ok, _} = application:ensure_all_started(genhub2)'"
+    command:
+      - sh
+      - -c
+      - >-
+        rebar3 compile >/dev/null && exec erl -noshell -sname genhub2 -config ${GENHUB2_SITE_DATA}/site.config
+        -mnesia dir '"${GENHUB2_SITE_DATA}/mnesia"' -pa _build/default/lib/*/ebin
+        -eval '{ok, _} = application:ensure_all_started(genhub2)'
     depends_on: [emqx]
     networks:
       site:
