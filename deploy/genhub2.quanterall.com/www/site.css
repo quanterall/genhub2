@@ -21,7 +21,7 @@ nav a { font: 400 11px 'IBM Plex Mono', monospace; letter-spacing: 1px; text-tra
 nav a:hover { color: var(--blue); }
 nav a.app { color: var(--amber); }
 main { max-width: 1080px; margin: 0 auto; padding: 0 48px; }
-section { padding: 64px 0 24px; }
+section { padding: 64px 0 24px; scroll-margin-top: 72px; }
 .hero { padding-top: 88px; }
 .kicker { font: 400 12px 'IBM Plex Mono', monospace; letter-spacing: 1px; color: var(--amber); margin-bottom: 18px; }
 h1 { font: 500 clamp(34px, 5vw, 54px)/1.12 'Cormorant Garamond', serif; color: var(--white); max-width: 820px; }
