@@ -15,22 +15,27 @@
 %% job names. A tampered link and an expired one are refused (bad_signature, expired).
 %% Mode push (the joint test): the same, then each genome's hand-off pushed to <base>/ext/push; the handle that comes
 %% back opens the view, for a person to check against the mutations listed here. A tampered payload and an expired
-%% one, each signed with the test key, are pushed too and must be refused (400 {"error": "refused"}); plain HTTP to
+%% one, each signed with the key, are pushed too and must be refused (400 {"error": "refused"}); plain HTTP to
 %% the entry points (empty requests only) must be refused, not redirected.
 %%
-%%   main([Out, Mode, Base, KeyFile, GenomeDir])
+%%   main([Out, Mode, Base, KeyFile, GenomeDir]) or main([..., Kid, Iss])
 -module(gh_joint_check).
 -export([main/1]).
 
 -define(URL, "http://127.0.0.1:28090").
 -define(MQTT_PORT, 21883).
--define(KID, <<"genhub2-test-2026a">>).
--define(ISS, <<"test.genhub2.quanterall.com">>).
+%% the key's id and the issuer: the test key's unless run_joint.sh is given others (VIEWER_KID, VIEWER_ISS)
+-define(KID, persistent_term:get({?MODULE, kid})).
+-define(ISS, persistent_term:get({?MODULE, iss})).
 -define(GENOMES, [{<<"d614g">>, <<"sars-cov-2">>}, {<<"ON544943">>, <<"sars-cov-2">>}, {<<"PP_0030E57">>, <<"rsv-a">>},
                   {<<"PP_002XZ5U">>, <<"rsv-b">>}]).
 
 -spec main([string()]) -> no_return().
-main([Out, Mode0, Base, KeyFile, GenomeDir]) ->
+main([Out, Mode, Base, KeyFile, GenomeDir]) ->
+    main([Out, Mode, Base, KeyFile, GenomeDir, "genhub2-test-2026a", "test.genhub2.quanterall.com"]);
+main([Out, Mode0, Base, KeyFile, GenomeDir, Kid, Iss]) ->
+    persistent_term:put({?MODULE, kid}, list_to_binary(Kid)),
+    persistent_term:put({?MODULE, iss}, list_to_binary(Iss)),
     Mode = list_to_atom(Mode0),
     true = lists:member(Mode, [dry, push]),
     ok = application:load(genhub2),
@@ -179,7 +184,7 @@ checks(Mode, Jobs, Direct, Refusals, Pushed, Remote) ->
     Expected = maps:from_list(?GENOMES),
     [check(<<"the four genomes analysed (d614g, BA.2, RSV-A, RSV-B)">>,
            [S || #{state := S} <- Jobs] =:= [<<"done">> || _ <- Jobs], [{N, S} || #{name := N, state := S} <- Jobs])]
-    ++ [check(<<"direct link for ", N/binary, ": signed with the test key, aud /ext/open, dataset ",
+    ++ [check(<<"direct link for ", N/binary, ": signed with the key, aud /ext/open, dataset ",
                 (maps:get(N, Expected))/binary, ", the result's mutations exactly, no names">>,
               S =:= 200 andalso K =:= ?KID andalso is_map(V) andalso Names =:= []
               andalso maps:get(<<"dataset">>, maps:get(<<"params">>, V)) =:= maps:get(N, Expected)

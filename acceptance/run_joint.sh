@@ -4,7 +4,8 @@
 #   sh acceptance/run_joint.sh dry     the links checked here only; nothing is sent
 #   sh acceptance/run_joint.sh push    the joint test: hand-offs pushed to TechUPGRADE's test entry point
 # VIEWER_BASE: the entry point (default https://techupgrade2.quanterall.com); VIEWER_KEY: the test key's private file
-# (default ~/.config/genhub2/viewer/genhub2-test-2026a.key; scripts/genhub2-admin.sh ... viewer_key makes one).
+# (default ~/.config/genhub2/viewer/genhub2-test-2026a.key; scripts/genhub2-admin.sh ... viewer_key makes one);
+# VIEWER_KID and VIEWER_ISS: its id and the issuer TechUPGRADE registered it with (default the test key's).
 # Starts EMQX 5.8.9 on 127.0.0.1:21883 as run_gateway.sh does. Needs the reference bundles of acceptance/run.sh.
 set -e
 cd "$(dirname "$0")/.."
@@ -12,6 +13,7 @@ MODE=${1:-dry}
 case "$MODE" in dry|push) ;; *) echo "usage: sh acceptance/run_joint.sh dry|push" >&2; exit 2 ;; esac
 BASE=${VIEWER_BASE:-https://techupgrade2.quanterall.com}
 KEY=${VIEWER_KEY:-$HOME/.config/genhub2/viewer/genhub2-test-2026a.key}
+KID=${VIEWER_KID:-genhub2-test-2026a}; ISS=${VIEWER_ISS:-test.genhub2.quanterall.com}
 [ -r "$KEY" ] || { echo "no test key at $KEY" >&2; exit 2; }
 DATE=$(date -u +%Y-%m-%dT%H%MZ); HOSTNAME=$(hostname -s)
 OUT=acceptance/results/joint-$MODE-$HOSTNAME-$DATE.json
@@ -45,7 +47,7 @@ docker run --rm --network host --user "$(id -u):$(id -g)" \
   rebar3 compile >/dev/null &&
   erl -noshell -sname gh_joint -mnesia dir '\"data/mnesia-joint\"' -pa _build/default/lib/*/ebin -genhub2 storage_encryption warn \
       -pa _build/default/lib/genhub2/acceptance \
-      -eval 'gh_joint_check:main([\"$OUT\", \"$MODE\", \"$BASE\", \"$KEY\", \"data/joint\"])'"
+      -eval 'gh_joint_check:main([\"$OUT\", \"$MODE\", \"$BASE\", \"$KEY\", \"data/joint\", \"$KID\", \"$ISS\"])'"
 RC=$?
 [ -n "$STARTED" ] && [ -z "$KEEP_EMQX" ] && docker stop genhub2-emqx >/dev/null
 exit $RC
