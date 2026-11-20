@@ -26,7 +26,8 @@ curl -s -o /dev/null -w '%{http_code}\n' http://10.55.66.2:8130/app/            
 ```
 
 The admin then adds the other users on the page (Users). To update: `git pull`, then
-`docker compose -f deploy/genhub2.quanterall.com/compose.yml restart genhub2` (the node compiles at start).
+`docker compose -f deploy/genhub2.quanterall.com/compose.yml restart genhub2 nginx` (the node compiles at start; nginx
+must be restarted, not reloaded, to see a changed `nginx.conf`, because the file is mounted on its own).
 
 ## On the edge server
 
