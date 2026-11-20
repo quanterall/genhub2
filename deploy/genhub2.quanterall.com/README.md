@@ -30,9 +30,10 @@ The admin then adds the other users on the page (Users). To update: `git pull`, 
 
 ## On the edge server
 
-[`edge-nginx.conf`](edge-nginx.conf): the server block for `genhub2.quanterall.com`, then the certificate with
-`sudo certbot --nginx --non-interactive --agree-tos --no-redirect -d genhub2.quanterall.com`. HTTP goes to HTTPS on
-the build host (on `X-Forwarded-Proto`), so certbot's challenge on port 80 is answered at the edge.
+[`edge-nginx.conf`](edge-nginx.conf) is the server block as applied on 20 November 2026, with the Let's Encrypt
+certificate from `sudo certbot --nginx --non-interactive --agree-tos --no-redirect -d genhub2.quanterall.com`, which
+certbot renews. HTTP goes to HTTPS on the build host (on `X-Forwarded-Proto`), so certbot's challenge on port 80 is
+answered at the edge.
 
 ## Later
 
